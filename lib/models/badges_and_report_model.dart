@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 enum BadgeCategory {
   all('Tất cả'),
@@ -49,16 +50,22 @@ enum DateRangeFilter {
 enum ExportStatus { idle, generating, completed }
 
 class BadgesAndReportModel extends ChangeNotifier {
-  // Level & Stats
-  final String athleteRank = 'BẬC THẦY DINH DƯỠNG';
-  final String rankLevel = 'LV.4';
-  final int unlockedBadgesCount = 6;
-  final int totalBadgesCount = 8;
-  final double rankProgress = 0.75;
+  static final BadgesAndReportModel instance = BadgesAndReportModel._internal();
+  factory BadgesAndReportModel() => instance;
+  BadgesAndReportModel._internal();
 
-  final int streakDays = 28;
-  final int macroTargetCount = 45;
-  final int reputationPoints = 1420;
+  bool isLoading = false;
+
+  // Level & Stats
+  String athleteRank = 'BẬC THẦY DINH DƯỠNG';
+  String rankLevel = 'LV.4';
+  int unlockedBadgesCount = 3;
+  int totalBadgesCount = 6;
+  double rankProgress = 0.5;
+
+  int streakDays = 0;
+  int macroTargetCount = 14;
+  int reputationPoints = 190;
 
   // Filter
   BadgeCategory _selectedCategory = BadgeCategory.all;
@@ -72,70 +79,147 @@ class BadgesAndReportModel extends ChangeNotifier {
   }
 
   // Badges Data
-  final List<BadgeItem> _badges = const [
-    BadgeItem(
+  List<BadgeItem> _badges = [
+    const BadgeItem(
+      id: 'COOKING_STARTER_3',
+      title: 'Khởi động bếp núc',
+      description: 'Tự nấu liên tục 3 ngày.',
+      category: BadgeCategory.streak,
+      isUnlocked: false,
+      points: 10,
+      icon: Icons.local_fire_department,
+      maxProgress: 3,
+    ),
+    const BadgeItem(
+      id: 'COOKING_WEEK_7',
+      title: 'Bếp trưởng 7 ngày',
+      description: 'Tự nấu liên tục 7 ngày.',
+      category: BadgeCategory.streak,
+      isUnlocked: false,
+      points: 30,
+      icon: Icons.emoji_events,
+      maxProgress: 7,
+    ),
+    const BadgeItem(
+      id: 'COOKING_CHAMPION_30',
+      title: 'Chiến binh Meal Prep',
+      description: 'Tự nấu liên tục 30 ngày.',
+      category: BadgeCategory.kitchen,
+      isUnlocked: false,
+      points: 150,
+      icon: Icons.military_tech,
+      maxProgress: 30,
+    ),
+    const BadgeItem(
       id: 'b1',
       title: 'Bậc thầy Calo',
       description: 'Giữ thâm hụt 400 kcal suốt 14 ngày',
       category: BadgeCategory.macro,
       isUnlocked: true,
       points: 50,
-      icon: Icons.emoji_events,
-    ),
-    BadgeItem(
-      id: 'b2',
-      title: 'Chuẩn Macro 7N',
-      description: 'P:C:F sai số < 5% trong 7 ngày',
-      category: BadgeCategory.macro,
-      isUnlocked: true,
-      points: 70,
       icon: Icons.bolt,
+      currentProgress: 14,
+      maxProgress: 14,
     ),
-    BadgeItem(
-      id: 'b3',
-      title: 'Bếp Lửa 12 Ngày',
-      description: '12 ngày tự nấu liên tiếp',
-      category: BadgeCategory.kitchen,
-      isUnlocked: true,
-      points: 150,
-      icon: Icons.outdoor_grill,
-    ),
-    BadgeItem(
-      id: 'b4',
-      title: 'Clean Eater Pro',
-      description: '0g đường tinh luyện 21 ngày',
-      category: BadgeCategory.streak,
-      isUnlocked: true,
-      points: 100,
-      icon: Icons.restaurant,
-    ),
-    BadgeItem(
+    const BadgeItem(
       id: 'b5',
       title: 'Chuyên gia Scan AI',
-      description: 'Quét nhận diện 100 món ăn bằng AI',
+      description: 'Quét nhận diện món ăn bằng AI (Confidence > 80%)',
       category: BadgeCategory.kitchen,
-      isUnlocked: false,
-      icon: Icons.lock,
-      currentProgress: 64,
-      maxProgress: 100,
-    ),
-    BadgeItem(
-      id: 'b6',
-      title: 'Đầu bếp Siêu cơ',
-      description: 'Nấu 15 bữa chuẩn tỉ lệ > 40g Protein',
-      category: BadgeCategory.macro,
-      isUnlocked: false,
-      icon: Icons.lock,
-      currentProgress: 12,
+      isUnlocked: true,
+      points: 100,
+      icon: Icons.qr_code_scanner,
+      currentProgress: 15,
       maxProgress: 15,
     ),
   ];
+
+  List<BadgeItem> get badges => _badges;
 
   List<BadgeItem> get filteredBadges {
     if (_selectedCategory == BadgeCategory.all) {
       return _badges;
     }
     return _badges.where((b) => b.category == _selectedCategory).toList();
+  }
+
+  /// Tải dữ liệu Streak & Badges từ API Server
+  Future<void> fetchAchievementsData() async {
+    try {
+      isLoading = true;
+      notifyListeners();
+
+      // 1. Lấy thông tin Streak từ Backend
+      try {
+        final streakData = await ApiService.getStreak();
+        if (streakData.containsKey('streak')) {
+          streakDays = (streakData['streak']['consecutiveDays'] as num?)?.toInt() ?? 0;
+        }
+      } catch (_) {}
+
+      // 2. Lấy danh sách Huy hiệu đã nhận từ Backend
+      try {
+        final userBadges = await ApiService.getBadges();
+        final unlockedCodes = userBadges.map((b) => b['code']?.toString()).toSet();
+
+        _badges = _badges.map((item) {
+          final isUnlocked = unlockedCodes.contains(item.id);
+          final progress = isUnlocked ? item.maxProgress : (streakDays < item.maxProgress ? streakDays : item.maxProgress);
+          return BadgeItem(
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            category: item.category,
+            isUnlocked: isUnlocked,
+            points: item.points,
+            icon: item.icon,
+            currentProgress: progress,
+            maxProgress: item.maxProgress,
+          );
+        }).toList();
+
+        unlockedBadgesCount = _badges.where((b) => b.isUnlocked).length;
+        totalBadgesCount = _badges.length;
+        rankProgress = totalBadgesCount > 0 ? unlockedBadgesCount / totalBadgesCount : 0.0;
+        reputationPoints = _badges.where((b) => b.isUnlocked).fold(0, (sum, b) => sum + b.points);
+
+        if (streakDays >= 30) {
+          athleteRank = 'HUYỀN THOẠI MEAL PREP';
+          rankLevel = 'LV.MAX';
+        } else if (streakDays >= 7) {
+          athleteRank = 'BẾP TRƯỞNG GYMER';
+          rankLevel = 'LV.5';
+        } else if (streakDays >= 3) {
+          athleteRank = 'ĐẦU BẾP NĂNG NỔ';
+          rankLevel = 'LV.3';
+        } else {
+          athleteRank = 'TÂN BINH BẾP NÚC';
+          rankLevel = 'LV.1';
+        }
+      } catch (_) {}
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Ghi nhận 1 ngày nấu ăn liên tục và nhận huy hiệu thưởng tự động
+  Future<Map<String, dynamic>?> recordCookingDay({String? note, String? mealPrepBatchId}) async {
+    try {
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final result = await ApiService.recordCookingDay(
+        cookedOn: todayStr,
+        note: note,
+        mealPrepBatchId: mealPrepBatchId,
+      );
+
+      // Cập nhật lại streak và huy hiệu
+      await fetchAchievementsData();
+      return result;
+    } catch (_) {
+      return null;
+    }
   }
 
   // Report Export State

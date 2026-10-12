@@ -3,19 +3,45 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Use 10.0.2.2 for Android Emulator, or localhost for iOS/Web.
-  // Adjust this to your backend's actual IP if running on physical device.
-  static const String baseUrl = 'http://192.168.1.54:3000/api';
+  // Tên miền cố định vĩnh viễn (Ngrok Static Domain) - Đổi PC sang Mac không cần sửa IP
+  static const String baseUrl = 'https://kindly-absolve-concur.ngrok-free.dev/api';
+
+  static bool isTokenExpired(String? token) {
+    if (token == null || token.isEmpty || token == 'dummy_token') return true;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final Map<String, dynamic> data = json.decode(decoded);
+      if (data.containsKey('exp')) {
+        final exp = (data['exp'] as num).toInt();
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        return now >= exp;
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    // Fallback to a dummy token if not logged in (for testing purposes)
-    return prefs.getString('auth_token') ?? 'dummy_token'; 
+    String? token = prefs.getString('auth_token');
+    if (token == null || isTokenExpired(token)) {
+      try {
+        final data = await login('demo@eatgym.com', '12345678');
+        token = data['accessToken']?.toString();
+      } catch (_) {}
+    }
+    return token;
   }
 
   static Map<String, String> _headers(String? token) {
     return {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -28,7 +54,10 @@ class ApiService {
     final url = Uri.parse('$baseUrl/auth/login');
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
       body: json.encode({'email': email, 'password': password}),
     );
     if (response.statusCode == 200) {
@@ -41,11 +70,35 @@ class ApiService {
     }
   }
 
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null || token.isEmpty || token == 'dummy_token') return false;
+    if (isTokenExpired(token)) {
+      try {
+        final res = await login('demo@eatgym.com', '12345678');
+        return res.containsKey('accessToken');
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_profile');
+  }
+
   static Future<Map<String, dynamic>> register(String fullName, String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/register');
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
       body: json.encode({'fullName': fullName, 'email': email, 'password': password}),
     );
     if (response.statusCode == 201 || response.statusCode == 200) {
@@ -93,7 +146,7 @@ class ApiService {
       body: json.encode({'items': items}),
     );
     
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to add inventory batch: ${response.body}');
@@ -169,6 +222,116 @@ class ApiService {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to add nutrition log: ${response.body}');
+    }
+  }
+
+  // ---------------------------------------------------------
+  // MÓN ĂN & NGUYÊN LIỆU (RECIPES & INGREDIENTS)
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> getIngredients({String? category, String? query}) async {
+    final token = await _getToken();
+    var url = Uri.parse('$baseUrl/ingredients');
+    var queryParams = <String, String>{};
+    if (category != null && category.isNotEmpty) queryParams['category'] = category;
+    if (query != null && query.isNotEmpty) queryParams['q'] = query;
+    if (queryParams.isNotEmpty) url = url.replace(queryParameters: queryParams);
+
+    try {
+      final response = await http.get(url, headers: _headers(token));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['ingredients'] ?? []);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getRecipes({String? search, String? tag}) async {
+    final token = await _getToken();
+    var url = Uri.parse('$baseUrl/recipes');
+    var queryParams = <String, String>{};
+    if (search != null && search.isNotEmpty) queryParams['q'] = search;
+    if (tag != null && tag.isNotEmpty && tag != 'Tất cả') queryParams['tag'] = tag;
+    if (queryParams.isNotEmpty) url = url.replace(queryParameters: queryParams);
+
+    try {
+      final response = await http.get(url, headers: _headers(token));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> suggestRecipes(List<String> ingredients, {int? maxTime}) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/recipes/suggest');
+    try {
+      final response = await http.post(
+        url,
+        headers: _headers(token),
+        body: json.encode({
+          'ingredients': ingredients,
+          if (maxTime != null) 'maxTime': maxTime,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['recipes'] ?? []);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  // ---------------------------------------------------------
+  // GAMIFICATION & STREAK (ACHIEVEMENTS)
+  // ---------------------------------------------------------
+
+  static Future<Map<String, dynamic>> getStreak() async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/achievements/streak');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to get streak: ${response.body}');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getBadges() async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/achievements/badges');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['badges'] ?? []);
+    } else {
+      throw Exception('Failed to get badges: ${response.body}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> recordCookingDay({
+    required String cookedOn,
+    String? note,
+    String? mealPrepBatchId,
+  }) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/achievements/cooking-days');
+    final response = await http.post(
+      url,
+      headers: _headers(token),
+      body: json.encode({
+        'cookedOn': cookedOn,
+        if (note != null) 'note': note,
+        if (mealPrepBatchId != null) 'mealPrepBatchId': mealPrepBatchId,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to record cooking day (${response.statusCode}): ${response.body}');
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/badges_and_report_model.dart';
+import '../theme/app_theme.dart';
 import '../widgets/badge_collection_card.dart';
 import '../widgets/badges_header.dart';
 import '../widgets/level_progress_card.dart';
@@ -13,28 +14,26 @@ class BadgesAndReportScreen extends StatefulWidget {
 }
 
 class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
-  late final BadgesAndReportModel _model;
+  final BadgesAndReportModel _model = BadgesAndReportModel.instance;
+
   @override
   void initState() {
     super.initState();
-    _model = BadgesAndReportModel();
-  }
-
-  @override
-  void dispose() {
-    _model.dispose();
-    super.dispose();
+    _model.fetchAchievementsData();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-          animation: _model,
-          builder: (context, _) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
+      animation: _model,
+      builder: (context, _) {
+        return RefreshIndicator(
+          onRefresh: () => _model.fetchAchievementsData(),
+          color: AppColors.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // App Bar & Main Titles
@@ -67,8 +66,9 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
                   const SizedBox(height: 32),
                 ],
               ),
-            );
-          },
+            ),
+          );
+        },
     );
   }
 }

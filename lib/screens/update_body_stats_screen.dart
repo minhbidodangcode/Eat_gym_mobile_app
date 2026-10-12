@@ -466,7 +466,7 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: measurementSource,
+            value: measurementSource,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               border: OutlineInputBorder(

@@ -32,9 +32,17 @@ class _NutritionDiaryScreenState extends State<NutritionDiaryScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi tải dữ liệu: $e')),
-        );
+        setState(() {
+          _diaryData = {
+            'summary': {'totalCalories': 0, 'totalProtein': 0, 'totalCarbs': 0, 'totalFat': 0},
+            'meals': {
+              'breakfast': {'items': [], 'totalCalories': 0},
+              'lunch': {'items': [], 'totalCalories': 0},
+              'dinner': {'items': [], 'totalCalories': 0},
+              'snack': {'items': [], 'totalCalories': 0},
+            }
+          };
+        });
       }
     } finally {
       if (mounted) {

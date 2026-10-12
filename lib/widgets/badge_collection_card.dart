@@ -139,7 +139,10 @@ class BadgeCollectionCard extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final badge = badges[index];
-              return _buildBadgeTile(badge);
+              return GestureDetector(
+                onTap: () => _showBadgeDetailModal(context, badge),
+                child: _buildBadgeTile(badge),
+              );
             },
           ),
         ],
@@ -324,5 +327,229 @@ class BadgeCollectionCard extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _showBadgeDetailModal(BuildContext context, BadgeItem badge) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: const BoxDecoration(
+            color: Color(0xFF191C1B),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Badge Icon Header with Glow
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: badge.isUnlocked
+                      ? Colors.amber.withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: badge.isUnlocked
+                        ? Colors.amber.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.15),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    badge.icon,
+                    size: 36,
+                    color: badge.isUnlocked ? Colors.amber : const Color(0xFFC4C7C5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Badge Title
+              Text(
+                badge.title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Status Pill & Points
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badge.isUnlocked
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: badge.isUnlocked
+                            ? Colors.green.withValues(alpha: 0.4)
+                            : Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Text(
+                      badge.isUnlocked ? '✓ ĐÃ MỞ KHÓA' : '🔒 ĐANG KHÓA',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: badge.isUnlocked ? Colors.greenAccent : const Color(0xFFC4C7C5),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      '+${badge.points} Điểm Uy Tín',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Nhiệm vụ chi tiết Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF181D1B),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.assignment_outlined, size: 16, color: Colors.white70),
+                        const SizedBox(width: 6),
+                        Text(
+                          'YÊU CẦU NHIỆM VỤ',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      badge.description,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Progress Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tiến độ:',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFC4C7C5),
+                          ),
+                        ),
+                        Text(
+                          '${badge.currentProgress} / ${badge.maxProgress}',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: badge.isUnlocked ? Colors.greenAccent : Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        height: 6,
+                        width: double.infinity,
+                        color: Colors.white.withValues(alpha: 0.08),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: badge.progressRatio,
+                          child: Container(
+                            color: badge.isUnlocked ? Colors.greenAccent : Colors.amber,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Button Đóng
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF191C1B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'ĐÃ HIỂU',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
