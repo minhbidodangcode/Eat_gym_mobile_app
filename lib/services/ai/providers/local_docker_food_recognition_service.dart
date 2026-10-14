@@ -15,6 +15,7 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
   LocalDockerFoodRecognitionService({
     List<String>? endpoints,
   }) : endpoints = endpoints ?? [
+          'https://kindly-absolve-concur.ngrok-free.dev/api/v1/detect',
           'http://127.0.0.1:8000/api/v1/detect',
           'http://10.0.2.2:8000/api/v1/detect',
           'http://192.168.1.47:8000/api/v1/detect',
@@ -56,11 +57,12 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
       try {
         final uri = Uri.parse(endpoint);
         final request = http.MultipartRequest('POST', uri);
+        request.headers['ngrok-skip-browser-warning'] = 'true';
         request.files.add(
           await http.MultipartFile.fromPath('file', image.path),
         );
 
-        final streamedResponse = await request.send().timeout(const Duration(seconds: 10));
+        final streamedResponse = await request.send().timeout(const Duration(seconds: 25));
         final response = await http.Response.fromStream(streamedResponse);
 
         if (response.statusCode == 200) {

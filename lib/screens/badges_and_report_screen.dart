@@ -5,6 +5,7 @@ import '../widgets/badge_collection_card.dart';
 import '../widgets/badges_header.dart';
 import '../widgets/level_progress_card.dart';
 import '../widgets/pdf_export_card.dart';
+import '../widgets/smartwatch_health_card.dart';
 
 class BadgesAndReportScreen extends StatefulWidget {
   const BadgesAndReportScreen({super.key});
@@ -19,7 +20,11 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
   @override
   void initState() {
     super.initState();
-    _model.fetchAchievementsData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _model.fetchAchievementsData();
+      }
+    });
   }
 
   @override
@@ -34,41 +39,46 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // App Bar & Main Titles
-                  BadgesHeader(
-                    onAvatarTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Mở hồ sơ cá nhân vận động viên'),
-                          duration: Duration(milliseconds: 900),
-                        ),
-                      );
-                    },
-                  ),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // App Bar & Main Titles
+                BadgesHeader(
+                  onAvatarTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Mở hồ sơ cá nhân vận động viên'),
+                        duration: Duration(milliseconds: 900),
+                      ),
+                    );
+                  },
+                ),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  // Monolith 1: Overall Level & Progress
-                  LevelProgressCard(model: _model),
+                // Monolith 1: Overall Level & Progress (Real-time calculated)
+                LevelProgressCard(model: _model),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  // Monolith 2: Gymer Chef Badge Collection Grid
-                  BadgeCollectionCard(model: _model),
+                // Monolith 2: Smartwatch & Health Connect Real-Time Sync
+                SmartwatchHealthCard(model: _model, isDark: true),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  // Monolith 3: PDF Medical & Clinical Nutrition Export Engine
-                  PdfExportCard(model: _model),
+                // Monolith 3: Gymer Chef Badge Collection Grid (High Protein Hero, Meal Prep Master...)
+                BadgeCollectionCard(model: _model),
 
-                  const SizedBox(height: 32),
-                ],
-              ),
+                const SizedBox(height: 20),
+
+                // Monolith 4: PDF Medical & Clinical Nutrition Export Engine
+                PdfExportCard(model: _model),
+
+                const SizedBox(height: 32),
+              ],
             ),
-          );
-        },
+          ),
+        );
+      },
     );
   }
 }

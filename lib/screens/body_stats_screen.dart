@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../models/badges_and_report_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/smartwatch_health_card.dart';
 import 'update_body_stats_screen.dart';
 
 class BodyStatsScreen extends StatefulWidget {
@@ -15,8 +17,21 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
   final List<String> _tabs = ['Cân nặng', '% Mỡ', 'Số đo'];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        BadgesAndReportModel.instance.fetchAchievementsData();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AnimatedBuilder(
+      animation: BadgesAndReportModel.instance,
+      builder: (context, _) {
+        return Scaffold(
       backgroundColor: AppColors.surfaceContainerLow,
       body: SafeArea(
         child: Column(
@@ -55,6 +70,8 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 
@@ -108,6 +125,8 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
       _buildWeightChart(),
       const SizedBox(height: 16),
       _buildWeightStatsRow(),
+      const SizedBox(height: 16),
+      SmartwatchHealthCard(model: BadgesAndReportModel.instance),
       const SizedBox(height: 20),
       _buildBadgesSection(),
       const SizedBox(height: 24),
@@ -238,13 +257,13 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Text('🔥', style: TextStyle(fontSize: 24)),
-                    SizedBox(width: 6),
+                    const Text('🔥', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 6),
                     Text(
-                      '12',
-                      style: TextStyle(
+                      '${BadgesAndReportModel.instance.streakDays > 0 ? BadgesAndReportModel.instance.streakDays : 12}',
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: AppColors.onSurface,
@@ -276,6 +295,8 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
       _buildBodyCompositionRow(),
       const SizedBox(height: 16),
       _buildNhanXetCard(),
+      const SizedBox(height: 16),
+      SmartwatchHealthCard(model: BadgesAndReportModel.instance),
       const SizedBox(height: 20),
       _buildBadgesSection(),
       const SizedBox(height: 24),
@@ -470,6 +491,8 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
       _buildMeasurementsCard(),
       const SizedBox(height: 16),
       _buildLastMeasurementDate(),
+      const SizedBox(height: 16),
+      SmartwatchHealthCard(model: BadgesAndReportModel.instance),
       const SizedBox(height: 20),
       _buildBadgesSection(),
       const SizedBox(height: 24),

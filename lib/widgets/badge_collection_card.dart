@@ -58,7 +58,7 @@ class BadgeCollectionCard extends StatelessWidget {
                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Text(
-                  '4 MỚI',
+                  '${model.unlockedBadgesCount} ĐÃ ĐẠT',
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
