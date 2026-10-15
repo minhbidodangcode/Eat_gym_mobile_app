@@ -458,7 +458,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
                 SizedBox(height: 16),
                 Text('AI đang nhận diện nguyên liệu...', style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 4),
-                Text('Lọc độ tin cậy > 80% & Công thức < 15p', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('Lọc độ tin cậy > 40% & Công thức < 15p', style: TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
@@ -474,7 +474,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
       final result = await recommendationService.recommendMeals(
         File(image.path),
-        minConfidence: 0.8, // Thuật toán AI: Confidence Score > 80%
+        minConfidence: 0.4, // Thuật toán AI: Confidence Score > 40%
         maxDurationMinutes: 15, // Gợi ý công thức dưới 15 phút
       );
 
@@ -507,7 +507,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('AI nhận diện (Confidence > 80%): $summary'),
+              content: Text('AI nhận diện (Confidence > 40%): $summary'),
               backgroundColor: AppColors.primary,
             ),
           );
@@ -520,7 +520,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Không tìm thấy nguyên liệu nào đạt Confidence Score > 80%'),
+              content: Text('Không tìm thấy nguyên liệu nào đạt Confidence Score > 40%'),
               backgroundColor: AppColors.warning,
             ),
           );
@@ -549,7 +549,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
           children: [
             Text('GỢI Ý CÔNG THỨC < 15 PHÚT', style: AppTypography.badge(color: AppColors.primary)),
             const SizedBox(height: 6),
-            Text('Từ AI Computer Vision (YOLOv8 Docker > 80%)', style: AppTypography.labelCaption()),
+            Text('Từ AI Computer Vision (YOLOv8 Docker > 40%)', style: AppTypography.labelCaption()),
           ],
         ),
         content: SizedBox(

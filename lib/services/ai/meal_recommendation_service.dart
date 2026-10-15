@@ -16,13 +16,13 @@ class MealRecommendationService {
 
   Future<MealRecommendationResult> recommendMeals(
     File image, {
-    double minConfidence = 0.8,
+    double minConfidence = 0.4,
     int maxDurationMinutes = 15,
   }) async {
     // 1. Nhận diện nguyên liệu từ ảnh (Gọi 1 lần duy nhất)
     final recognitionResults = await foodRecognitionService.recognizeIngredients(image);
 
-    // 2. Lọc confidence >= 0.8 (Confidence Score > 80%)
+    // 2. Lọc confidence >= 0.4 (Confidence Score > 40%)
     final filteredResults = recognitionResults
         .where((result) => result.confidence >= minConfidence)
         .toList();

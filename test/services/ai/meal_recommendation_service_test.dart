@@ -36,11 +36,11 @@ void main() {
     );
   });
 
-  test('Test 1: Only ingredients with confidence >= 0.8 are used', () async {
+  test('Test 1: Only ingredients with confidence >= 0.4 are used', () async {
     mockRecognition.results = [
       FoodRecognitionResult(foodName: 'Chicken Breast', confidence: 0.91),
       FoodRecognitionResult(foodName: 'Yellow Onion', confidence: 0.87),
-      FoodRecognitionResult(foodName: 'Mushroom', confidence: 0.70),
+      FoodRecognitionResult(foodName: 'Mushroom', confidence: 0.35),
     ];
 
     mockRecipe.mockData = {
@@ -58,9 +58,9 @@ void main() {
     expect(result.recognizedIngredients.length, 2);
   });
 
-  test('Test 2: All confidence < 0.8 returns empty list', () async {
+  test('Test 2: All confidence < 0.4 returns empty list', () async {
     mockRecognition.results = [
-      FoodRecognitionResult(foodName: 'Chicken', confidence: 0.79),
+      FoodRecognitionResult(foodName: 'Chicken', confidence: 0.39),
     ];
     final result = await service.recommendMeals(File('dummy.jpg'));
     expect(result.recipes, isEmpty);

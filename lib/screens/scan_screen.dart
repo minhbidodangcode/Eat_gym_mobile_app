@@ -46,10 +46,10 @@ class _ScanScreenState extends State<ScanScreen> {
       });
 
       try {
-        // Gọi service nhận diện (Confidence > 80%) và gợi ý công thức dưới 15 phút
+        // Gọi service nhận diện (Confidence > 40%) và gợi ý công thức dưới 15 phút
         final result = await _recommendationService.recommendMeals(
           _selectedImage!,
-          minConfidence: 0.8,
+          minConfidence: 0.4,
           maxDurationMinutes: 15,
         );
 
