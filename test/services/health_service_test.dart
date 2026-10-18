@@ -47,5 +47,62 @@ void main() {
       expect(badgeIds.contains('COOKING_WEEK_7'), true);
       expect(badgeIds.contains('HEALTH_SYNC_ACTIVE'), true);
     });
+
+    test('HealthService should format today date string and track heart rate', () async {
+      final service = HealthService.instance;
+      final dateStr = HealthService.getTodayDateString();
+      expect(dateStr.length, 10);
+      expect(RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateStr), true);
+
+      await service.updateCustomHealthMetrics(
+        steps: 2656,
+        caloriesBurned: 2,
+        heartRate: 89,
+        source: 'Nothing X',
+        syncBackend: false,
+      );
+
+      expect(service.todaySteps, 2656);
+      expect(service.todayCaloriesBurned, 2);
+      expect(service.todayHeartRate, 89);
+      expect(service.currentSource, 'Nothing X');
+    });
+
+    test('HealthService.init should reset steps and calories to 0 if previous sync was on an older date', () async {
+      final service = HealthService.instance;
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final yesterdayIso = yesterday.toIso8601String();
+
+      SharedPreferences.setMockInitialValues({
+        'health_today_steps': 5000,
+        'health_today_calories': 250,
+        'health_today_heart_rate': 85,
+        'health_last_sync': yesterdayIso,
+      });
+
+      await service.init();
+
+      expect(service.todaySteps, 0);
+      expect(service.todayCaloriesBurned, 0);
+      expect(service.todayHeartRate, 0);
+    });
+
+    test('HealthService.init should retain steps and calories if synced today', () async {
+      final service = HealthService.instance;
+      final todayIso = DateTime.now().toIso8601String();
+
+      SharedPreferences.setMockInitialValues({
+        'health_today_steps': 3500,
+        'health_today_calories': 120,
+        'health_today_heart_rate': 78,
+        'health_last_sync': todayIso,
+      });
+
+      await service.init();
+
+      expect(service.todaySteps, 3500);
+      expect(service.todayCaloriesBurned, 120);
+      expect(service.todayHeartRate, 78);
+    });
   });
 }

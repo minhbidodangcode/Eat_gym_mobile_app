@@ -17,12 +17,12 @@ class MealRecommendationService {
   Future<MealRecommendationResult> recommendMeals(
     File image, {
     double minConfidence = 0.4,
-    int maxDurationMinutes = 15,
+    int? maxDurationMinutes,
   }) async {
-    // 1. Nhận diện nguyên liệu từ ảnh (Gọi 1 lần duy nhất)
-    final recognitionResults = await foodRecognitionService.recognizeIngredients(image);
+    // 1. Nhận diện nguyên liệu từ ảnh (Gọi 1 lần duy nhất với confidence threshold)
+    final recognitionResults = await foodRecognitionService.recognizeIngredients(image, confidence: minConfidence);
 
-    // 2. Lọc confidence >= 0.4 (Confidence Score > 40%)
+    // 2. Lọc confidence >= minConfidence
     final filteredResults = recognitionResults
         .where((result) => result.confidence >= minConfidence)
         .toList();
@@ -47,8 +47,10 @@ class MealRecommendationService {
       try {
         final recipes = await recipeService.getRecipesByIngredient(ingredient);
         for (var recipe in recipes) {
-          // 5. Lọc gợi ý công thức dưới 15 phút (durationMinutes <= 15)
-          if (recipe.durationMinutes != null && recipe.durationMinutes! > maxDurationMinutes) {
+          // Bỏ lọc cố định <= 15p: chỉ lọc nếu có yêu cầu cụ thể
+          if (maxDurationMinutes != null &&
+              recipe.durationMinutes != null &&
+              recipe.durationMinutes! > maxDurationMinutes) {
             continue;
           }
           // Loại bỏ duplicate dựa trên tên món ăn
@@ -62,7 +64,7 @@ class MealRecommendationService {
 
     final allRecipes = uniqueRecipes.values.toList();
 
-    // 6. Xếp hạng Recipe theo mức độ phù hợp (Score)
+    // 5. Xếp hạng Recipe theo thời gian nấu từ thấp đến cao (durationMinutes ASC)
     final scoredRecipes = allRecipes.map((recipe) {
       int score = 0;
       final recipeIngredientsLower = recipe.ingredients
@@ -72,7 +74,6 @@ class MealRecommendationService {
       for (var aiIng in normalizedIngredients) {
         final aiIngLower = aiIng.toLowerCase();
         
-        // Kiểm tra xem nguyên liệu AI có trong danh sách nguyên liệu của Recipe không
         bool isMatch = recipeIngredientsLower.any((recipeIng) =>
             recipeIng.contains(aiIngLower) || aiIngLower.contains(recipeIng));
         
@@ -83,8 +84,14 @@ class MealRecommendationService {
       return _ScoredRecipe(recipe, score);
     }).toList();
 
-    // Sort giảm dần theo score
-    scoredRecipes.sort((a, b) => b.score.compareTo(a.score));
+    // Sắp xếp thời gian nấu từ thấp tới cao, nếu bằng nhau thì ưu tiên món khớp nhiều nguyên liệu hơn
+    scoredRecipes.sort((a, b) {
+      final aTime = a.recipe.durationMinutes ?? 999;
+      final bTime = b.recipe.durationMinutes ?? 999;
+      final timeComp = aTime.compareTo(bTime);
+      if (timeComp != 0) return timeComp;
+      return b.score.compareTo(a.score);
+    });
 
     return MealRecommendationResult(
       recognizedIngredients: filteredResults,

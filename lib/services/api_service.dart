@@ -334,4 +334,58 @@ class ApiService {
       throw Exception('Failed to record cooking day (${response.statusCode}): ${response.body}');
     }
   }
+
+  // ---------------------------------------------------------
+  // DAILY HEALTH & SMARTWATCH METRICS
+  // ---------------------------------------------------------
+
+  static Future<Map<String, dynamic>> saveDailyHealthMetrics({
+    String? logDate,
+    required int steps,
+    required double caloriesBurned,
+    int? heartRateAvg,
+    int? activeMinutes,
+    String source = 'Nothing X',
+  }) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/health/daily');
+    final response = await http.post(
+      url,
+      headers: _headers(token),
+      body: json.encode({
+        if (logDate != null) 'logDate': logDate,
+        'steps': steps,
+        'caloriesBurned': caloriesBurned,
+        if (heartRateAvg != null) 'heartRateAvg': heartRateAvg,
+        if (activeMinutes != null) 'activeMinutes': activeMinutes,
+        'source': source,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(utf8.decode(response.bodyBytes));
+    } else {
+      throw Exception('Lỗi lưu chỉ số sức khỏe: ${response.body}');
+    }
+  }
+
+  static Future<List<dynamic>> getDailyHealthMetrics({
+    String? startDate,
+    String? endDate,
+    int limit = 30,
+  }) async {
+    final token = await _getToken();
+    String query = '?limit=$limit';
+    if (startDate != null) query += '&startDate=$startDate';
+    if (endDate != null) query += '&endDate=$endDate';
+
+    final url = Uri.parse('$baseUrl/health/daily$query');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      return data['metrics'] as List<dynamic>? ?? [];
+    } else {
+      throw Exception('Lỗi tải lịch sử sức khỏe: ${response.body}');
+    }
+  }
 }
+

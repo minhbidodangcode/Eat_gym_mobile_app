@@ -29,9 +29,9 @@ void main() {
       final results = LocalDockerFoodRecognitionService.parseDetections(mockResponse);
 
       expect(results.length, 2);
-      expect(results[0].foodName, "egg");
+      expect(results[0].foodName, "Trứng gà tươi");
       expect(results[0].confidence, 0.942);
-      expect(results[1].foodName, "tomato");
+      expect(results[1].foodName, "Cà chua bi");
       expect(results[1].confidence, 0.885);
     });
 

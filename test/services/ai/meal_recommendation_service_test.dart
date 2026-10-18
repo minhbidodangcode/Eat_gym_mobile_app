@@ -9,7 +9,7 @@ import 'package:gymer_app/services/ai/meal_recommendation_service.dart';
 class MockFoodRecognitionService implements FoodRecognitionService {
   List<FoodRecognitionResult> results = [];
   @override
-  Future<List<FoodRecognitionResult>> recognizeIngredients(File image) async {
+  Future<List<FoodRecognitionResult>> recognizeIngredients(File image, {double confidence = 0.25}) async {
     return results;
   }
 }
@@ -44,9 +44,9 @@ void main() {
     ];
 
     mockRecipe.mockData = {
-      'chicken': [Recipe(name: 'Chicken Soup', ingredients: ['chicken'], steps: [])],
-      'onion': [Recipe(name: 'Onion Rings', ingredients: ['onion'], steps: [])],
-      'mushroom': [Recipe(name: 'Mushroom Risotto', ingredients: ['mushroom'], steps: [])],
+      'Ức gà không da': [Recipe(name: 'Chicken Soup', ingredients: ['Ức gà không da'], steps: [])],
+      'Hành tây': [Recipe(name: 'Onion Rings', ingredients: ['Hành tây'], steps: [])],
+      'Nấm mỡ trắng': [Recipe(name: 'Mushroom Risotto', ingredients: ['Nấm mỡ trắng'], steps: [])],
     };
 
     final result = await service.recommendMeals(File('dummy.jpg'));
@@ -73,10 +73,10 @@ void main() {
       FoodRecognitionResult(foodName: 'Onion', confidence: 0.9),
     ];
 
-    final sharedRecipe = Recipe(name: 'Shared Dish', ingredients: ['chicken', 'onion'], steps: []);
+    final sharedRecipe = Recipe(name: 'Shared Dish', ingredients: ['Ức gà không da', 'hành tây'], steps: []);
     mockRecipe.mockData = {
-      'chicken': [sharedRecipe],
-      'onion': [sharedRecipe],
+      'Ức gà không da': [sharedRecipe],
+      'Hành tây': [sharedRecipe],
     };
 
     final result = await service.recommendMeals(File('dummy.jpg'));
@@ -90,18 +90,18 @@ void main() {
       FoodRecognitionResult(foodName: 'Onion', confidence: 0.9),
     ];
 
-    final recipe1 = Recipe(name: 'Just Chicken', ingredients: ['chicken'], steps: []);
-    final recipe2 = Recipe(name: 'Chicken & Onion', ingredients: ['chicken', 'onion'], steps: []);
+    final recipe1 = Recipe(name: 'Just Chicken', ingredients: ['Ức gà không da'], steps: [], durationMinutes: 10);
+    final recipe2 = Recipe(name: 'Chicken & Onion', ingredients: ['Ức gà không da', 'hành tây'], steps: [], durationMinutes: 10);
 
     mockRecipe.mockData = {
-      'chicken': [recipe1, recipe2],
-      'onion': [recipe2],
+      'Ức gà không da': [recipe1, recipe2],
+      'Hành tây': [recipe2],
     };
 
     final result = await service.recommendMeals(File('dummy.jpg'));
     
     expect(result.recipes.length, 2);
-    expect(result.recipes[0].name, 'Chicken & Onion'); // Score 2
+    expect(result.recipes[0].name, 'Chicken & Onion'); // Score 2 (same duration)
     expect(result.recipes[1].name, 'Just Chicken');    // Score 1
   });
 
@@ -111,10 +111,10 @@ void main() {
     ];
 
     mockRecipe.mockData = {
-      'chicken': [
-        Recipe(name: 'Quick Chicken Salad', ingredients: ['chicken'], steps: [], durationMinutes: 10),
-        Recipe(name: '15-Min Stir Fry', ingredients: ['chicken'], steps: [], durationMinutes: 15),
-        Recipe(name: 'Slow Roast Chicken', ingredients: ['chicken'], steps: [], durationMinutes: 45),
+      'Ức gà không da': [
+        Recipe(name: 'Quick Chicken Salad', ingredients: ['Ức gà không da'], steps: [], durationMinutes: 10),
+        Recipe(name: '15-Min Stir Fry', ingredients: ['Ức gà không da'], steps: [], durationMinutes: 15),
+        Recipe(name: 'Slow Roast Chicken', ingredients: ['Ức gà không da'], steps: [], durationMinutes: 45),
       ],
     };
 

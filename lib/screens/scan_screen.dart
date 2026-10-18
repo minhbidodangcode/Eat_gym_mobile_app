@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../models/recipe.dart';
 import '../services/ai/ai_service_factory.dart';
 import '../services/ai/meal_recommendation_service.dart';
-import '../services/ai/providers/themealdb_recipe_service.dart';
 
 // Nội dung chính của màn hình Quét
 class ScanScreen extends StatefulWidget {
@@ -17,6 +16,7 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   bool _isFlashOn = false;
   bool _isLoading = false;
+  double _confidenceThreshold = 0.4;
   File? _selectedImage;
   List<Recipe> _recommendedRecipes = [];
   List<String> _detectedIngredients = [];
@@ -29,7 +29,7 @@ class _ScanScreenState extends State<ScanScreen> {
     super.initState();
     _recommendationService = MealRecommendationService(
       foodRecognitionService: AIServiceFactory.createFoodRecognitionService(),
-      recipeService: TheMealDBRecipeService(),
+      recipeService: AIServiceFactory.createRecipeService(),
     );
   }
 
@@ -46,11 +46,10 @@ class _ScanScreenState extends State<ScanScreen> {
       });
 
       try {
-        // Gọi service nhận diện (Confidence > 40%) và gợi ý công thức dưới 15 phút
+        // Gọi service nhận diện theo độ tin cậy và gợi ý công thức xếp theo thời gian nấu từ thấp đến cao
         final result = await _recommendationService.recommendMeals(
           _selectedImage!,
-          minConfidence: 0.4,
-          maxDurationMinutes: 15,
+          minConfidence: _confidenceThreshold,
         );
 
         if (!mounted) return;

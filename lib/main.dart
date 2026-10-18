@@ -11,9 +11,8 @@ import 'screens/update_body_stats_screen.dart';
 import 'screens/nutrition_diary_screen.dart';
 import 'services/api_service.dart';
 import 'services/ai/ai_service_factory.dart';
-import 'services/ai/meal_recommendation_service.dart';
-import 'services/ai/providers/themealdb_recipe_service.dart';
-import 'models/recipe.dart' as ai_model;
+import 'services/ai/ingredient_normalizer.dart';
+import 'models/food_recognition_result.dart';
 import 'widgets/app_bottom_nav_bar.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -218,6 +217,31 @@ class AppHeader extends StatelessWidget {
   }
 }
 
+// Model cho nguyên liệu được AI nhận diện đang chờ người dùng xem xét & xác nhận
+class _DetectedIngredientReviewItem {
+  final String name;
+  final String icon;
+  final double confidence;
+  final int kcalPer100g;
+  final int protein;
+  final int carbs;
+  final int fat;
+  int weight;
+  bool isSelected;
+
+  _DetectedIngredientReviewItem({
+    required this.name,
+    required this.icon,
+    required this.confidence,
+    required this.kcalPer100g,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    this.weight = 100,
+    this.isSelected = true,
+  });
+}
+
 // Nội dung chính của màn hình Quét
 class CameraScanContent extends StatefulWidget {
   const CameraScanContent({super.key});
@@ -228,6 +252,7 @@ class CameraScanContent extends StatefulWidget {
 
 class _CameraScanContentState extends State<CameraScanContent> {
   bool _isFlashOn = false;
+  double _confidenceThreshold = 0.4; // 4 mức: 0.2 (20%), 0.4 (40%), 0.6 (60%), 0.8 (80%)
   List<Map<String, dynamic>> _availableIngredients = [];
 
   // Lưu trữ nguyên liệu trong phiên làm việc (tồn tại khi chuyển tab, chỉ xóa khi thoát app)
@@ -443,22 +468,107 @@ class _CameraScanContentState extends State<CameraScanContent> {
     );
   }
 
+  Widget _buildConfidenceSelector() {
+    final levels = [
+      {'val': 0.2, 'label': '20%', 'desc': 'Nhạy'},
+      {'val': 0.4, 'label': '40%', 'desc': 'Chuẩn'},
+      {'val': 0.6, 'label': '60%', 'desc': 'Rõ'},
+      {'val': 0.8, 'label': '80%', 'desc': 'Chính xác'},
+    ];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      child: Row(
+        children: levels.map((lvl) {
+          final val = lvl['val'] as double;
+          final isSelected = (_confidenceThreshold - val).abs() < 0.05;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _confidenceThreshold = val;
+                });
+                ScaffoldMessenger.of(context).removeCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã chỉnh độ nhận diện AI: ${lvl['label']} (${lvl['desc']})'),
+                    duration: const Duration(milliseconds: 1000),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      lvl['label'] as String,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.onPrimary : AppColors.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      lvl['desc'] as String,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.onPrimary.withValues(alpha: 0.85) : AppColors.onSurfaceVariant,
+                        fontSize: 10,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Future<void> _processImageWithAI(XFile image) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
+      builder: (_) => Center(
         child: Card(
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
-            padding: EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('AI đang nhận diện nguyên liệu...', style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text('Lọc độ tin cậy > 40% & Công thức < 15p', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const CircularProgressIndicator(color: AppColors.primary),
+                const SizedBox(height: 16),
+                const Text('AI đang quét nguyên liệu...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 6),
+                Text(
+                  'Độ tin cậy lọc ≥ ${(_confidenceThreshold * 100).toInt()}% • YOLOv8 AI',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -467,64 +577,50 @@ class _CameraScanContentState extends State<CameraScanContent> {
     );
 
     try {
-      final recommendationService = MealRecommendationService(
-        foodRecognitionService: AIServiceFactory.createFoodRecognitionService(),
-        recipeService: TheMealDBRecipeService(),
-      );
-
-      final result = await recommendationService.recommendMeals(
+      final recognitionService = AIServiceFactory.createFoodRecognitionService();
+      final results = await recognitionService.recognizeIngredients(
         File(image.path),
-        minConfidence: 0.4, // Thuật toán AI: Confidence Score > 40%
-        maxDurationMinutes: 15, // Gợi ý công thức dưới 15 phút
+        confidence: _confidenceThreshold,
       );
 
       if (mounted) Navigator.pop(context); // Close loading dialog
 
-      if (result.recognizedIngredients.isNotEmpty) {
-        setState(() {
-          for (final item in result.recognizedIngredients) {
-            final name = item.foodName;
-            final already = _ingredients.any((i) => i['name'].toString().toLowerCase() == name.toLowerCase());
-            if (!already) {
-              _ingredients.add({
-                'name': name,
-                'icon': '🥗',
-                'weight': 100,
-                'kcalPer100g': 120,
-                'protein': 20,
-                'carbs': 5,
-                'fat': 2,
-              });
-            }
-          }
-          _syncSession();
-        });
+      // Lọc các kết quả có confidence >= _confidenceThreshold
+      final validResults = results.where((r) => r.confidence >= _confidenceThreshold).toList();
 
+      if (validResults.isEmpty) {
         if (mounted) {
-          final summary = result.recognizedIngredients
-              .map((r) => '${r.foodName} (${(r.confidence * 100).toStringAsFixed(0)}%)')
-              .join(', ');
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('AI nhận diện (Confidence > 40%): $summary'),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-
-          if (result.recipes.isNotEmpty) {
-            _showAiQuickRecipesDialog(result.recipes);
-          }
+          _showNoIngredientsFoundDialog();
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Không tìm thấy nguyên liệu nào đạt Confidence Score > 40%'),
-              backgroundColor: AppColors.warning,
-            ),
-          );
+        return;
+      }
+
+      // Nhóm và loại bỏ trùng lặp nguyên liệu, lấy độ tin cậy cao nhất cho mỗi loại
+      final Map<String, FoodRecognitionResult> uniqueMap = {};
+      for (final r in validResults) {
+        final key = r.foodName.toLowerCase().trim();
+        if (!uniqueMap.containsKey(key) || uniqueMap[key]!.confidence < r.confidence) {
+          uniqueMap[key] = r;
         }
+      }
+
+      final reviewItems = uniqueMap.values.map((r) {
+        final details = IngredientNormalizer.getIngredientDetails(r.foodName);
+        return _DetectedIngredientReviewItem(
+          name: details['vi']?.toString() ?? r.foodName,
+          icon: details['icon']?.toString() ?? '🥗',
+          confidence: r.confidence,
+          kcalPer100g: (details['kcal'] as num?)?.toInt() ?? 100,
+          protein: (details['protein'] as num?)?.toInt() ?? 15,
+          carbs: (details['carbs'] as num?)?.toInt() ?? 5,
+          fat: (details['fat'] as num?)?.toInt() ?? 3,
+          weight: 100,
+          isSelected: true,
+        );
+      }).toList();
+
+      if (mounted) {
+        _showDetectionReviewBottomSheet(reviewItems);
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -539,49 +635,464 @@ class _CameraScanContentState extends State<CameraScanContent> {
     }
   }
 
-  void _showAiQuickRecipesDialog(List<ai_model.Recipe> recipes) {
+  void _showNoIngredientsFoundDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
+        title: const Row(
           children: [
-            Text('GỢI Ý CÔNG THỨC < 15 PHÚT', style: AppTypography.badge(color: AppColors.primary)),
-            const SizedBox(height: 6),
-            Text('Từ AI Computer Vision (YOLOv8 Docker > 40%)', style: AppTypography.labelCaption()),
+            Icon(Icons.search_off, color: AppColors.warning),
+            SizedBox(width: 8),
+            Text('Chưa thấy nguyên liệu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ],
         ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 350,
-          child: ListView.builder(
-            itemCount: recipes.length,
-            itemBuilder: (context, idx) {
-              final r = recipes[idx];
-              final duration = r.durationMinutes ?? 12;
-              return ListTile(
-                dense: true,
-                leading: const Icon(Icons.restaurant_menu, color: AppColors.primary),
-                title: Text(r.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('⏱ $duration phút • ${r.ingredients.length} nguyên liệu'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CookingTimerScreen(
-                        recipe: {
-                          'title': r.name,
-                          'time': duration,
-                          'cooking_time_min': duration,
-                          'kcal': 320,
-                          'protein': 28,
-                          'instructions': r.steps.join('\n'),
-                        },
+        content: Text(
+          'Không tìm thấy nguyên liệu nào đạt độ tin cậy ≥ ${(_confidenceThreshold * 100).toInt()}%.\n\n'
+          '💡 Gợi ý:\n'
+          '• Thử chọn mức 20% (Nhạy) ở thanh chỉnh độ nhận diện.\n'
+          '• Chụp gần vật thể hơn, tránh bị sấp bóng hoặc mờ.\n'
+          '• Hoặc bấm "Thêm" để chọn trong 340 nguyên liệu sẵn có.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          if (_confidenceThreshold > 0.25)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() => _confidenceThreshold = 0.2);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã chuyển sang độ nhận diện 20% (Nhạy). Hãy thử chụp lại!'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              },
+              child: const Text('HẠ XUỐNG 20% & THỬ LẠI'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ĐÓNG'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDetectionReviewBottomSheet(List<_DetectedIngredientReviewItem> items) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final selectedCount = items.where((i) => i.isSelected).length;
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: 20,
+                right: 20,
+                top: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('XÁC NHẬN NGUYÊN LIỆU AI', style: AppTypography.titleMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Phát hiện ${items.length} món • Đã chọn $selectedCount món (≥ ${(_confidenceThreshold * 100).toInt()}%)',
+                            style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: () {
+                          setSheetState(() {
+                            final allSelected = items.every((i) => i.isSelected);
+                            for (var it in items) {
+                              it.isSelected = !allSelected;
+                            }
+                          });
+                        },
+                        icon: Icon(
+                          items.every((i) => i.isSelected) ? Icons.deselect : Icons.select_all,
+                          size: 16,
+                        ),
+                        label: Text(
+                          items.every((i) => i.isSelected) ? 'Bỏ chọn hết' : 'Chọn tất cả',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+
+                  // Danh sách nguyên liệu kèm checkbox và chỉnh khối lượng
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        final item = items[idx];
+                        final confPercent = (item.confidence * 100).toInt();
+                        final confColor = confPercent >= 70
+                            ? AppColors.green
+                            : (confPercent >= 40 ? AppColors.warning : AppColors.primary);
+
+                        final itemKcal = ((item.kcalPer100g * item.weight) / 100).round();
+                        final itemProtein = ((item.protein * item.weight) / 100).round();
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: item.isSelected ? AppColors.surfaceContainerLow : AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: item.isSelected ? AppColors.primary.withValues(alpha: 0.5) : AppColors.outlineVariant.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: item.isSelected,
+                                activeColor: AppColors.primary,
+                                onChanged: (val) {
+                                  setSheetState(() {
+                                    item.isSelected = val ?? false;
+                                  });
+                                },
+                              ),
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(item.icon, style: const TextStyle(fontSize: 20)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            item.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: item.isSelected ? AppColors.onSurface : AppColors.onSurfaceVariant,
+                                              decoration: item.isSelected ? null : TextDecoration.lineThrough,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: confColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '$confPercent%',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: confColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '$itemKcal kcal • $itemProtein g Đạm (${item.weight}g)',
+                                      style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Nút tăng giảm khối lượng nhanh
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    icon: const Icon(Icons.remove_circle_outline, size: 20, color: AppColors.onSurfaceVariant),
+                                    onPressed: item.weight > 50
+                                        ? () {
+                                            setSheetState(() {
+                                              item.weight -= 50;
+                                            });
+                                          }
+                                        : null,
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      _showEditWeightDialog(item, () => setSheetState(() {}));
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppColors.outlineVariant),
+                                      ),
+                                      child: Text(
+                                        '${item.weight}g',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    icon: const Icon(Icons.add_circle_outline, size: 20, color: AppColors.primary),
+                                    onPressed: () {
+                                      setSheetState(() {
+                                        item.weight += 50;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 2 Nút hành động
+                  Row(
+                    children: [
+                      // Nút 1: Lưu danh sách kho
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                          onPressed: selectedCount == 0
+                              ? null
+                              : () {
+                                  _addConfirmedItemsToCart(items.where((i) => i.isSelected).toList());
+                                  Navigator.pop(sheetContext);
+                                },
+                          icon: const Icon(Icons.playlist_add, size: 18),
+                          label: Text('LƯU DANH SÁCH ($selectedCount)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Nút 2: Gợi ý món ăn ngay
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: selectedCount == 0
+                              ? null
+                              : () {
+                                  final confirmed = items.where((i) => i.isSelected).toList();
+                                  _addConfirmedItemsToCart(confirmed);
+                                  Navigator.pop(sheetContext);
+                                  final names = confirmed.map((c) => c.name).toList();
+                                  _showRecipesForIngredients(names);
+                                },
+                          icon: const Icon(Icons.restaurant_menu, size: 18),
+                          label: const Text('GỢI Ý MÓN ĂN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditWeightDialog(_DetectedIngredientReviewItem item, VoidCallback onUpdated) {
+    final ctrl = TextEditingController(text: item.weight.toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('${item.icon} Chỉnh khối lượng: ${item.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Khối lượng (gam)',
+            suffixText: 'g',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('HỦY')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary),
+            onPressed: () {
+              final w = int.tryParse(ctrl.text.trim());
+              if (w != null && w > 0) {
+                item.weight = w;
+                onUpdated();
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('XÁC NHẬN'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addConfirmedItemsToCart(List<_DetectedIngredientReviewItem> confirmed) {
+    setState(() {
+      for (final item in confirmed) {
+        final existingIdx = _ingredients.indexWhere(
+          (i) => i['name'].toString().toLowerCase() == item.name.toLowerCase(),
+        );
+        if (existingIdx >= 0) {
+          _ingredients[existingIdx]['weight'] = item.weight;
+        } else {
+          _ingredients.add({
+            'name': item.name,
+            'icon': item.icon,
+            'weight': item.weight,
+            'kcalPer100g': item.kcalPer100g,
+            'protein': item.protein,
+            'carbs': item.carbs,
+            'fat': item.fat,
+          });
+        }
+      }
+      _syncSession();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đã cập nhật ${confirmed.length} nguyên liệu vào giỏ!'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showRecipesForIngredients(List<String> ingNames) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: AppColors.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          children: [
+            Text(
+              'CÔNG THỨC GỢI Ý TỪ AI',
+              style: AppTypography.badge(color: AppColors.primary).copyWith(
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Xếp theo thời gian nấu từ nhanh đến lâu • CSDL 4,008 món',
+              style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Container(width: 30, height: 2, color: AppColors.outlineVariant),
+          ],
+        ),
+        contentPadding: const EdgeInsets.all(16),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 380,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: ApiService.suggestRecipes(ingNames),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final recipes = snapshot.data ?? [];
+              if (recipes.isEmpty) {
+                return Center(
+                  child: Text(
+                    'Không tìm thấy công thức phù hợp với nguyên liệu đã chọn.\nHãy thử bổ sung thêm nguyên liệu khác!',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant),
+                  ),
+                );
+              }
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: recipes.length,
+                itemBuilder: (context, idx) {
+                  final r = recipes[idx];
+                  final title = r['title'] ?? 'Món ăn';
+                  final kcal = r['kcal'] ?? 0;
+                  final time = r['time'] ?? 15;
+                  final protein = r['protein'] ?? 0;
+                  final matchCount = r['matchingCount'] ?? 0;
+                  final tag = matchCount > 0
+                      ? 'Khớp $matchCount NVL'
+                      : (r['tags'] != null && (r['tags'] as List).isNotEmpty
+                          ? (r['tags'] as List).first.toString()
+                          : 'Gợi ý');
+                  return _buildRecipeItem(
+                    title,
+                    '$kcal kcal • $time phút • $protein g Pro',
+                    tag,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CookingTimerScreen(recipe: r),
+                        ),
+                      );
+                    },
                   );
                 },
               );
@@ -590,8 +1101,8 @@ class _CameraScanContentState extends State<CameraScanContent> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ĐÓNG'),
+            onPressed: () => Navigator.pop(context),
+            child: Text('ĐÓNG', style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -682,86 +1193,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
   void _showRecipesDialog() {
     final ingNames = _ingredients.map((i) => i['name'].toString()).toList();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: AppColors.surface,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
-          children: [
-            Text(
-              'CÔNG THỨC GỢI Ý',
-              style: AppTypography.badge(color: AppColors.onSurface).copyWith(
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(width: 30, height: 2, color: AppColors.outlineVariant),
-          ],
-        ),
-        contentPadding: const EdgeInsets.all(16),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 380,
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: ApiService.suggestRecipes(ingNames),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final recipes = snapshot.data ?? [];
-              if (recipes.isEmpty) {
-                return Center(
-                  child: Text(
-                    'Không tìm thấy công thức phù hợp với nguyên liệu này.',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant),
-                  ),
-                );
-              }
-              return ListView.builder(
-                shrinkWrap: true,
-                itemCount: recipes.length,
-                itemBuilder: (context, idx) {
-                  final r = recipes[idx];
-                  final title = r['title'] ?? 'Món ăn';
-                  final kcal = r['kcal'] ?? 0;
-                  final time = r['time'] ?? 15;
-                  final protein = r['protein'] ?? 0;
-                  final matchCount = r['matchingCount'] ?? 0;
-                  final tag = matchCount > 0
-                      ? 'Khớp $matchCount NVL'
-                      : (r['tags'] != null && (r['tags'] as List).isNotEmpty ? (r['tags'] as List).first.toString() : 'Gợi ý');
-                  return _buildRecipeItem(
-                    title,
-                    '$kcal kcal • $time phút • $protein g Pro',
-                    tag,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CookingTimerScreen(recipe: r),
-                        ),
-                      );
-                    },
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('ĐÓNG', style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
+    _showRecipesForIngredients(ingNames);
   }
 
   void _saveToInventory() async {
@@ -951,6 +1383,11 @@ class _CameraScanContentState extends State<CameraScanContent> {
           ),
         ),
 
+        // 1.5. Nút chỉnh độ nhận diện AI (20%, 40%, 60%, 80%)
+        SliverToBoxAdapter(
+          child: _buildConfidenceSelector(),
+        ),
+
         // 2. Khối Camera có hiệu ứng thu nhỏ mượt mà thành icon bar (như Ảnh 3) khi vuốt lên
         SliverPersistentHeader(
           pinned: true,
@@ -959,6 +1396,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
             minHeight: 80.0,
             onCapture: _simulateCapture,
             onGallery: _simulateGallery,
+            confidenceThreshold: _confidenceThreshold,
           ),
         ),
 
@@ -1249,12 +1687,14 @@ class _CameraScanHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final VoidCallback onCapture;
   final VoidCallback onGallery;
+  final double confidenceThreshold;
 
   _CameraScanHeaderDelegate({
     required this.maxHeight,
     required this.minHeight,
     required this.onCapture,
     required this.onGallery,
+    required this.confidenceThreshold,
   });
 
   @override
@@ -1392,28 +1832,28 @@ class _CameraScanHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                     ),
 
-                    // Auto-detect & 60 FPS
+                    // Auto-detect & Confidence indicator
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.auto_awesome, color: AppColors.onSurfaceVariant, size: 14),
+                            const Icon(Icons.tune, color: AppColors.primary, size: 14),
                             const SizedBox(width: 4),
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'AUTO-DETECT',
+                                  'ĐỘ NHẬN: ${(confidenceThreshold * 100).toInt()}%',
                                   style: AppTypography.labelCaption(color: AppColors.onSurface)
                                       .copyWith(fontWeight: FontWeight.w900, fontSize: 10),
                                 ),
                                 Text(
-                                  '60 FPS',
-                                  style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant)
-                                      .copyWith(fontSize: 9),
+                                  'YOLOv8 AI',
+                                  style: AppTypography.labelCaption(color: AppColors.primary)
+                                      .copyWith(fontSize: 9, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),

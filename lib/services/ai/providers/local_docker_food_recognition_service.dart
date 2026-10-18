@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../../models/food_recognition_result.dart';
 import '../food_recognition_service.dart';
+import '../ingredient_normalizer.dart';
 
 /// Provider nhận diện đồ ăn qua Local Docker AI Server (FastAPI + YOLOv8)
 class LocalDockerFoodRecognitionService implements FoodRecognitionService {
   /// Danh sách endpoint dự phòng:
+  /// - ngrok: Tên miền cố định
   /// - 127.0.0.1:8000: Dành cho kết nối qua cáp USB (đã reverse port qua adb)
   /// - 10.0.2.2:8000: Dành cho Android Emulator
   /// - 192.168.1.47:8000: Dành cho mạng nội bộ Wi-Fi LAN
@@ -22,7 +24,7 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
           'https://kindly-absolve-concur.ngrok-free.dev/api/v1/detect',
         ];
 
-  /// Chuyển đổi dữ liệu JSON từ eatgym-ai thành danh sách FoodRecognitionResult
+  /// Chuyển đổi dữ liệu JSON từ eatgym-ai thành danh sách FoodRecognitionResult (Đã dịch sang tiếng Việt)
   static List<FoodRecognitionResult> parseDetections(Map<String, dynamic> data) {
     if (!data.containsKey('detections') || data['detections'] is! List) {
       return [];
@@ -34,12 +36,15 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
       try {
         final englishName = item['english_name']?.toString().trim();
         final className = item['class_name']?.toString().trim();
-        final foodName = (englishName != null && englishName.isNotEmpty)
+        final rawFoodName = (englishName != null && englishName.isNotEmpty)
             ? englishName
             : (className ?? 'Unknown');
 
+        // Ánh xạ tự động từ nhãn tiếng Anh của YOLO sang tiếng Việt chuẩn trong CSDL
+        final vietnameseName = IngredientNormalizer.normalizeToVietnamese(rawFoodName);
+
         return FoodRecognitionResult(
-          foodName: foodName,
+          foodName: vietnameseName,
           confidence: (item['confidence'] as num?)?.toDouble() ?? 0.0,
         );
       } catch (e) {
@@ -51,12 +56,18 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
   }
 
   @override
-  Future<List<FoodRecognitionResult>> recognizeIngredients(File image) async {
+  Future<List<FoodRecognitionResult>> recognizeIngredients(File image, {double confidence = 0.25}) async {
     Exception? lastError;
 
     for (final endpoint in endpoints) {
       try {
-        final uri = Uri.parse(endpoint);
+        // Truyền tham số confidence xuống API AI
+        final baseUri = Uri.parse(endpoint);
+        final uri = baseUri.replace(queryParameters: {
+          ...baseUri.queryParameters,
+          'confidence': confidence.toString(),
+        });
+
         final request = http.MultipartRequest('POST', uri);
         request.headers['ngrok-skip-browser-warning'] = 'true';
         request.files.add(

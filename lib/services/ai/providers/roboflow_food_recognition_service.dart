@@ -36,7 +36,7 @@ class RoboflowFoodRecognitionService implements FoodRecognitionService {
   }
 
   @override
-  Future<List<FoodRecognitionResult>> recognizeIngredients(File image) async {
+  Future<List<FoodRecognitionResult>> recognizeIngredients(File image, {double confidence = 0.25}) async {
     try {
       final bytes = await image.readAsBytes();
       final base64Image = base64Encode(bytes);

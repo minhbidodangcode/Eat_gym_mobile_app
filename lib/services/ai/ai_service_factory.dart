@@ -1,6 +1,8 @@
 import 'food_recognition_service.dart';
+import 'recipe_service.dart';
 import 'providers/local_docker_food_recognition_service.dart';
 import 'providers/roboflow_food_recognition_service.dart';
+import 'providers/eatgym_backend_recipe_service.dart';
 
 class AIServiceFactory {
   /// Mặc định sử dụng Local Docker AI Service (FastAPI + YOLOv8)
@@ -13,4 +15,10 @@ class AIServiceFactory {
     }
     return LocalDockerFoodRecognitionService();
   }
+
+  /// Khởi tạo Recipe Service kết nối với CSDL 4,008 món ăn EatGym
+  static RecipeService createRecipeService() {
+    return EatGymBackendRecipeService();
+  }
 }
+

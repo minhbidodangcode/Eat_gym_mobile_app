@@ -73,9 +73,29 @@ class BadgesAndReportModel extends ChangeNotifier {
   // Health Data từ Smartwatch / Health Connect / Apple Health
   int get todaySteps => HealthService.instance.todaySteps;
   int get todayCaloriesBurned => HealthService.instance.todayCaloriesBurned;
+  int get todayHeartRate => HealthService.instance.todayHeartRate;
   bool get isHealthAuthorized => HealthService.instance.isAuthorized;
   DateTime? get lastHealthSyncTime => HealthService.instance.lastSyncTime;
   String get healthSourceLabel => HealthService.instance.healthSourceLabel;
+
+  /// Cập nhật chỉ số sức khỏe hàng ngày (0h-24h) từ Smartwatch (Nothing X)
+  Future<void> updateDailyHealthMetrics({
+    required int steps,
+    required int caloriesBurned,
+    int? heartRate,
+    String? source,
+    String? logDate,
+  }) async {
+    await HealthService.instance.updateCustomHealthMetrics(
+      steps: steps,
+      caloriesBurned: caloriesBurned,
+      heartRate: heartRate,
+      source: source,
+      logDate: logDate,
+      syncBackend: true,
+    );
+    await fetchAchievementsData();
+  }
 
   // Filter
   BadgeCategory _selectedCategory = BadgeCategory.all;
@@ -205,7 +225,9 @@ class BadgesAndReportModel extends ChangeNotifier {
       macroTargetCount = calculatedMacroDays > 0 ? calculatedMacroDays : (streakDays > 0 ? streakDays : 1);
 
       // 4. Kiểm tra trạng thái Health Connect / Apple Health
-      final bool isHealthConnected = HealthService.instance.isAuthorized || HealthService.instance.todayCaloriesBurned > 0;
+      final bool isHealthConnected = HealthService.instance.isAuthorized ||
+          HealthService.instance.todayCaloriesBurned > 0 ||
+          HealthService.instance.todaySteps > 0;
 
       // 5. Cập nhật tiến độ của từng huy hiệu theo số liệu thực tế
       _badges = _badges.map((item) {
