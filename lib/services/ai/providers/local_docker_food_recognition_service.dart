@@ -15,10 +15,11 @@ class LocalDockerFoodRecognitionService implements FoodRecognitionService {
   LocalDockerFoodRecognitionService({
     List<String>? endpoints,
   }) : endpoints = endpoints ?? [
-          'https://kindly-absolve-concur.ngrok-free.dev/api/v1/detect',
-          'http://127.0.0.1:8000/api/v1/detect',
+          'http://192.168.1.54:8000/api/v1/detect',
           'http://10.0.2.2:8000/api/v1/detect',
+          'http://127.0.0.1:8000/api/v1/detect',
           'http://192.168.1.47:8000/api/v1/detect',
+          'https://kindly-absolve-concur.ngrok-free.dev/api/v1/detect',
         ];
 
   /// Chuyển đổi dữ liệu JSON từ eatgym-ai thành danh sách FoodRecognitionResult
