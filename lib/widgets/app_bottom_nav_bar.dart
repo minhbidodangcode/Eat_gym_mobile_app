@@ -14,7 +14,7 @@ class AppBottomNavBar extends StatelessWidget {
 
   static const List<Map<String, dynamic>> navItems = [
     {'icon': Icons.roofing, 'label': 'Home'},
-    {'icon': Icons.document_scanner, 'label': 'Quét'},
+    {'icon': Icons.kitchen_outlined, 'label': 'Tủ lạnh'},
     {'icon': Icons.restaurant_menu, 'label': 'Nấu ăn'},
     {'icon': Icons.fitness_center, 'label': 'Vóc dáng'},
     {'icon': Icons.menu_book, 'label': 'Nhật ký'},
