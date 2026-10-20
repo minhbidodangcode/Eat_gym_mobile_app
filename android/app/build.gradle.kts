@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.gymer_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "26.3.11579264"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
