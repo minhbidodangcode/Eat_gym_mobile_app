@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'api_service.dart';
 
 class YoloApiService {
   // Địa chỉ AI FastAPI server trên máy ảo

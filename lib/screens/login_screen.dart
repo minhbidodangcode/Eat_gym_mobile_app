@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 // Các màn hình phụ
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,8 +29,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkAutoLogin() async {
     final loggedIn = await ApiService.isLoggedIn();
     if (loggedIn && mounted) {
+      Map<String, dynamic>? profile;
+      try {
+        profile = await ApiService.getProfile();
+      } catch (_) {
+        // Giữ trải nghiệm đăng nhập cũ nếu máy đang mất kết nối tạm thời.
+        profile = {};
+      }
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+        MaterialPageRoute(builder: (context) => profile == null ? const OnboardingScreen() : const MainScreen()),
       );
     }
   }
@@ -52,8 +61,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await ApiService.login(email, password);
       if (mounted) {
+        Map<String, dynamic>? profile;
+        try {
+          profile = await ApiService.getProfile();
+        } catch (_) {
+          profile = {};
+        }
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
+          MaterialPageRoute(builder: (context) => profile == null ? const OnboardingScreen() : const MainScreen()),
         );
       }
     } catch (e) {

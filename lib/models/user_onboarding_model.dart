@@ -73,7 +73,7 @@ class MacroBreakdown {
 
 class UserOnboardingModel extends ChangeNotifier {
   Gender _gender = Gender.male;
-  int _age = 26;
+  DateTime _dateOfBirth = DateTime(DateTime.now().year - 26, 1, 1);
   double _heightCm = 175.0;
   double _weightKg = 74.5;
   ActivityLevel _activityLevel = ActivityLevel.medium;
@@ -81,12 +81,20 @@ class UserOnboardingModel extends ChangeNotifier {
   NutritionGoal _goal = NutritionGoal.fatLoss;
   int _calories = 2150;
 
-  final Set<String> _selectedAllergies = {'Đậu phộng', 'Sữa bò'};
-  final Set<String> _selectedPreferences = {'Eat Clean', 'High Protein'};
+  final Set<String> _selectedAllergies = {};
+  final Set<String> _selectedPreferences = {};
 
   // Getters
   Gender get gender => _gender;
-  int get age => _age;
+  DateTime get dateOfBirth => _dateOfBirth;
+  int get age {
+    final today = DateTime.now();
+    var result = today.year - _dateOfBirth.year;
+    if (DateTime(today.year, _dateOfBirth.month, _dateOfBirth.day).isAfter(today)) {
+      result--;
+    }
+    return result;
+  }
   double get heightCm => _heightCm;
   double get weightKg => _weightKg;
   ActivityLevel get activityLevel => _activityLevel;
@@ -106,7 +114,12 @@ class UserOnboardingModel extends ChangeNotifier {
   }
 
   void setAge(int val) {
-    _age = val.clamp(15, 100);
+    _dateOfBirth = DateTime(DateTime.now().year - val.clamp(13, 120).toInt(), 1, 1);
+    notifyListeners();
+  }
+
+  void setDateOfBirth(DateTime value) {
+    _dateOfBirth = value;
     notifyListeners();
   }
 

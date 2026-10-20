@@ -78,6 +78,17 @@ class PhysicalInfoCard extends StatelessWidget {
     );
   }
 
+  Future<void> _pickDateOfBirth(BuildContext context) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: model.dateOfBirth,
+      firstDate: DateTime(DateTime.now().year - 120),
+      lastDate: DateTime(DateTime.now().year - 13),
+      helpText: 'CHỌN NGÀY SINH',
+    );
+    if (selected != null) model.setDateOfBirth(selected);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -133,18 +144,10 @@ class PhysicalInfoCard extends StatelessWidget {
                   Expanded(
                     child: _buildMetricTile(
                       context,
-                      label: 'TUỔI',
-                      value: '${model.age}',
-                      unit: 'năm',
-                      onTap: () {
-                        _showNumberEditDialog(
-                          context,
-                          title: 'Tuổi',
-                          unit: 'năm',
-                          initialValue: model.age,
-                          onSubmitted: (v) => model.setAge(v.toInt()),
-                        );
-                      },
+                      label: 'NGÀY SINH',
+                      value: '${model.dateOfBirth.day.toString().padLeft(2, '0')}/${model.dateOfBirth.month.toString().padLeft(2, '0')}',
+                      unit: '${model.age} tuổi',
+                      onTap: () => _pickDateOfBirth(context),
                     ),
                   ),
                   const SizedBox(width: 8),

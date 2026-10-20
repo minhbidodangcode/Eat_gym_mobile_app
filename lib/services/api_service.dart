@@ -91,6 +91,60 @@ class ApiService {
     await prefs.remove('user_profile');
   }
 
+  // ---------------------------------------------------------
+  // HỒ SƠ KHỞI TẠO (ONBOARDING PROFILE)
+  // ---------------------------------------------------------
+
+  /// Trả về `null` khi tài khoản chưa tạo hồ sơ lần đầu.
+  static Future<Map<String, dynamic>?> getProfile() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/profile'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(json.decode(response.body)['profile']);
+    }
+    if (response.statusCode == 404) return null;
+    throw Exception('Không thể tải hồ sơ: ${response.body}');
+  }
+
+  static Future<Map<String, dynamic>> saveProfile({
+    required String sex,
+    required String dateOfBirth,
+    required double heightCm,
+    required double weightKg,
+    required String activityLevel,
+    required String fitnessGoal,
+  }) async {
+    final token = await _getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl/profile'),
+      headers: _headers(token),
+      body: json.encode({
+        'sex': sex,
+        'dateOfBirth': dateOfBirth,
+        'heightCm': heightCm,
+        'weightKg': weightKg,
+        'activityLevel': activityLevel,
+        'fitnessGoal': fitnessGoal,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(json.decode(response.body));
+    }
+    throw Exception('Không thể lưu hồ sơ: ${response.body}');
+  }
+
+  static Future<void> saveOnboardingPreferences({
+    required Iterable<String> allergies,
+    required Iterable<String> preferences,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('food_allergies', allergies.toList());
+    await prefs.setStringList('food_preferences', preferences.toList());
+  }
+
   static Future<Map<String, dynamic>> register(String fullName, String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/register');
     final response = await http.post(

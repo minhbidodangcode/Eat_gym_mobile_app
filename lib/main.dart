@@ -4,6 +4,7 @@ import 'theme/app_theme.dart';
 import 'screens/body_stats_screen.dart';
 import 'screens/cooking_timer_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/badges_and_report_screen.dart';
 import 'models/badges_and_report_model.dart';
 import 'screens/recipe_search_screen.dart';
@@ -14,6 +15,8 @@ import 'services/ai/ai_service_factory.dart';
 import 'services/ai/ingredient_normalizer.dart';
 import 'models/food_recognition_result.dart';
 import 'widgets/app_bottom_nav_bar.dart';
+import 'widgets/voice_ingredient_sheet.dart';
+import 'screens/nutrigym_chatbot_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
 void main() async {
@@ -32,7 +35,41 @@ class NutriGymApp extends StatelessWidget {
       title: 'NutriGym AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: isLoggedIn ? const MainScreen() : const LoginScreen(),
+      home: AppStartupGate(isLoggedIn: isLoggedIn),
+    );
+  }
+}
+
+class AppStartupGate extends StatefulWidget {
+  final bool isLoggedIn;
+  const AppStartupGate({super.key, required this.isLoggedIn});
+
+  @override
+  State<AppStartupGate> createState() => _AppStartupGateState();
+}
+
+class _AppStartupGateState extends State<AppStartupGate> {
+  late final Future<Map<String, dynamic>?> _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _profile = widget.isLoggedIn ? ApiService.getProfile() : Future.value(null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isLoggedIn) return const LoginScreen();
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _profile,
+      builder: (_, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        // Khi mạng đang tạm lỗi, vẫn cho người dùng truy cập app đã đăng nhập.
+        if (snapshot.hasError || snapshot.data != null) return const MainScreen();
+        return const OnboardingScreen();
+      },
     );
   }
 }
@@ -123,31 +160,78 @@ class AppHeader extends StatelessWidget {
               ),
             ],
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.person_outline, color: AppColors.onSurface),
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: AppColors.surface,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Nút Mở AI Chatbot Trợ Lý Dinh Dưỡng
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NutriGymChatbotScreen()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, Color(0xFF2563EB)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  builder: (context) => _buildProfileSheet(context),
-                );
-              },
-            ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.smart_toy, color: Colors.white, size: 16),
+                      SizedBox(width: 5),
+                      Text(
+                        'AI CHAT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.person_outline, color: AppColors.onSurface),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: AppColors.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (context) => _buildProfileSheet(context),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -246,6 +330,9 @@ class _DetectedIngredientReviewItem {
 class CameraScanContent extends StatefulWidget {
   const CameraScanContent({super.key});
 
+  // Lưu trữ nguyên liệu trong phiên làm việc (tồn tại khi chuyển tab, chỉ xóa khi thoát app)
+  static List<Map<String, dynamic>> sessionIngredients = [];
+
   @override
   State<CameraScanContent> createState() => _CameraScanContentState();
 }
@@ -255,19 +342,16 @@ class _CameraScanContentState extends State<CameraScanContent> {
   double _confidenceThreshold = 0.4; // 4 mức: 0.2 (20%), 0.4 (40%), 0.6 (60%), 0.8 (80%)
   List<Map<String, dynamic>> _availableIngredients = [];
 
-  // Lưu trữ nguyên liệu trong phiên làm việc (tồn tại khi chuyển tab, chỉ xóa khi thoát app)
-  static List<Map<String, dynamic>> sessionIngredients = [];
-
   List<Map<String, dynamic>> _ingredients = [];
 
   void _syncSession() {
-    sessionIngredients = List<Map<String, dynamic>>.from(_ingredients);
+    CameraScanContent.sessionIngredients = List<Map<String, dynamic>>.from(_ingredients);
   }
 
   @override
   void initState() {
     super.initState();
-    _ingredients = List<Map<String, dynamic>>.from(sessionIngredients);
+    _ingredients = List<Map<String, dynamic>>.from(CameraScanContent.sessionIngredients);
     _loadAvailableIngredients();
   }
 
@@ -284,7 +368,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
   void _showIngredientOptions(int index) {
     final item = _ingredients[index];
-    final TextEditingController _weightCtrl = TextEditingController(text: item['weight'].toString());
+    final TextEditingController weightCtrl = TextEditingController(text: item['weight'].toString());
 
     showDialog(
       context: context,
@@ -292,7 +376,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
         backgroundColor: AppColors.surface,
         title: Text('${item['icon']} ${item['name']}', style: AppTypography.titleMedium(color: AppColors.onSurface)),
         content: TextField(
-          controller: _weightCtrl,
+          controller: weightCtrl,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             labelText: 'Khối lượng (g)',
@@ -322,7 +406,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
             ),
             onPressed: () {
               setState(() {
-                item['weight'] = int.tryParse(_weightCtrl.text) ?? item['weight'];
+                item['weight'] = int.tryParse(weightCtrl.text) ?? item['weight'];
                 _syncSession();
               });
               Navigator.pop(context);
@@ -428,7 +512,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
                           )
                         : ListView.separated(
                             itemCount: available.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            separatorBuilder: (context, index) => const Divider(height: 1),
                             itemBuilder: (context, idx) {
                               final item = available[idx];
                               return ListTile(
@@ -756,7 +840,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
                   Expanded(
                     child: ListView.separated(
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, idx) {
                         final item = items[idx];
                         final confPercent = (item.confidence * 100).toInt();
@@ -1013,7 +1097,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Đã cập nhật ${confirmed.length} nguyên liệu vào giỏ!'),
+        content: Text('Đã cập nhật ${confirmed.length} nguyên liệu vào danh sách!'),
         backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 2),
       ),
@@ -1145,6 +1229,34 @@ class _CameraScanContentState extends State<CameraScanContent> {
         );
       }
     }
+  }
+
+  void _openVoiceIngredientInput() {
+    VoiceIngredientSheet.show(
+      context: context,
+      availableIngredients: _availableIngredients,
+      onConfirm: (results) {
+        setState(() {
+          for (final r in results) {
+            final existingIdx = _ingredients.indexWhere(
+              (i) => i['name'].toString().toLowerCase() == r.name.toLowerCase(),
+            );
+            if (existingIdx >= 0) {
+              _ingredients[existingIdx]['weight'] = r.weight;
+            } else {
+              _ingredients.add(r.toIngredientItem());
+            }
+          }
+          _syncSession();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã thêm ${results.length} nguyên liệu bằng giọng nói vào danh sách!'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      },
+    );
   }
 
   int get _totalCalories {
@@ -1396,6 +1508,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
             minHeight: 80.0,
             onCapture: _simulateCapture,
             onGallery: _simulateGallery,
+            onVoice: _openVoiceIngredientInput,
             confidenceThreshold: _confidenceThreshold,
           ),
         ),
@@ -1428,6 +1541,30 @@ class _CameraScanContentState extends State<CameraScanContent> {
                         style: AppTypography.titleMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
+                      // Nút Thêm bằng giọng nói
+                      GestureDetector(
+                        onTap: _openVoiceIngredientInput,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.mic, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'GIỌNG NÓI',
+                                style: AppTypography.labelCaption(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Nút Thêm thủ công
                       GestureDetector(
                         onTap: _showAddIngredientDialog,
                         child: Container(
@@ -1467,7 +1604,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _ingredients.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final ing = _ingredients[index];
                         final kcal = ((ing['kcalPer100g'] ?? 100) * (ing['weight'] ?? 100) / 100).round();
@@ -1552,28 +1689,61 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
                   const SizedBox(height: 10),
                   // Nút bấm thêm nguyên liệu dạng hàng
-                  InkWell(
-                    onTap: _showAddIngredientDialog,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.outlineVariant, style: BorderStyle.solid),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Thêm nguyên liệu khác',
-                            style: AppTypography.bodyMedium(color: AppColors.primary).copyWith(fontWeight: FontWeight.w600),
+                  // Hai nút bấm thêm nguyên liệu: Nói bằng giọng nói & Tìm thủ công
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: _openVoiceIngredientInput,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.mic, color: AppColors.primary, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Nói để thêm',
+                                  style: AppTypography.bodyMedium(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: _showAddIngredientDialog,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLow.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.outlineVariant),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.search, color: AppColors.onSurface, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Tìm thủ công',
+                                  style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 20),
@@ -1687,6 +1857,7 @@ class _CameraScanHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final VoidCallback onCapture;
   final VoidCallback onGallery;
+  final VoidCallback? onVoice;
   final double confidenceThreshold;
 
   _CameraScanHeaderDelegate({
@@ -1694,6 +1865,7 @@ class _CameraScanHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.minHeight,
     required this.onCapture,
     required this.onGallery,
+    this.onVoice,
     required this.confidenceThreshold,
   });
 
@@ -1766,47 +1938,82 @@ class _CameraScanHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ),
                 ),
 
-              // 3. Thanh điều khiển Camera (GALLERY, Nút chụp, AUTO-DETECT 60 FPS)
-              // Khi chưa vuốt: nằm gọn ở đáy card (bottom: 16)
-              // Khi vuốt lên: trượt đều lên căn giữa thanh 80px (như Ảnh 3)
+              // 3. Thanh điều khiển Camera (GALLERY, VOICE, Nút chụp, AUTO-DETECT)
               Positioned(
                 bottom: bottomPos,
                 left: 16.0,
                 right: 16.0,
                 child: Row(
                   children: [
-                    // Nút GALLERY
+                    // Nút GALLERY & VOICE
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: onGallery,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(9),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.06),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: onGallery,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(9),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.06),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.image_outlined, color: AppColors.onSurface, size: 20),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'GALLERY',
+                                    style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant)
+                                        .copyWith(fontWeight: FontWeight.bold, fontSize: 9),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (onVoice != null) ...[
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                onTap: onVoice,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(9),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceContainer,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(alpha: 0.18),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(Icons.mic, color: AppColors.primary, size: 20),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'VOICE',
+                                      style: AppTypography.labelCaption(color: AppColors.primary)
+                                          .copyWith(fontWeight: FontWeight.bold, fontSize: 9),
                                     ),
                                   ],
                                 ),
-                                child: const Icon(Icons.image_outlined, color: AppColors.onSurface, size: 20),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'GALLERY',
-                                style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant)
-                                    .copyWith(fontWeight: FontWeight.bold, fontSize: 9),
                               ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
