@@ -133,6 +133,14 @@ class IngredientNormalizer {
     if (_dictionary.containsKey(key)) {
       return Map<String, dynamic>.from(_dictionary[key]!);
     }
+    // 1. Khớp theo tên tiếng Việt
+    for (final entry in _dictionary.entries) {
+      final vi = (entry.value["vi"] as String? ?? '').toLowerCase();
+      if (vi == key || vi.contains(key) || key.contains(vi)) {
+        return Map<String, dynamic>.from(entry.value);
+      }
+    }
+    // 2. Khớp theo key tiếng Anh
     for (final entry in _dictionary.entries) {
       if (key.contains(entry.key) || entry.key.contains(key)) {
         return Map<String, dynamic>.from(entry.value);
@@ -147,6 +155,24 @@ class IngredientNormalizer {
       "fat": 2,
       "cat": "other"
     };
+  }
+
+  /// Kiểm tra xem một chuỗi có phải là nguyên liệu thực phẩm hợp lệ trong từ điển không
+  static bool isKnownIngredient(String rawName) {
+    final key = rawName.toLowerCase().trim();
+    if (key.isEmpty) return false;
+    if (_dictionary.containsKey(key)) return true;
+
+    for (final entry in _dictionary.entries) {
+      final vi = (entry.value["vi"] as String? ?? '').toLowerCase();
+      if (vi == key || vi.contains(key) || key.contains(vi)) {
+        return true;
+      }
+      if (key.contains(entry.key) || entry.key.contains(key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Tương thích ngược với code cũ
