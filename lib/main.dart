@@ -44,6 +44,186 @@ import 'package:image_picker/image_picker.dart';
 
 
 
+Widget buildFoodIconWidget(String? icon, {double size = 22, String? name}) {
+  String str = icon ?? '🥗';
+  final n = (name ?? '').toLowerCase();
+  
+  if (n.contains('thanh long')) {
+    str = 'assets/icons/thanh_long.png';
+  } else if (n.contains('dầu ô liu') || n.contains('olive')) {
+    str = 'assets/icons/dau_o_liu.png';
+  } else if (n.contains('dầu mè') || n.contains('dầu ăn') || n.contains('dầu thực vật') || (n.contains('dầu') && !n.contains('hào'))) {
+    str = 'assets/icons/dau_an.png';
+  } else if (n.contains('hạnh nhân') || n.contains('almond')) {
+    str = 'assets/icons/hat_hanh_nhan.png';
+  } else if (n.contains('óc chó') || n.contains('walnut')) {
+    str = 'assets/icons/hat_oc_cho.png';
+  } else if (n.contains('hạt điều') || n.contains('cashew')) {
+    str = 'assets/icons/hat_dieu.png';
+  } else if (n.contains('hạt chia') || n.contains('chia')) {
+    str = 'assets/icons/hat_chia.png';
+  } else if ((n.contains('mè') || n.contains('vừng') || n.contains('sesame')) && !n.contains('cá') && !n.contains('dầu')) {
+    str = 'assets/icons/me.png';
+  } else if (n.contains('xì dầu') || n.contains('nước tương') || n.contains('soy sauce')) {
+    str = 'assets/icons/xi_dau.png';
+  } else if (n.contains('ớt')) {
+    str = 'assets/icons/ot_tuoi.png';
+  } else if (n.contains('tương cà') || n.contains('ketchup')) {
+    str = 'assets/icons/tuong_ca.png';
+  } else if (n.contains('tương ớt') || n.contains('chili sauce') || n.contains('sriracha')) {
+    str = 'assets/icons/tuong_ot.png';
+  } else if (n.contains('tương đen') || n.contains('hoisin')) {
+    str = 'assets/icons/tuong_den.png';
+  } else if (n.contains('sốt mayonnaise') || n.contains('sốt mè rang') || n.contains('mayo')) {
+    str = 'assets/icons/sot_mayo.png';
+  } else if (n.contains('sả')) {
+    str = 'assets/icons/sa.png';
+  } else if (n.contains('rượu')) {
+    str = 'assets/icons/ruou_trang.png';
+  } else if (n.contains('dầu hào')) {
+    str = 'assets/icons/dau_hao.png';
+  } else if (n.contains('ngó sen')) {
+    str = 'assets/icons/ngo_sen.png';
+  } else if (n.contains('măng tây')) {
+    str = 'assets/icons/mang_tay.png';
+  } else if (n.contains('bắp cải trắng') || (n.contains('bắp cải') && !n.contains('tím'))) {
+    str = 'assets/icons/bap_cai_trang.png';
+  } else if (n.contains('nấm hương') || n.contains('nấm đông cô') || n.contains('shiitake')) {
+    str = 'assets/icons/nam_huong.png';
+  } else if (n.contains('nước mắm') || n.contains('fish sauce')) {
+    str = 'assets/icons/nuoc_mam.png';
+  } else if (n.contains('giấm táo') || n.contains('apple cider')) {
+    str = 'assets/icons/giam_tao.png';
+  } else if (n.contains('cari') || n.contains('cà ri') || n.contains('curry')) {
+    str = 'assets/icons/cari_bot.png';
+  } else if (n.contains('nấm kim châm')) {
+    str = 'assets/icons/nam_kim_cham.png';
+  } else if (n.contains('nấm rơm')) {
+    str = 'assets/icons/nam_rom.png';
+  } else if (n.contains('nấm đùi gà')) {
+    str = 'assets/icons/nam_dui_ga.png';
+  } else if (n.contains('giá đỗ')) {
+    str = 'assets/icons/gia_do.png';
+  } else if (n.contains('bắp cải tím')) {
+    str = 'assets/icons/bap_cai_tim.png';
+  } else if (n.contains('vải hộp') || n.contains('vải đóng hộp')) {
+    str = 'assets/icons/vai_hop.png';
+  } else if (n.contains('khoai tây chiên')) {
+    str = 'assets/icons/khoai_tay_chien.png';
+  } else if (n.contains('khoai tây') || n.contains('potato')) {
+    str = 'assets/icons/khoai_tay.png';
+  } else if (n.contains('khoai môn') || n.contains('taro')) {
+    str = 'assets/icons/khoai_mon.png';
+  } else if (n.contains('dứa đóng hộp') || n.contains('dứa hộp')) {
+    str = 'assets/icons/dua_hop.png';
+  } else if (n.contains('củ sắn') || n.contains('khoai mì')) {
+    str = 'assets/icons/cu_san.png';
+  } else if (n.contains('mứt đu đủ')) {
+    str = 'assets/icons/mut_du_du.png';
+  } else if (n.contains('củ từ')) {
+    str = 'assets/icons/cu_tu.png';
+  } else if (n.contains('wrap')) {
+    str = 'assets/icons/banh_wrap.png';
+  } else if (n.contains('đậu hũ chiên')) {
+    str = 'assets/icons/dau_hu_chien.png';
+  } else if (n.contains('đậu hũ') || n.contains('đậu phụ') || n.contains('tofu')) {
+    str = 'assets/icons/dau_phu.png';
+  } else if (n.contains('mắm tôm') || n.contains('shrimp paste')) {
+    str = 'assets/icons/mam_tom.png';
+  } else if (n.contains('bột sắn dây') || n.contains('bột sắn')) {
+    str = 'assets/icons/bot_san_day.png';
+  } else if (n.contains('bánh đúc')) {
+    str = 'assets/icons/banh_duc.png';
+  } else if (n.contains('bún gạo lứt')) {
+    str = 'assets/icons/bun_gao_lut.png';
+  } else if (n.contains('miến')) {
+    str = 'assets/icons/mien_dong.png';
+  } else if (n.contains('bún')) {
+    str = 'assets/icons/bun.png';
+  } else if (n.contains('hoa chuối')) {
+    str = 'assets/icons/hoa_chuoi.png';
+  } else if (n.contains('whey') || n.contains('isolate')) {
+    str = 'assets/icons/whey_protein.png';
+  } else if (n.contains('thịt lợn hộp') || n.contains('thịt heo hộp') || n.contains('spam')) {
+    str = 'assets/icons/thit_lon_hop.png';
+  } else if (n.contains('thịt bò hộp') || n.contains('bò hộp') || n.contains('corned beef')) {
+    str = 'assets/icons/thit_bo_hop.png';
+  } else if (n.contains('pate') || n.contains('pa-tê')) {
+    str = 'assets/icons/pate.png';
+  } else if (n.contains('nem chua')) {
+    str = 'assets/icons/nem_chua.png';
+  } else if (n.contains('lạp xưởng') || n.contains('lạp sườn')) {
+    str = 'assets/icons/lap_xuong.png';
+  } else if (n.contains('lươn')) {
+    str = 'assets/icons/luon.png';
+  } else if (n.contains('lòng lợn') || n.contains('lòng heo') || n.contains('phèo')) {
+    str = 'assets/icons/long_lon.png';
+  } else if (n.contains('cá trích hộp') || n.contains('cá thu hộp') || n.contains('cá ngừ hộp') || (n.contains('cá') && n.contains('hộp'))) {
+    str = 'assets/icons/ca_hop.png';
+  } else if (n.contains('phồng tôm')) {
+    str = 'assets/icons/banh_phong_tom.png';
+  } else if (n.contains('chả lụa') || n.contains('giò lụa')) {
+    str = 'assets/icons/cha_lua.png';
+  } else if (n.contains('chả quế')) {
+    str = 'assets/icons/cha_que.png';
+  } else if (n.contains('chà bông') || n.contains('ruốc thịt') || n.contains('ruốc')) {
+    str = 'assets/icons/cha_bong.png';
+  } else if (n.contains('gan gà')) {
+    str = 'assets/icons/con_ga.png';
+  } else if (n.contains('gan vịt')) {
+            str = 'assets/icons/con_vit.png';
+  } else if (n.contains('thịt gà hộp') || (n.contains('gà') && n.contains('hộp'))) {
+    str = 'assets/icons/thit_lon_hop.png';
+  } else if (n.contains('bánh phở') || n.contains('phở')) {
+    str = 'assets/icons/banh_pho.png';
+  } else if (n.contains('giá đỗ')) {
+    str = 'assets/icons/gia_do.png';
+  } else if (n.contains('nem chua')) {
+    str = 'assets/icons/nem_chua.png';
+  } else if (n.contains('chả bò')) {
+    str = 'assets/icons/cha_bo.png';
+  } else if (n.contains('thịt vịt') || n.contains('vịt')) {
+    str = 'assets/icons/con_vit.png';
+  } else if (n.contains('coca') || n.contains('pepsi')) {
+    str = 'assets/icons/cocacola.png';
+  } else if (n.contains('xoài') || n.contains('mango')) {
+    str = 'assets/icons/xoai.png';
+  } else if (n.contains('ba khía')) {
+    str = 'assets/icons/ba_khia.png';
+  } else if (n.contains('trứng vịt')) {
+    str = 'assets/icons/trung_vit.png';
+  } else if (n.contains('trứng') || n.contains('egg')) {
+    str = 'assets/icons/trung_ga.png';
+  } else if (n.contains('xúc xích')) {
+    str = 'assets/icons/xuc_xich.png';
+  } else if (n.contains('cải bó xôi') || n.contains('chân vịt') || n.contains('spinach')) {
+    str = 'assets/icons/cai_bo_xoi.png';
+  } else if (n.contains('ớt chuông')) {
+    str = 'assets/icons/ot_chuong.png';
+  } else if (n.contains('bánh tráng')) {
+    str = 'assets/icons/banh_trang.png';
+  } else if (!n.contains('hộp') && !n.contains('sữa') && (n.contains('thịt bò') || n.contains('bắp bò') || n.contains('gầu bò') || n.contains('thăn bò') || n.contains('bò'))) {
+    str = 'assets/icons/con_bo.png';
+  } else if (n.contains('gan bò') || n.contains('cật bò') || n.contains('bao tử bò') || n.contains('óc bò') || n.contains('đuôi bò')) {
+    str = 'assets/icons/con_bo.png';
+  } else if (n.contains('gan lợn') || n.contains('gan heo') || n.contains('cật lợn') || n.contains('cật heo') || n.contains('bao tử lợn') || n.contains('bao tử heo') || n.contains('óc lợn') || n.contains('óc heo')) {
+    str = 'assets/icons/thit_lon.png';
+  } else if (!n.contains('hộp') && (n.contains('thịt lợn') || n.contains('thịt heo') || n.contains('đầu lợn') || n.contains('đầu heo') || n.contains('đuôi lợn') || n.contains('đuôi heo') || n.contains('tai lợn') || n.contains('tai heo') || n.contains('sườn lợn') || n.contains('sườn non lợn') || n.contains('sườn heo') || n.contains('ba chỉ') || n.contains('ba rọi') || n.contains('giò lợn') || n.contains('giò heo') || n.contains('giò thủ') || n.contains('da lợn') || n.contains('da heo') || n.contains('dăm bông lợn') || n.contains('dăm bông heo') || n.contains('nạc heo') || n.contains('nạc lợn'))) {
+    str = 'assets/icons/thit_lon.png';
+  }
+
+  if (str.startsWith('assets/') || str.endsWith('.png')) {
+    return Image.asset(
+      str,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Text('🥗', style: TextStyle(fontSize: size)),
+    );
+  }
+  return Text(str, style: TextStyle(fontSize: size));
+}
+
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
@@ -1008,7 +1188,13 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
         backgroundColor: AppColors.surface,
 
-        title: Text('${item['icon']} ${item['name']}', style: AppTypography.titleMedium(color: AppColors.onSurface)),
+        title: Row(
+            children: [
+              buildFoodIconWidget(item['icon']?.toString(), size: 24),
+              const SizedBox(width: 8),
+              Expanded(child: Text(item['name']?.toString() ?? '', style: AppTypography.titleMedium(color: AppColors.onSurface))),
+            ],
+          ),
 
         content: TextField(
 
@@ -1168,7 +1354,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
               final name = (dbItem['name'] ?? '').toString().toLowerCase();
 
-              final matchesFilter = name.contains(filter.toLowerCase());
+              final matchesFilter = IngredientNormalizer.matchesSearch(name, filter);
 
               final notYetAdded = !_ingredients.any((i) => i['name'] == dbItem['name']);
 
@@ -1296,7 +1482,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
                                 contentPadding: EdgeInsets.zero,
 
-                                leading: Text(item['icon']?.toString() ?? '🥗', style: const TextStyle(fontSize: 24)),
+                                leading: buildFoodIconWidget(item['icon']?.toString(), size: 24),
 
                                 title: Text(item['name']?.toString() ?? '', style: AppTypography.bodyMedium(color: AppColors.onSurface)),
 
@@ -2018,7 +2204,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
                                 alignment: Alignment.center,
 
-                                child: Text(item.icon, style: const TextStyle(fontSize: 20)),
+                                child: buildFoodIconWidget(item.icon, size: 20),
 
                               ),
 
@@ -2346,7 +2532,13 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
         backgroundColor: AppColors.surface,
 
-        title: Text('${item.icon} Chỉnh khối lượng: ${item.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Row(
+            children: [
+              buildFoodIconWidget(item.icon, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Chỉnh khối lượng: ${item.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+            ],
+          ),
 
         content: TextField(
 
@@ -3512,7 +3704,7 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
                                 alignment: Alignment.center,
 
-                                child: Text(ing['icon']?.toString() ?? '🥗', style: const TextStyle(fontSize: 22)),
+                                child: buildFoodIconWidget(ing['icon']?.toString(), size: 22),
 
                               ),
 

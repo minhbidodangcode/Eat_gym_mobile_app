@@ -242,7 +242,7 @@ class VoiceIngredientParser {
       final isKnown = IngredientNormalizer.isKnownIngredient(ingredientQuery) ||
           (availableIngredients != null &&
               availableIngredients.any((i) =>
-                  (i['name'] ?? '').toString().toLowerCase().contains(ingredientQuery.toLowerCase())));
+                  IngredientNormalizer.matchesSearch((i['name'] ?? '').toString(), ingredientQuery)));
       if (!isKnown) {
         return null;
       }
@@ -326,8 +326,8 @@ class VoiceIngredientParser {
     if (availableIngredients != null && availableIngredients.isNotEmpty) {
       // Khớp chính xác hoặc chứa tên
       for (final item in availableIngredients) {
-        final name = (item['name'] ?? '').toString().toLowerCase();
-        if (name == qLower || name.contains(qLower) || qLower.contains(name)) {
+        final name = (item['name'] ?? '').toString();
+        if (IngredientNormalizer.matchesSearch(name, qLower) || IngredientNormalizer.matchesSearch(qLower, name)) {
           int finalWeight = weight;
           if (finalWeight < 0) {
             final count = (-finalWeight).toDouble();

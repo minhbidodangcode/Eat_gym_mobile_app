@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'cooking_timer_screen.dart';
 import '../services/api_service.dart';
+import '../services/ai/ingredient_normalizer.dart';
 
 /// Trang Nấu Ăn thiết kế theo phong cách Lướt Bảng Tin Instagram (Instagram Recipe Feed)
 
@@ -63,7 +64,7 @@ class RecipeImageDatabase {
     // 19. Đùi gà nướng thảo mộc
     'roast_chicken': 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800',
     'roast_chicken_thigh': 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800',
-    // 20. Thịt heo nạc rim mật ong cơm gạo lứt
+    // 20. Thịt lợn nạc rim mật ong cơm gạo lứt
     'pork_rice': 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=800',
     'pork_brown_rice': 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=800',
     // 21. Trứng cuộn phô mai rau củ
@@ -168,8 +169,8 @@ class RecipeImageDatabase {
       return standardImages['beef_rice']!;
     }
 
-    // 8. Thịt heo
-    if (lower.contains('thịt heo') || lower.contains('nạc heo') || lower.contains('heo rim') || lower.contains('thịt lợn') || lower.contains('thăn heo') || lower.contains('heo kho') || lower.contains('bao tử')) {
+    // 8. Thịt lợn
+    if (lower.contains('thịt lợn') || lower.contains('nạc lợn') || lower.contains('lợn rim') || lower.contains('thịt lợn') || lower.contains('thăn heo') || lower.contains('heo kho') || lower.contains('bao tử')) {
       return standardImages['pork_rice']!;
     }
 
@@ -443,7 +444,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
         buckets['beef']!.add(r);
       } else if (t.contains('ức gà') || t.contains('đùi gà') || t.contains('cánh gà') || t.contains('thịt gà') || t.contains('gà')) {
         buckets['chicken']!.add(r);
-      } else if (t.contains('thịt heo') || t.contains('nạc heo') || t.contains('thịt lợn') || t.contains('heo')) {
+      } else if (t.contains('thịt lợn') || t.contains('nạc lợn') || t.contains('thịt lợn') || t.contains('heo')) {
         buckets['pork']!.add(r);
       } else if (t.contains('bún') || t.contains('mì') || t.contains('phở') || t.contains('shirataki') || t.contains('miến') || t.contains('nui') || t.contains('bánh canh')) {
         buckets['noodle']!.add(r);
@@ -628,7 +629,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
       },
       {
         'id': 'ig_5',
-        'title': 'Cơm gạo lứt thịt nạc heo rim mật ong',
+        'title': 'Cơm gạo lứt thịt nạc lợn rim mật ong',
         'kcal': 420,
         'protein': 35,
         'carbs': 48,
@@ -637,12 +638,12 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
         'tags': ['Tăng cơ', 'Eat Clean'],
         'description': 'Bữa trưa no lâu với carbs chậm từ gạo lứt và protein nạc không mỡ, giúp cơ bắp có nguồn năng lượng dồi dào suốt ngày dài.',
         'ingredients': [
-          {'name': 'Thịt nạc heo thăn', 'amount': '200', 'unit': 'g'},
+          {'name': 'Thịt nạc lợn thăn', 'amount': '200', 'unit': 'g'},
           {'name': 'Cơm gạo lứt nấu chín', 'amount': '150', 'unit': 'g'},
           {'name': 'Mật ong & nước tương thanh vị', 'amount': '2', 'unit': 'muỗng'},
           {'name': 'Dưa chuột ăn kèm', 'amount': '1', 'unit': 'trái'},
         ],
-        'instructions': '1. Thái thịt nạc heo miếng vừa ăn, ướp mật ong, nước tương, tiêu tỏi trong 10 phút.\n2. Cho vào chảo rim lửa nhỏ cho đến khi sốt keo sền sệt bám đều thịt.\n3. Bày ăn cùng cơm gạo lứt nóng hổi và dưa chuột.',
+        'instructions': '1. Thái thịt nạc lợn miếng vừa ăn, ướp mật ong, nước tương, tiêu tỏi trong 10 phút.\n2. Cho vào chảo rim lửa nhỏ cho đến khi sốt keo sền sệt bám đều thịt.\n3. Bày ăn cùng cơm gạo lứt nóng hổi và dưa chuột.',
       },
     ];
   }
@@ -1196,7 +1197,7 @@ const SizedBox(height: 12),
             final filtered = savedPosts.where((p) {
               final title = (p['title'] ?? '').toString().toLowerCase();
               final desc = (p['description'] ?? '').toString().toLowerCase();
-              return title.contains(searchQuery.toLowerCase()) || desc.contains(searchQuery.toLowerCase());
+              return IngredientNormalizer.matchesSearch(title, searchQuery) || IngredientNormalizer.matchesSearch(desc, searchQuery);
             }).toList();
 
             return Container(

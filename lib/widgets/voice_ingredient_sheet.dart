@@ -1,3 +1,4 @@
+import '../main.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../theme/app_theme.dart';
@@ -204,7 +205,13 @@ class _VoiceIngredientSheetState extends State<VoiceIngredientSheet> with Single
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('${item.icon} Chỉnh khối lượng: ${item.name}', style: AppTypography.titleMedium(color: AppColors.onSurface)),
+        title: Row(
+          children: [
+            buildFoodIconWidget(item.icon, size: 20, name: item.name),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Chỉnh khối lượng: ${item.name}', style: AppTypography.titleMedium(color: AppColors.onSurface))),
+          ],
+        ),
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
@@ -485,7 +492,7 @@ class _VoiceIngredientSheetState extends State<VoiceIngredientSheet> with Single
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               alignment: Alignment.center,
-                              child: Text(item.icon, style: const TextStyle(fontSize: 20)),
+                              child: buildFoodIconWidget(item.icon, size: 22, name: item.name),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

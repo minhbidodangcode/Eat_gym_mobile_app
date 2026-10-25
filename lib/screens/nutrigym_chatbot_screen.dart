@@ -630,7 +630,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
               ),
               child: Row(
                 children: [
-                  Text(ing.icon, style: const TextStyle(fontSize: 18)),
+                  buildFoodIconWidget(ing.icon, size: 18, name: ing.name),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

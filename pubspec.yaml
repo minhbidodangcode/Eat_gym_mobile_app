@@ -66,6 +66,84 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/icons/
+    - assets/icons/thanh_long.png
+    - assets/icons/dau_o_liu.png
+    - assets/icons/dau_an.png
+    - assets/icons/hat_hanh_nhan.png
+    - assets/icons/hat_oc_cho.png
+    - assets/icons/hat_dieu.png
+    - assets/icons/me.png
+    - assets/icons/hat_chia.png
+    - assets/icons/xi_dau.png
+    - assets/icons/ot_tuoi.png
+    - assets/icons/tuong_ca.png
+    - assets/icons/tuong_ot.png
+    - assets/icons/tuong_den.png
+    - assets/icons/sot_mayo.png
+    - assets/icons/sa.png
+    - assets/icons/ruou_trang.png
+    - assets/icons/dau_hao.png
+    - assets/icons/ngo_sen.png
+    - assets/icons/mang_tay.png
+    - assets/icons/bap_cai_trang.png
+    - assets/icons/nam_huong.png
+    - assets/icons/nuoc_mam.png
+    - assets/icons/giam_tao.png
+    - assets/icons/cari_bot.png
+    - assets/icons/nam_kim_cham.png
+    - assets/icons/nam_rom.png
+    - assets/icons/nam_dui_ga.png
+    - assets/icons/gia_do.png
+    - assets/icons/bap_cai_tim.png
+    - assets/icons/vai_hop.png
+    - assets/icons/khoai_mon.png
+    - assets/icons/khoai_tay.png
+    - assets/icons/khoai_tay_chien.png
+    - assets/icons/dua_hop.png
+    - assets/icons/cu_san.png
+    - assets/icons/mut_du_du.png
+    - assets/icons/cu_tu.png
+    - assets/icons/banh_wrap.png
+    - assets/icons/dau_phu.png
+    - assets/icons/dau_hu_chien.png
+    - assets/icons/mam_tom.png
+    - assets/icons/bot_san_day.png
+    - assets/icons/bun.png
+    - assets/icons/mien_dong.png
+    - assets/icons/bun_gao_lut.png
+    - assets/icons/hoa_chuoi.png
+    - assets/icons/whey_protein.png
+    - assets/icons/thit_lon_hop.png
+    - assets/icons/thit_bo_hop.png
+    - assets/icons/pate.png
+    - assets/icons/nem_chua.png
+    - assets/icons/lap_xuong.png
+    - assets/icons/luon.png
+    - assets/icons/thit_lon.png
+    - assets/icons/long_lon.png
+    - assets/icons/ca_hop.png
+    - assets/icons/banh_phong_tom.png
+    - assets/icons/banh_duc.png
+    - assets/icons/cha_lua.png
+    - assets/icons/cha_que.png
+    - assets/icons/cha_bong.png
+    - assets/icons/con_bo.png
+    - assets/icons/con_ga.png
+    - assets/icons/con_vit.png
+    - assets/icons/cocacola.png
+    - assets/icons/xoai.png
+    - assets/icons/ba_khia.png
+    - assets/icons/trung_ga.png
+    - assets/icons/trung_vit.png
+    - assets/icons/xuc_xich.png
+    - assets/icons/cai_bo_xoi.png
+    - assets/icons/ot_chuong.png
+    - assets/icons/banh_trang.png
+    - assets/icons/banh_pho.png
+    - assets/icons/cha_bo.png
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

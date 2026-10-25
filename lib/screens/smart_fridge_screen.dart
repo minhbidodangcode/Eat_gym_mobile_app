@@ -97,6 +97,8 @@ class SmartFridgeScreen extends StatefulWidget {
 }
 
 class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTickerProviderStateMixin {
+  static List<Map<String, dynamic>>? _cachedAllRecipes;
+
 
   static const String _prefsKey = 'eatgym_smart_fridge_items_v4';
 
@@ -153,80 +155,141 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
   /// Tải danh sách nguyên liệu từ bộ nhớ máy hoặc pre-seed
 
   Future<void> _loadFridgeItems() async {
-
     try {
-
       final prefs = await SharedPreferences.getInstance();
-
       final jsonStr = prefs.getString(_prefsKey);
 
       if (jsonStr != null && jsonStr.isNotEmpty) {
-
         final List<dynamic> decoded = jsonDecode(jsonStr);
+        final loaded = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        final updatedList = <Map<String, dynamic>>[];
 
-        _fridgeItems = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        for (var item in loaded) {
+          var n = (item['name'] ?? '').toString().trim();
+          var lower = n.toLowerCase();
 
+          // 0. Bỏ Nhãn hộp
+          if (lower.contains('nhãn hộp')) {
+            continue;
+          }
+
+          // 1. Đổi hết heo -> lợn
+          if (lower.contains('heo')) {
+            n = n.replaceAll('heo', 'lợn').replaceAll('Heo', 'Lợn');
+            item['name'] = n;
+            lower = n.toLowerCase();
+          }
+
+          // 2. Đổi thơm -> dứa (trừ dầu mè thơm)
+          if (lower.contains('thơm') && !lower.contains('dầu mè')) {
+            n = n.replaceAll('thơm', 'dứa').replaceAll('Thơm', 'Dứa');
+            item['name'] = n;
+            lower = n.toLowerCase();
+          }
+
+          // 3. Chuẩn hóa tên chung chung
+          if (lower == 'nước ngọt') {
+            item['name'] = 'CocaCola';
+            item['icon'] = '🥤';
+            item['unit'] = 'lon';
+            item['kcalPer100g'] = 42;
+          } else if (lower == 'nước sốt') {
+            item['name'] = 'Sốt cà chua';
+            item['icon'] = '🥫';
+            item['unit'] = 'hũ';
+            item['kcalPer100g'] = 80;
+          } else if (lower == 'hải sản') {
+            item['name'] = 'Mực ống tươi';
+            item['icon'] = '🦑';
+            item['kcalPer100g'] = 85;
+          } else if (lower == 'cá') {
+            item['name'] = 'Phi lê cá hồi';
+            item['icon'] = '🐟';
+            item['kcalPer100g'] = 208;
+          } else if (lower == 'tôm') {
+            item['name'] = 'Tôm thẻ tươi';
+            item['icon'] = '🦐';
+            item['kcalPer100g'] = 99;
+          } else if (lower == 'thịt bò') {
+            item['name'] = 'Thịt thăn bò';
+            item['icon'] = '🥩';
+          } else if (lower == 'thịt heo' || lower == 'thịt lợn') {
+            item['name'] = 'Thịt nạc lợn';
+            item['icon'] = '🐖';
+          }
+
+          // 4. Chuẩn hóa icon theo tên nguyên liệu cụ thể
+          final detected = IngredientNormalizer.detectIcon(item['name'] ?? '');
+          if (detected != '🥗') {
+            item['icon'] = detected;
+          } else if (item['icon'] == null || item['icon'].toString().isEmpty) {
+            item['icon'] = detected;
+          }
+          updatedList.add(item);
+        }
+
+        _fridgeItems = updatedList;
+        _saveFridgeItems();
       } else {
-
-        // Khởi tạo sẵn một số món mẫu phổ biến trong tủ lạnh gymer
-
+        // Khởi tạo sẵn một số món mẫu phổ biến trong tủ lạnh gymer (tên cụ thể, icon chuẩn)
         _fridgeItems = [
           // Ngăn đông (Hàng 1)
           {
             'id': 'f_1',
-            'name': 'Thịt bò',
+            'name': 'Thịt thăn bò',
             'icon': '🥩',
-            'weight': 1,
-            'unit': 'phần',
+            'weight': 500,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 180,
+            'kcalPer100g': 142,
             'protein': 26,
             'carbs': 0,
-            'fat': 8,
+            'fat': 3.5,
           },
           {
             'id': 'f_2',
-            'name': 'Thịt heo',
-            'icon': '🥩',
-            'weight': 1,
-            'unit': 'phần',
+            'name': 'Thịt nạc lợn',
+            'icon': '🐖',
+            'weight': 400,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
             'kcalPer100g': 143,
-            'protein': 22,
+            'protein': 26,
             'carbs': 0,
-            'fat': 6,
+            'fat': 3.5,
           },
           {
             'id': 'f_3',
-            'name': 'Đùi gà',
+            'name': 'Ức gà tươi',
             'icon': '🍗',
-            'weight': 1,
-            'unit': 'cái',
+            'weight': 600,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 165,
-            'protein': 24,
+            'kcalPer100g': 120,
+            'protein': 26,
             'carbs': 0,
-            'fat': 7,
+            'fat': 1.5,
           },
           {
             'id': 'f_4',
-            'name': 'Cá',
+            'name': 'Phi lê cá hồi',
             'icon': '🐟',
-            'weight': 1,
-            'unit': 'con',
+            'weight': 350,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 120,
-            'protein': 20,
+            'kcalPer100g': 208,
+            'protein': 22,
             'carbs': 0,
-            'fat': 4,
+            'fat': 13,
           },
+
           // Ngăn đông (Hàng 2)
           {
             'id': 'f_5',
-            'name': 'Tôm',
+            'name': 'Tôm thẻ tươi',
             'icon': '🦐',
-            'weight': 1,
-            'unit': 'phần',
+            'weight': 300,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
             'kcalPer100g': 99,
             'protein': 24,
@@ -235,19 +298,19 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
           },
           {
             'id': 'f_6',
-            'name': 'Hải sản',
-            'icon': '🦀',
-            'weight': 1,
-            'unit': 'phần',
+            'name': 'Mực ống tươi',
+            'icon': '🦑',
+            'weight': 300,
+            'unit': 'g',
             'compartment': FridgeClassifier.freezer,
             'kcalPer100g': 85,
             'protein': 18,
-            'carbs': 0,
-            'fat': 1,
+            'carbs': 1.4,
+            'fat': 1.1,
           },
           {
             'id': 'f_7',
-            'name': 'Đá viên',
+            'name': 'Đá viên tinh khiết',
             'icon': '🧊',
             'weight': 1,
             'unit': 'khay',
@@ -259,109 +322,109 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
           },
           {
             'id': 'f_8',
-            'name': 'Kem',
+            'name': 'Kem sữa chua',
             'icon': '🍦',
             'weight': 1,
-            'unit': 'ly',
+            'unit': 'hộp',
             'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 207,
+            'kcalPer100g': 120,
             'protein': 3.5,
-            'carbs': 24,
-            'fat': 11,
+            'carbs': 18,
+            'fat': 3.0,
           },
 
-          // Ngăn mát - Kệ 1 (Trứng, Sữa, Phô mai, Bơ)
+          // Ngăn mát - Kệ 1 (Sữa trứng protein)
           {
             'id': 'c_1',
-            'name': 'Trứng gà',
+            'name': 'Trứng gà ta',
             'icon': '🥚',
-            'weight': 4,
+            'weight': 10,
             'unit': 'quả',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 143,
+            'kcalPer100g': 155,
             'protein': 13,
-            'carbs': 1,
-            'fat': 9.5,
+            'carbs': 1.1,
+            'fat': 11,
           },
           {
             'id': 'c_2',
-            'name': 'Sữa tươi',
+            'name': 'Sữa tươi tiệt trùng',
             'icon': '🥛',
-            'weight': 1,
-            'unit': 'hộp',
+            'weight': 1000,
+            'unit': 'ml',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 62,
+            'kcalPer100g': 60,
             'protein': 3.2,
             'carbs': 4.8,
-            'fat': 3.5,
+            'fat': 3.3,
           },
           {
             'id': 'c_3',
-            'name': 'Phô mai',
+            'name': 'Phô mai lát',
             'icon': '🧀',
-            'weight': 1,
-            'unit': 'miếng',
+            'weight': 200,
+            'unit': 'g',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 402,
-            'protein': 25,
-            'carbs': 1.3,
-            'fat': 33,
+            'kcalPer100g': 350,
+            'protein': 20,
+            'carbs': 2.0,
+            'fat': 28,
           },
           {
             'id': 'c_4',
-            'name': 'Bơ',
+            'name': 'Bơ lạt',
             'icon': '🧈',
-            'weight': 1,
-            'unit': 'khối',
+            'weight': 200,
+            'unit': 'g',
             'compartment': FridgeClassifier.cooler,
             'kcalPer100g': 717,
-            'protein': 0.9,
+            'protein': 0.8,
             'carbs': 0.1,
             'fat': 81,
           },
 
-          // Ngăn mát - Kệ 2 (Tương cà, Mứt dâu, Nước sốt, Nước ngọt)
+          // Ngăn mát - Kệ 2 (Đồ uống & Sốt tương)
           {
             'id': 'c_5',
-            'name': 'Tương cà',
+            'name': 'Tương cà chua',
             'icon': '🥫',
             'weight': 1,
             'unit': 'chai',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 100,
+            'kcalPer100g': 102,
             'protein': 1.2,
-            'carbs': 25,
-            'fat': 0.1,
+            'carbs': 24,
+            'fat': 0.2,
           },
           {
             'id': 'c_6',
-            'name': 'Mứt dâu',
+            'name': 'Sữa chua dâu',
             'icon': '🍓',
-            'weight': 1,
+            'weight': 4,
             'unit': 'hũ',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 250,
-            'protein': 0.5,
-            'carbs': 60,
-            'fat': 0.1,
+            'kcalPer100g': 85,
+            'protein': 3.5,
+            'carbs': 14,
+            'fat': 1.5,
           },
           {
             'id': 'c_7',
-            'name': 'Nước sốt',
-            'icon': '🍯',
+            'name': 'Sốt cà chua',
+            'icon': '🥫',
             'weight': 1,
             'unit': 'hũ',
             'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 120,
-            'protein': 1.0,
-            'carbs': 15,
-            'fat': 5,
+            'kcalPer100g': 80,
+            'protein': 1.5,
+            'carbs': 14,
+            'fat': 1.0,
           },
           {
             'id': 'c_8',
-            'name': 'Nước ngọt',
+            'name': 'CocaCola',
             'icon': '🥤',
-            'weight': 1,
+            'weight': 2,
             'unit': 'lon',
             'compartment': FridgeClassifier.cooler,
             'kcalPer100g': 42,
@@ -370,10 +433,10 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
             'fat': 0,
           },
 
-          // Ngăn mát - Hộc rau quả trái (Rau củ)
+          // Ngăn mát - Hộc rau quả trái (Rau xanh & Củ)
           {
             'id': 'v_1',
-            'name': 'Bông cải',
+            'name': 'Bông cải xanh',
             'icon': '🥦',
             'weight': 1,
             'unit': 'cây',
@@ -387,24 +450,24 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
           },
           {
             'id': 'v_2',
-            'name': 'Bắp cải',
+            'name': 'Cải thìa',
             'icon': '🥬',
             'weight': 1,
-            'unit': 'bắp',
+            'unit': 'bó',
             'compartment': FridgeClassifier.cooler,
             'isDrawer': true,
             'drawerIndex': 0,
-            'kcalPer100g': 25,
-            'protein': 1.3,
-            'carbs': 6,
-            'fat': 0.1,
+            'kcalPer100g': 13,
+            'protein': 1.5,
+            'carbs': 2.2,
+            'fat': 0.2,
           },
           {
             'id': 'v_3',
-            'name': 'Cà chua',
+            'name': 'Cà chua bi',
             'icon': '🍅',
-            'weight': 1,
-            'unit': 'quả',
+            'weight': 500,
+            'unit': 'g',
             'compartment': FridgeClassifier.cooler,
             'isDrawer': true,
             'drawerIndex': 0,
@@ -473,7 +536,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
           },
           {
             'id': 'v_8',
-            'name': 'Chuối',
+            'name': 'Chuối tiêu',
             'icon': '🍌',
             'weight': 1,
             'unit': 'nải',
@@ -487,7 +550,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
           },
           {
             'id': 'v_9',
-            'name': 'Cam',
+            'name': 'Cam sành',
             'icon': '🍊',
             'weight': 1,
             'unit': 'quả',
@@ -502,21 +565,14 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
         ];
 
         _saveFridgeItems();
-
       }
-
     } catch (_) {}
 
     _syncToGlobalSession();
-
     if (mounted) {
-
       setState(() => _isLoading = false);
-
     }
-
   }
-
   Future<void> _saveFridgeItems() async {
 
     try {
@@ -649,7 +705,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
 
         content: Text(
 
-          'Đã cất ${newItem['icon']} ${newItem['name']} vào ${comp == FridgeClassifier.freezer ? "❄️ NGĂN ĐÔNG" : "🍃 NGĂN MÁT"}!',
+          'Đã cất ${newItem['icon']?.toString().startsWith('assets/') == true ? '' : '${newItem['icon']} '}${newItem['name']} vào ${comp == FridgeClassifier.freezer ? "❄️ NGĂN ĐÔNG" : "🍃 NGĂN MÁT"}!',
 
         ),
 
@@ -663,6 +719,206 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
 
     );
 
+  }
+
+  /// Lấy icon chuẩn xác cho nguyên liệu, tự động sửa icon lỗi hoặc mặc định salad
+  String _getItemIcon(Map<String, dynamic> item) {
+    final currentIcon = item['icon']?.toString();
+    if (currentIcon != null && (currentIcon.startsWith('assets/') || currentIcon.endsWith('.png'))) {
+      return currentIcon;
+    }
+    final name = (item['name'] ?? '').toString();
+    final detected = IngredientNormalizer.detectIcon(name);
+    if (detected != '🥗') {
+      return detected;
+    }
+    if (currentIcon != null && currentIcon.isNotEmpty) {
+      return currentIcon;
+    }
+    return '🥗';
+  }
+
+  Widget _buildItemIconWidget(Map<String, dynamic> item, {double size = 22}) {
+    final name = (item['name'] ?? '').toString().toLowerCase();
+    final icon = _getItemIcon(item);
+    String? assetPath;
+
+    if (icon.startsWith('assets/') || icon.endsWith('.png')) {
+      assetPath = icon;
+    } else if (name.contains('thanh long')) {
+      assetPath = 'assets/icons/thanh_long.png';
+    } else if (name.contains('dầu ô liu') || name.contains('olive')) {
+      assetPath = 'assets/icons/dau_o_liu.png';
+    } else if (name.contains('dầu mè') || name.contains('dầu ăn') || name.contains('dầu thực vật') || (name.contains('dầu') && !name.contains('hào'))) {
+      assetPath = 'assets/icons/dau_an.png';
+    } else if (name.contains('hạnh nhân') || name.contains('almond')) {
+      assetPath = 'assets/icons/hat_hanh_nhan.png';
+    } else if (name.contains('óc chó') || name.contains('walnut')) {
+      assetPath = 'assets/icons/hat_oc_cho.png';
+    } else if (name.contains('hạt điều') || name.contains('cashew')) {
+      assetPath = 'assets/icons/hat_dieu.png';
+    } else if (name.contains('hạt chia') || name.contains('chia')) {
+      assetPath = 'assets/icons/hat_chia.png';
+    } else if ((name.contains('mè') || name.contains('vừng') || name.contains('sesame')) && !name.contains('cá') && !name.contains('dầu')) {
+      assetPath = 'assets/icons/me.png';
+    } else if (name.contains('xì dầu') || name.contains('nước tương') || name.contains('soy sauce')) {
+      assetPath = 'assets/icons/xi_dau.png';
+    } else if (name.contains('ớt')) {
+      assetPath = 'assets/icons/ot_tuoi.png';
+    } else if (name.contains('tương cà') || name.contains('ketchup')) {
+      assetPath = 'assets/icons/tuong_ca.png';
+    } else if (name.contains('tương ớt') || name.contains('chili sauce') || name.contains('sriracha')) {
+      assetPath = 'assets/icons/tuong_ot.png';
+    } else if (name.contains('tương đen') || name.contains('hoisin')) {
+      assetPath = 'assets/icons/tuong_den.png';
+    } else if (name.contains('sốt mayonnaise') || name.contains('sốt mè rang') || name.contains('mayo')) {
+      assetPath = 'assets/icons/sot_mayo.png';
+    } else if (name.contains('sả')) {
+      assetPath = 'assets/icons/sa.png';
+    } else if (name.contains('rượu')) {
+      assetPath = 'assets/icons/ruou_trang.png';
+    } else if (name.contains('dầu hào')) {
+      assetPath = 'assets/icons/dau_hao.png';
+    } else if (name.contains('ngó sen')) {
+      assetPath = 'assets/icons/ngo_sen.png';
+    } else if (name.contains('măng tây')) {
+      assetPath = 'assets/icons/mang_tay.png';
+    } else if (name.contains('bắp cải trắng') || (name.contains('bắp cải') && !name.contains('tím'))) {
+      assetPath = 'assets/icons/bap_cai_trang.png';
+    } else if (name.contains('nấm hương') || name.contains('nấm đông cô') || name.contains('shiitake')) {
+      assetPath = 'assets/icons/nam_huong.png';
+    } else if (name.contains('nước mắm') || name.contains('fish sauce')) {
+      assetPath = 'assets/icons/nuoc_mam.png';
+    } else if (name.contains('giấm táo') || name.contains('apple cider')) {
+      assetPath = 'assets/icons/giam_tao.png';
+    } else if (name.contains('cari') || name.contains('cà ri') || name.contains('curry')) {
+      assetPath = 'assets/icons/cari_bot.png';
+    } else if (name.contains('nấm kim châm')) {
+      assetPath = 'assets/icons/nam_kim_cham.png';
+    } else if (name.contains('nấm rơm')) {
+      assetPath = 'assets/icons/nam_rom.png';
+    } else if (name.contains('nấm đùi gà')) {
+      assetPath = 'assets/icons/nam_dui_ga.png';
+    } else if (name.contains('giá đỗ')) {
+      assetPath = 'assets/icons/gia_do.png';
+    } else if (name.contains('bắp cải tím')) {
+      assetPath = 'assets/icons/bap_cai_tim.png';
+    } else if (name.contains('vải hộp') || name.contains('vải đóng hộp')) {
+      assetPath = 'assets/icons/vai_hop.png';
+    } else if (name.contains('khoai tây chiên')) {
+      assetPath = 'assets/icons/khoai_tay_chien.png';
+    } else if (name.contains('khoai tây') || name.contains('potato')) {
+      assetPath = 'assets/icons/khoai_tay.png';
+    } else if (name.contains('khoai môn') || name.contains('taro')) {
+      assetPath = 'assets/icons/khoai_mon.png';
+    } else if (name.contains('dứa đóng hộp') || name.contains('dứa hộp')) {
+      assetPath = 'assets/icons/dua_hop.png';
+    } else if (name.contains('củ sắn') || name.contains('khoai mì')) {
+      assetPath = 'assets/icons/cu_san.png';
+    } else if (name.contains('mứt đu đủ')) {
+      assetPath = 'assets/icons/mut_du_du.png';
+    } else if (name.contains('củ từ')) {
+      assetPath = 'assets/icons/cu_tu.png';
+    } else if (name.contains('wrap')) {
+      assetPath = 'assets/icons/banh_wrap.png';
+    } else if (name.contains('đậu hũ chiên')) {
+      assetPath = 'assets/icons/dau_hu_chien.png';
+    } else if (name.contains('đậu hũ') || name.contains('đậu phụ') || name.contains('tofu')) {
+      assetPath = 'assets/icons/dau_phu.png';
+    } else if (name.contains('mắm tôm') || name.contains('shrimp paste')) {
+      assetPath = 'assets/icons/mam_tom.png';
+    } else if (name.contains('bột sắn dây') || name.contains('bột sắn')) {
+      assetPath = 'assets/icons/bot_san_day.png';
+    } else if (name.contains('bánh đúc')) {
+      assetPath = 'assets/icons/banh_duc.png';
+    } else if (name.contains('bún gạo lứt')) {
+      assetPath = 'assets/icons/bun_gao_lut.png';
+    } else if (name.contains('miến')) {
+      assetPath = 'assets/icons/mien_dong.png';
+    } else if (name.contains('bún')) {
+      assetPath = 'assets/icons/bun.png';
+    } else if (name.contains('hoa chuối')) {
+      assetPath = 'assets/icons/hoa_chuoi.png';
+    } else if (name.contains('whey') || name.contains('isolate')) {
+      assetPath = 'assets/icons/whey_protein.png';
+    } else if (name.contains('thịt lợn hộp') || name.contains('thịt heo hộp') || name.contains('spam')) {
+      assetPath = 'assets/icons/thit_lon_hop.png';
+    } else if (name.contains('thịt bò hộp') || name.contains('bò hộp') || name.contains('corned beef')) {
+      assetPath = 'assets/icons/thit_bo_hop.png';
+    } else if (name.contains('pate') || name.contains('pa-tê')) {
+      assetPath = 'assets/icons/pate.png';
+    } else if (name.contains('nem chua')) {
+      assetPath = 'assets/icons/nem_chua.png';
+    } else if (name.contains('lạp xưởng') || name.contains('lạp sườn')) {
+      assetPath = 'assets/icons/lap_xuong.png';
+    } else if (name.contains('lươn')) {
+      assetPath = 'assets/icons/luon.png';
+    } else if (name.contains('lòng lợn') || name.contains('lòng heo') || name.contains('phèo')) {
+      assetPath = 'assets/icons/long_lon.png';
+    } else if (name.contains('cá trích hộp') || name.contains('cá thu hộp') || name.contains('cá ngừ hộp') || (name.contains('cá') && name.contains('hộp'))) {
+      assetPath = 'assets/icons/ca_hop.png';
+    } else if (name.contains('phồng tôm')) {
+      assetPath = 'assets/icons/banh_phong_tom.png';
+    } else if (name.contains('chả lụa') || name.contains('giò lụa')) {
+      assetPath = 'assets/icons/cha_lua.png';
+    } else if (name.contains('chả quế')) {
+      assetPath = 'assets/icons/cha_que.png';
+    } else if (name.contains('chà bông') || name.contains('ruốc thịt') || name.contains('ruốc')) {
+      assetPath = 'assets/icons/cha_bong.png';
+    } else if (name.contains('gan gà')) {
+      assetPath = 'assets/icons/con_ga.png';
+    } else if (name.contains('gan vịt')) {
+                  assetPath = 'assets/icons/con_vit.png';
+    } else if (name.contains('thịt gà hộp') || (name.contains('gà') && name.contains('hộp'))) {
+      assetPath = 'assets/icons/thit_lon_hop.png';
+    } else if (name.contains('bánh phở') || name.contains('phở')) {
+      assetPath = 'assets/icons/banh_pho.png';
+    } else if (name.contains('giá đỗ')) {
+      assetPath = 'assets/icons/gia_do.png';
+    } else if (name.contains('nem chua')) {
+      assetPath = 'assets/icons/nem_chua.png';
+    } else if (name.contains('chả bò')) {
+      assetPath = 'assets/icons/cha_bo.png';
+    } else if (name.contains('thịt vịt') || name.contains('vịt')) {
+      assetPath = 'assets/icons/con_vit.png';
+    } else if (name.contains('coca') || name.contains('pepsi')) {
+      assetPath = 'assets/icons/cocacola.png';
+    } else if (name.contains('xoài') || name.contains('mango')) {
+      assetPath = 'assets/icons/xoai.png';
+    } else if (name.contains('ba khía')) {
+      assetPath = 'assets/icons/ba_khia.png';
+    } else if (name.contains('trứng vịt')) {
+      assetPath = 'assets/icons/trung_vit.png';
+    } else if (name.contains('trứng') || name.contains('egg')) {
+      assetPath = 'assets/icons/trung_ga.png';
+    } else if (name.contains('xúc xích')) {
+      assetPath = 'assets/icons/xuc_xich.png';
+    } else if (name.contains('cải bó xôi') || name.contains('chân vịt') || name.contains('spinach')) {
+      assetPath = 'assets/icons/cai_bo_xoi.png';
+    } else if (name.contains('ớt chuông')) {
+      assetPath = 'assets/icons/ot_chuong.png';
+    } else if (name.contains('bánh tráng')) {
+      assetPath = 'assets/icons/banh_trang.png';
+    } else if (!name.contains('hộp') && !name.contains('sữa') && (name.contains('thịt bò') || name.contains('bắp bò') || name.contains('gầu bò') || name.contains('thăn bò') || name.contains('bò'))) {
+      assetPath = 'assets/icons/con_bo.png';
+    } else if (name.contains('gan bò') || name.contains('cật bò') || name.contains('bao tử bò') || name.contains('óc bò') || name.contains('đuôi bò')) {
+      assetPath = 'assets/icons/con_bo.png';
+    } else if (name.contains('gan lợn') || name.contains('gan heo') || name.contains('cật lợn') || name.contains('cật heo') || name.contains('bao tử lợn') || name.contains('bao tử heo') || name.contains('óc lợn') || name.contains('óc heo')) {
+      assetPath = 'assets/icons/thit_lon.png';
+    } else if (!name.contains('hộp') && (name.contains('thịt lợn') || name.contains('thịt heo') || name.contains('đầu lợn') || name.contains('đầu heo') || name.contains('đuôi lợn') || name.contains('đuôi heo') || name.contains('tai lợn') || name.contains('tai heo') || name.contains('sườn lợn') || name.contains('sườn non lợn') || name.contains('sườn heo') || name.contains('ba chỉ') || name.contains('ba rọi') || name.contains('giò lợn') || name.contains('giò heo') || name.contains('giò thủ') || name.contains('da lợn') || name.contains('da heo') || name.contains('dăm bông lợn') || name.contains('dăm bông heo') || name.contains('nạc heo') || name.contains('nạc lợn'))) {
+      assetPath = 'assets/icons/thit_lon.png';
+    }
+
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Text('🥗', style: TextStyle(fontSize: size)),
+      );
+    }
+    return Text(icon, style: TextStyle(fontSize: size));
   }
 
   void _showEditItemDialog(Map<String, dynamic> item) {
@@ -687,7 +943,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
 
             children: [
 
-              Text(item['icon'] ?? '🥗', style: const TextStyle(fontSize: 28)),
+              _buildItemIconWidget(item, size: 28),
 
               const SizedBox(width: 8),
 
@@ -1162,580 +1418,36 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
   /// 1. Nhập tay
 
   void _showManualAddDialog() async {
-
     List<Map<String, dynamic>> dbIngredients = [];
-
     try {
-
       dbIngredients = await ApiService.getIngredients();
-
     } catch (_) {}
-
     if (!mounted) return;
 
     showModalBottomSheet(
-
       context: context,
-
       isScrollControlled: true,
-
       backgroundColor: AppColors.surface,
-
       shape: const RoundedRectangleBorder(
-
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-
       ),
-
-      builder: (context) {
-
-        String query = '';
-
-        final customNameCtrl = TextEditingController();
-
-        final selectedItems = <Map<String, dynamic>>{};
-
-        return StatefulBuilder(
-
-          builder: (ctx, setSheetState) {
-
-            final filtered = dbIngredients.where((i) {
-
-              final n = (i['name'] ?? '').toString().toLowerCase();
-
-              return n.contains(query.toLowerCase());
-
-            }).toList();
-
-            return Container(
-
-              height: MediaQuery.of(context).size.height * 0.82,
-
-              padding: EdgeInsets.only(
-
-                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-
-                left: 16,
-
-                right: 16,
-
-                top: 14,
-
-              ),
-
-              child: Column(
-
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-
-                  Center(
-
-                    child: Container(
-
-                      width: 40,
-
-                      height: 4,
-
-                      decoration: BoxDecoration(
-
-                        color: AppColors.outlineVariant,
-
-                        borderRadius: BorderRadius.circular(2),
-
-                      ),
-
-                    ),
-
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                    children: [
-
-                      const Text(
-
-                        'Nhập tay nguyên liệu',
-
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-
-                      ),
-
-                      if (selectedItems.isNotEmpty)
-
-                        Container(
-
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-
-                          decoration: BoxDecoration(
-
-                            color: const Color(0xFFDCFCE7),
-
-                            borderRadius: BorderRadius.circular(12),
-
-                            border: Border.all(color: const Color(0xFF16A34A)),
-
-                          ),
-
-                          child: Text(
-
-                            'Đã chọn ${selectedItems.length} món',
-
-                            style: const TextStyle(
-
-                              fontWeight: FontWeight.bold,
-
-                              fontSize: 12,
-
-                              color: Color(0xFF15803D),
-
-                            ),
-
-                          ),
-
-                        ),
-
-                    ],
-
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Ô tìm kiếm nguyên liệu
-
-                  TextField(
-
-                    onChanged: (val) => setSheetState(() => query = val),
-
-                    decoration: InputDecoration(
-
-                      hintText: 'Tìm kiếm nguyên liệu (thịt, rau, trứng, cá...)...',
-
-                      prefixIcon: const Icon(Icons.search, size: 20),
-
-                      isDense: true,
-
-                      filled: true,
-
-                      fillColor: AppColors.surfaceContainerLow,
-
-                      border: OutlineInputBorder(
-
-                        borderRadius: BorderRadius.circular(12),
-
-                        borderSide: BorderSide.none,
-
-                      ),
-
-                    ),
-
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Danh sách nguyên liệu dạng Multi-Select
-
-                  Expanded(
-
-                    child: filtered.isEmpty
-
-                        ? Center(
-
-                            child: Column(
-
-                              mainAxisAlignment: MainAxisAlignment.center,
-
-                              children: [
-
-                                const Text('Không thấy trong từ điển? Thêm trực tiếp:'),
-
-                                const SizedBox(height: 8),
-
-                                Padding(
-
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-
-                                  child: TextField(
-
-                                    controller: customNameCtrl,
-
-                                    decoration: const InputDecoration(
-
-                                      hintText: 'Nhập tên món (ví dụ: Nạc dăm heo)',
-
-                                    ),
-
-                                  ),
-
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                ElevatedButton.icon(
-
-                                  onPressed: () {
-
-                                    if (customNameCtrl.text.trim().isNotEmpty) {
-
-                                      _addItemToFridge(
-
-                                        name: customNameCtrl.text.trim(),
-
-                                        icon: '🥗',
-
-                                        weight: 150,
-
-                                      );
-
-                                      Navigator.pop(context);
-
-                                    }
-
-                                  },
-
-                                  icon: const Icon(Icons.add),
-
-                                  label: const Text('Thêm món này vào tủ lạnh'),
-
-                                ),
-
-                              ],
-
-                            ),
-
-                          )
-
-                        : ListView.separated(
-
-                            itemCount: filtered.length,
-
-                            separatorBuilder: (context, index) => const SizedBox(height: 6),
-
-                            itemBuilder: (_, idx) {
-
-                              final item = filtered[idx];
-
-                              final isSelected = selectedItems.contains(item);
-
-                              final comp = FridgeClassifier.classify(item['name'] ?? '');
-
-                              final isFreezer = comp == FridgeClassifier.freezer;
-
-                              return InkWell(
-
-                                onTap: () {
-
-                                  setSheetState(() {
-
-                                    if (isSelected) {
-
-                                      selectedItems.remove(item);
-
-                                    } else {
-
-                                      selectedItems.add(item);
-
-                                    }
-
-                                  });
-
-                                },
-
-                                borderRadius: BorderRadius.circular(12),
-
-                                child: AnimatedContainer(
-
-                                  duration: const Duration(milliseconds: 180),
-
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-
-                                  decoration: BoxDecoration(
-
-                                    // Khi chọn sẽ hiện nền xanh nổi bật
-
-                                    color: isSelected
-
-                                        ? const Color(0xFFDCFCE7)
-
-                                        : AppColors.surfaceContainerLow.withValues(alpha: 0.5),
-
-                                    borderRadius: BorderRadius.circular(12),
-
-                                    border: Border.all(
-
-                                      color: isSelected
-
-                                          ? const Color(0xFF16A34A)
-
-                                          : Colors.grey.withValues(alpha: 0.2),
-
-                                      width: isSelected ? 1.8 : 1.0,
-
-                                    ),
-
-                                  ),
-
-                                  child: Row(
-
-                                    children: [
-
-                                      // Icon món ăn
-
-                                      Text(
-
-                                        item['icon']?.toString() ?? '🥗',
-
-                                        style: const TextStyle(fontSize: 24),
-
-                                      ),
-
-                                      const SizedBox(width: 12),
-
-                                      // Tên món và thông số kcal
-
-                                      Expanded(
-
-                                        child: Column(
-
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-
-                                          children: [
-
-                                            Text(
-
-                                              item['name']?.toString() ?? '',
-
-                                              style: TextStyle(
-
-                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-
-                                                fontSize: 14,
-
-                                                color: isSelected ? const Color(0xFF14532D) : AppColors.onSurface,
-
-                                              ),
-
-                                            ),
-
-                                            const SizedBox(height: 3),
-
-                                            Row(
-
-                                              children: [
-
-                                                Container(
-
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-
-                                                  decoration: BoxDecoration(
-
-                                                    color: isFreezer
-
-                                                        ? Colors.lightBlue.withValues(alpha: 0.2)
-
-                                                        : Colors.green.withValues(alpha: 0.2),
-
-                                                    borderRadius: BorderRadius.circular(4),
-
-                                                  ),
-
-                                                  child: Text(
-
-                                                    isFreezer ? '❄️ Ngăn đông' : '🍃 Ngăn mát',
-
-                                                    style: TextStyle(
-
-                                                      fontSize: 10,
-
-                                                      fontWeight: FontWeight.bold,
-
-                                                      color: isFreezer ? Colors.blue[800] : Colors.green[800],
-
-                                                    ),
-
-                                                  ),
-
-                                                ),
-
-                                                const SizedBox(width: 8),
-
-                                                Text(
-
-                                                  '${item['kcalPer100g']} kcal/100g',
-
-                                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-
-                                                ),
-
-                                              ],
-
-                                            ),
-
-                                          ],
-
-                                        ),
-
-                                      ),
-
-                                      // Nút chọn / Dấu tích xanh khi chọn
-
-                                      Container(
-
-                                        width: 28,
-
-                                        height: 28,
-
-                                        decoration: BoxDecoration(
-
-                                          color: isSelected ? const Color(0xFF16A34A) : Colors.transparent,
-
-                                          shape: BoxShape.circle,
-
-                                          border: Border.all(
-
-                                            color: isSelected ? const Color(0xFF16A34A) : Colors.grey.withValues(alpha: 0.5),
-
-                                            width: 1.6,
-
-                                          ),
-
-                                        ),
-
-                                        child: isSelected
-
-                                            ? const Icon(Icons.check, size: 18, color: Colors.white)
-
-                                            : null,
-
-                                      ),
-
-                                    ],
-
-                                  ),
-
-                                ),
-
-                              );
-
-                            },
-
-                          ),
-
-                  ),
-
-                  // NÚT THÊM TẤT CẢ NGUYÊN LIỆU ĐÃ CHỌN VÀO TỦ LẠNH
-
-                  const SizedBox(height: 10),
-
-                  SizedBox(
-
-                    width: double.infinity,
-
-                    height: 50,
-
-                    child: ElevatedButton.icon(
-
-                      style: ElevatedButton.styleFrom(
-
-                        backgroundColor: selectedItems.isNotEmpty ? AppColors.primary : Colors.grey[400],
-
-                        foregroundColor: Colors.white,
-
-                        elevation: selectedItems.isNotEmpty ? 2 : 0,
-
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-
-                      ),
-
-                      onPressed: selectedItems.isNotEmpty
-
-                          ? () {
-
-                              for (final item in selectedItems) {
-
-                                _addItemToFridge(
-
-                                  name: item['name'] ?? '',
-
-                                  icon: item['icon'] ?? '🥗',
-
-                                  weight: 150,
-
-                                  kcal: (item['kcalPer100g'] as num?)?.toInt(),
-
-                                  protein: (item['protein'] as num?)?.toInt(),
-
-                                  carbs: (item['carbs'] as num?)?.toInt(),
-
-                                  fat: (item['fat'] as num?)?.toInt(),
-
-                                );
-
-                              }
-
-                              Navigator.pop(context);
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-
-                                SnackBar(
-
-                                  content: Text(
-
-                                    '✨ Đã cất ${selectedItems.length} nguyên liệu đã chọn vào tủ lạnh thành công!',
-
-                                  ),
-
-                                  backgroundColor: AppColors.primary,
-
-                                  behavior: SnackBarBehavior.floating,
-
-                                ),
-
-                              );
-
-                            }
-
-                          : null,
-
-                      icon: const Icon(Icons.add_shopping_cart, size: 20),
-
-                      label: Text(
-
-                        selectedItems.isNotEmpty
-
-                            ? 'THÊM ${selectedItems.length} MÓN ĐÃ CHỌN VÀO TỦ'
-
-                            : 'CHỌN CÁC MÓN ĐỂ THÊM VÀO TỦ',
-
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, letterSpacing: 0.5),
-
-                      ),
-
-                    ),
-
-                  ),
-
-                ],
-
-              ),
-
-            );
-
-          },
-
-        );
-
-      },
-
+      builder: (ctx) => _ManualAddIngredientSheet(
+        dbIngredients: dbIngredients,
+        onAddItem: (item) {
+          _addItemToFridge(
+            name: item['name'] ?? '',
+            icon: item['icon'] ?? '🥗',
+            weight: 150,
+            kcal: (item['kcalPer100g'] as num?)?.toInt(),
+            protein: (item['protein'] as num?)?.toInt(),
+            carbs: (item['carbs'] as num?)?.toInt(),
+            fat: (item['fat'] as num?)?.toInt(),
+          );
+        },
+        buildItemIcon: _buildItemIconWidget,
+      ),
     );
-
   }
-
-  /// 2. Thêm bằng giọng nói
 
   void _openVoiceInput() {
 
@@ -2080,21 +1792,29 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
               final recipes = snapshot.data ?? [];
 
               if (recipes.isEmpty) {
-
                 return Center(
-
-                  child: Text(
-
-                    'Không tìm thấy công thức phù hợp. Hãy thử chọn thêm nguyên liệu khác từ tủ nhé!',
-
-                    textAlign: TextAlign.center,
-
-                    style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant),
-
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.soup_kitchen_outlined, size: 54, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Chưa có công thức phù hợp với ${itemsToUse.length} nguyên liệu đã chọn.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Hãy chọn thêm nguyên liệu nấu ăn khác từ tủ (thịt, cá, trứng, rau củ...) để gợi ý món ăn chuẩn gymer nhé!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
                   ),
-
                 );
-
               }
 
               return ListView.separated(
@@ -2252,12 +1972,17 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
     );
   }
 
-  /// Lấy hoặc tạo công thức gợi ý, ưu tiên công thức đã lưu bên Nấu Ăn (Yêu cầu 6)
+  /// Lấy danh sách công thức gợi ý theo Cách 3:
+  /// - Phân loại nguyên liệu cốt lõi (thịt, cá, trứng, rau, đậu, tinh bột...) vs gia vị / đồ phụ
+  /// - Món ăn bắt buộc phải khớp ít nhất 1 nguyên liệu cốt lõi (không gợi ý món chỉ vì có mắm/muối/tiêu/dầu)
+  /// - Ưu tiên món đã lưu trong bộ sưu tập lên đầu tiên
+  /// - Giới hạn lấy Top 30 món ăn xuất sắc nhất (nhẹ RAM, 0% giật lag, tốc độ phản hồi tức thì)
   Future<List<Map<String, dynamic>>> _fetchOrFallbackRecipes(List<String> ingNames) async {
     final prefs = await SharedPreferences.getInstance();
-    final savedIds = prefs.getStringList('eatgym_saved_recipes_ids_v1') ?? [];
+    // Danh sách ID các công thức người dùng THỰC SỰ ĐÃ LƯU bên Nấu Ăn (Bookmark)
+    final savedIds = (prefs.getStringList('eatgym_saved_recipes_ids_v1') ?? []).toSet();
     
-    // Tải các công thức do người dùng tự đăng bên trang Nấu ăn
+    // Tải các công thức do người dùng tự đăng bên trang Nấu ăn (nếu có)
     List<Map<String, dynamic>> userRecipes = [];
     try {
       final userJson = prefs.getString('eatgym_user_created_recipes_v2');
@@ -2267,145 +1992,124 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
       }
     } catch (_) {}
 
-    List<Map<String, dynamic>> resultList = [];
-    try {
-      final res = await ApiService.suggestRecipes(ingNames);
-      if (res.isNotEmpty) {
-        resultList = List.from(res);
+    // Lấy toàn bộ kho công thức chuẩn từ Database Backend (dùng chung 100% với trang Nấu Ăn)
+    List<Map<String, dynamic>> allRecipes = [];
+    if (_cachedAllRecipes != null && _cachedAllRecipes!.isNotEmpty) {
+      allRecipes = _cachedAllRecipes!;
+    } else {
+      try {
+        final fetched = await ApiService.getRecipes();
+        if (fetched.isNotEmpty) {
+          _cachedAllRecipes = fetched;
+          allRecipes = fetched;
+        }
+      } catch (_) {}
+    }
+
+    final pool = <Map<String, dynamic>>[...userRecipes, ...allRecipes];
+    if (pool.isEmpty) return [];
+
+    bool isCondiment(String name) {
+      final n = IngredientNormalizer.removeDiacritics(name.toLowerCase()).trim();
+      const condiments = [
+        'nuoc mam', 'xi dau', 'nuoc tuong', 'dau an', 'dau me', 'dau o liu',
+        'dau thuc vat', 'dau hao', 'giam', 'tuong ca', 'tuong ot', 'tuong den',
+        'mayonnaise', 'sot ', 'sot', 'muoi', 'tieu', 'duong', 'bot ngot', 'hat nem',
+        'cocacola', 'pepsi', 'nuoc ngot', 'da vien', 'ruou'
+      ];
+      return condiments.any((c) => n.contains(c));
+    }
+
+    String cleanItemName(String name) {
+      final stripped = name.replaceAll(RegExp(r'(tươi|nạc|phi lê|đóng hộp|hộp|xay|khô)'), '').trim();
+      return IngredientNormalizer.removeDiacritics((stripped.isNotEmpty ? stripped : name).toLowerCase());
+    }
+
+    // 1. Phân loại nguyên liệu trong tủ thành Nguyên liệu chính và Gia vị / Đồ phụ
+    final List<MapEntry<String, String>> coresClean = [];
+    final List<MapEntry<String, String>> condsClean = [];
+
+    for (final rawName in ingNames) {
+      final cName = cleanItemName(rawName);
+      if (isCondiment(rawName)) {
+        condsClean.add(MapEntry(rawName, cName));
+      } else {
+        coresClean.add(MapEntry(rawName, cName));
       }
-    } catch (_) {}
+    }
 
-    final lowerNames = ingNames.map((e) => e.toLowerCase()).toList();
+    final List<Map<String, dynamic>> matchedList = [];
 
-    // 1. Kiểm tra các công thức do người dùng đăng bên Nấu Ăn xem có khớp nguyên liệu trong tủ không
-    for (final ur in userRecipes) {
-      int match = 0;
-      final ings = (ur['ingredients'] as List? ?? []);
-      for (final ing in ings) {
-        final iName = (ing['name'] ?? '').toString().toLowerCase();
-        if (lowerNames.any((n) => iName.contains(n) || n.contains(iName))) {
-          match++;
+    // 2. So khớp nhanh với kho công thức
+    for (final r in pool) {
+      final title = (r['title'] ?? '').toString();
+      final ings = (r['ingredients'] as List? ?? []);
+      
+      // Chuẩn hóa trước toàn bộ văn bản của món ăn 1 lần
+      final ingNamesJoined = ings.map((ing) {
+        if (ing is Map) return (ing['name'] ?? '').toString();
+        return ing.toString();
+      }).join(' ');
+      final rText = IngredientNormalizer.removeDiacritics('$title $ingNamesJoined'.toLowerCase());
+
+      int coreMatches = 0;
+      int condMatches = 0;
+
+      for (final entry in coresClean) {
+        if (rText.contains(entry.value)) {
+          coreMatches++;
         }
       }
-      if (match > 0 || lowerNames.any((n) => (ur['title'] ?? '').toString().toLowerCase().contains(n))) {
-        final mapped = Map<String, dynamic>.from(ur);
-        mapped['matchingCount'] = match > 0 ? match : 1;
-        mapped['isSavedInKitchen'] = true;
-        resultList.add(mapped);
+
+      // ĐIỀU KIỆN CỐT LÕI CỦA CÁCH 3:
+      // Món ăn BẮT BUỘC phải khớp ít nhất 1 nguyên liệu chính!
+      // (Không bao giờ gợi ý món ăn chỉ vì có mắm, muối, tiêu, dầu ăn hay đá viên)
+      if (coreMatches == 0) {
+        continue;
       }
+
+      for (final entry in condsClean) {
+        if (rText.contains(entry.value)) {
+          condMatches++;
+        }
+      }
+
+      final totalMatches = coreMatches + condMatches;
+      final mapped = Map<String, dynamic>.from(r);
+      final rId = (mapped['id'] ?? '').toString();
+      final isSaved = savedIds.contains(rId);
+
+      // Điểm số xếp hạng:
+      // - Đã lưu trong bộ sưu tập: +1000 điểm (luôn đứng đầu danh sách)
+      // - Mỗi nguyên liệu chính khớp: +10 điểm
+      // - Mỗi gia vị khớp: +1 điểm (điểm thưởng)
+      final score = (isSaved ? 1000 : 0) + (coreMatches * 10) + condMatches;
+
+      mapped['matchingCount'] = totalMatches;
+      mapped['coreMatches'] = coreMatches;
+      mapped['score'] = score;
+      mapped['isSavedInKitchen'] = isSaved;
+      mapped['kcal'] = mapped['kcal'] ?? 350;
+      mapped['time'] = mapped['time'] ?? mapped['cooking_time_min'] ?? 15;
+      mapped['protein'] = mapped['protein'] ?? mapped['protein_g'] ?? 25;
+      matchedList.add(mapped);
     }
 
-    // 2. Bổ sung các công thức fallback chuẩn Gymer
-    if (lowerNames.any((n) => n.contains('gà') || n.contains('ức gà'))) {
-      resultList.add({
-        'id': 'ig_1',
-        'title': 'Ức gà áp chảo sốt bơ tỏi hương thảo',
-        'kcal': 380,
-        'protein': 42,
-        'carbs': 8,
-        'fat': 12,
-        'time': 15,
-        'matchingCount': 3,
-        'description': 'Món ức gà vàng giòn mặt ngoài, mềm ngọt mọng nước bên trong, đậm vị bơ tỏi.',
-        'ingredients': [
-          {'name': 'Ức gà không da', 'amount': '250', 'unit': 'g'},
-          {'name': 'Bơ lạt', 'amount': '15', 'unit': 'g'},
-          {'name': 'Tỏi băm', 'amount': '2', 'unit': 'tép'},
-        ],
-        'steps': [
-          'Khứa nhẹ bề mặt ức gà, ướp tiêu muối trong 5 phút.',
-          'Làm nóng chảo, cho chút dầu ô liu và áp chảo mỗi mặt 4-5 phút.',
-          'Cho bơ lạt và tỏi băm vào rưới đều lên bề mặt gà.',
-        ]
-      });
-    }
-
-    if (lowerNames.any((n) => n.contains('bò'))) {
-      resultList.add({
-        'id': 'ig_2',
-        'title': 'Thịt bò xào bông cải xanh & nấm',
-        'kcal': 340,
-        'protein': 38,
-        'carbs': 12,
-        'fat': 10,
-        'time': 12,
-        'matchingCount': 3,
-        'description': 'Món xào thanh đạm, giàu chất xơ và đạm đỏ giúp tăng trưởng cơ bắp săn chắc.',
-        'ingredients': [
-          {'name': 'Thịt thăn bò', 'amount': '200', 'unit': 'g'},
-          {'name': 'Bông cải xanh', 'amount': '150', 'unit': 'g'},
-          {'name': 'Dầu hào', 'amount': '1', 'unit': 'muỗng'},
-        ],
-        'steps': [
-          'Thái thịt bò mỏng, ướp dầu hào và tiêu.',
-          'Chần sơ bông cải xanh trong nước sôi 1 phút.',
-          'Phi tỏi thơm, cho thịt bò xào lửa lớn 2 phút rồi trút bông cải vào đảo đều.',
-        ]
-      });
-    }
-
-    if (lowerNames.any((n) => n.contains('trứng') || n.contains('phô mai'))) {
-      resultList.add({
-        'id': 'ig_5',
-        'title': 'Trứng cuộn rau củ phô mai',
-        'kcal': 280,
-        'protein': 22,
-        'carbs': 6,
-        'fat': 16,
-        'time': 10,
-        'matchingCount': 2,
-        'description': 'Bữa ăn sáng hoặc bữa phụ nhanh gọn, giàu choline và protein hấp thu nhanh.',
-        'ingredients': [
-          {'name': 'Trứng gà', 'amount': '3', 'unit': 'quả'},
-          {'name': 'Cà chua bi', 'amount': '50', 'unit': 'g'},
-          {'name': 'Hành lá', 'amount': '10', 'unit': 'g'},
-        ],
-        'steps': [
-          'Đánh tan trứng với chút muối tiêu và hành lá băm.',
-          'Đổ một lớp mỏng trứng vào chảo chống dính, rắc cà chua bi xắt nhỏ.',
-          'Cuộn tròn từ từ và thưởng thức nóng.',
-        ]
-      });
-    }
-
-    // Luôn bổ sung món salad tổng hợp
-    resultList.add({
-      'id': 'ig_4',
-      'title': 'Salad EatClean trộn sốt mè rang',
-      'kcal': 220,
-      'protein': 16,
-      'carbs': 15,
-      'fat': 8,
-      'time': 8,
-      'matchingCount': ingNames.length,
-      'description': 'Món salad giòn mát, thanh lọc cơ thể và cung cấp đầy đủ vi chất cho gymer.',
-      'ingredients': ingNames.take(4).map((n) => {'name': n, 'amount': '100', 'unit': 'g'}).toList(),
-      'steps': [
-        'Rửa sạch các nguyên liệu rau củ và để ráo nước.',
-        'Cắt miếng vừa ăn xếp vào tô lớn.',
-        'Rưới 2 muỗng sốt mè rang và trộn đều trước khi dùng.',
-      ]
+    // 3. Sắp xếp danh sách theo điểm số từ cao xuống thấp
+    matchedList.sort((a, b) {
+      final aScore = (a['score'] as int?) ?? 0;
+      final bScore = (b['score'] as int?) ?? 0;
+      if (aScore != bScore) {
+        return bScore.compareTo(aScore);
+      }
+      final aTime = (a['time'] as int?) ?? 20;
+      final bTime = (b['time'] as int?) ?? 20;
+      return aTime.compareTo(bTime);
     });
 
-    // 3. Đánh dấu các món đã lưu bên trang "Nấu ăn" (Yêu cầu 6)
-    for (final r in resultList) {
-      final rId = r['id']?.toString() ?? '';
-      if (savedIds.contains(rId) || r['isMine'] == true) {
-        r['isSavedInKitchen'] = true;
-      }
-    }
-
-    // 4. Sắp xếp để CÁC CÔNG THỨC ĐÃ LƯU BÊN NẤU ĂN HIỂN THỊ LÊN ĐẦU TIÊN (Yêu cầu 6)
-    resultList.sort((a, b) {
-      final aSaved = a['isSavedInKitchen'] == true ? 1 : 0;
-      final bSaved = b['isSavedInKitchen'] == true ? 1 : 0;
-      if (aSaved != bSaved) {
-        return bSaved.compareTo(aSaved); // 1 trước 0
-      }
-      return ((b['matchingCount'] as int?) ?? 0).compareTo((a['matchingCount'] as int?) ?? 0);
-    });
-
-    return resultList;
+    // 4. GIỚI HẠN TOP 30 MÓN ĂN XUẤT SẮC NHẤT (CÁCH 3)
+    // Giữ RAM nhẹ tênh, render siêu mượt 60 FPS, không còn tình trạng quay đơ lag
+    return matchedList.take(30).toList();
   }
 
   Widget build(BuildContext context) {
@@ -2864,10 +2568,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
                       : null,
                 ),
                 child: Center(
-                  child: Text(
-                    item['icon']?.toString() ?? '🥗',
-                    style: const TextStyle(fontSize: 22),
-                  ),
+                  child: _buildItemIconWidget(item, size: 24),
                 ),
               ),
 
@@ -3035,4 +2736,307 @@ class IciclesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+class _ManualAddIngredientSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> dbIngredients;
+  final Function(Map<String, dynamic>) onAddItem;
+  final Widget Function(Map<String, dynamic>, {double size}) buildItemIcon;
+
+  const _ManualAddIngredientSheet({
+    required this.dbIngredients,
+    required this.onAddItem,
+    required this.buildItemIcon,
+  });
+
+  @override
+  State<_ManualAddIngredientSheet> createState() => _ManualAddIngredientSheetState();
+}
+
+class _ManualAddIngredientSheetState extends State<_ManualAddIngredientSheet> {
+  late final TextEditingController _searchCtrl;
+  late final TextEditingController _customNameCtrl;
+  String _query = '';
+  final Set<Map<String, dynamic>> _selectedItems = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+    _customNameCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _customNameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.dbIngredients.where((i) {
+      final n = (i['name'] ?? '').toString();
+      return IngredientNormalizer.matchesSearch(n, _query);
+    }).toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        left: 16,
+        right: 16,
+        top: 14,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Nhập tay nguyên liệu',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              if (_selectedItems.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF16A34A)),
+                  ),
+                  child: Text(
+                    'Đã chọn ${_selectedItems.length} món',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _searchCtrl,
+            onChanged: (val) {
+              setState(() {
+                _query = val;
+              });
+            },
+            decoration: InputDecoration(
+              hintText: 'Tìm kiếm nguyên liệu (thịt, rau, trứng, cá...)...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() {
+                          _query = '';
+                        });
+                      },
+                    )
+                  : null,
+              isDense: true,
+              filled: true,
+              fillColor: AppColors.surfaceContainerLow,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Không thấy trong từ điển? Thêm trực tiếp:'),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: TextField(
+                            controller: _customNameCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'Nhập tên món (ví dụ: Nạc dăm lợn)',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            if (_customNameCtrl.text.trim().isNotEmpty) {
+                              final name = _customNameCtrl.text.trim();
+                              final customDetails = IngredientNormalizer.getIngredientDetails(name);
+                              widget.onAddItem({
+                                'name': name,
+                                'icon': customDetails['icon']?.toString() ?? '🥗',
+                                'weight': 150,
+                              });
+                              Navigator.pop(context);
+                            }
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Thêm món này vào tủ lạnh'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 6),
+                    itemBuilder: (_, idx) {
+                      final item = filtered[idx];
+                      final isSelected = _selectedItems.contains(item);
+                      final comp = FridgeClassifier.classify(item['name'] ?? '');
+                      final isFreezer = comp == FridgeClassifier.freezer;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedItems.remove(item);
+                            } else {
+                              _selectedItems.add(item);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFDCFCE7)
+                                : AppColors.surfaceContainerLow.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF16A34A)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: isSelected ? 1.8 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              widget.buildItemIcon(item, size: 28),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['name']?.toString() ?? '',
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                        fontSize: 14,
+                                        color: isSelected ? const Color(0xFF14532D) : AppColors.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: isFreezer
+                                                ? Colors.lightBlue.withValues(alpha: 0.2)
+                                                : Colors.green.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            isFreezer ? '❄️ Ngăn đông' : '🍃 Ngăn mát',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: isFreezer ? Colors.blue[800] : Colors.green[800],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${item['kcalPer100g']} kcal/100g',
+                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFF16A34A) : Colors.transparent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFF16A34A) : Colors.grey.withValues(alpha: 0.5),
+                                    width: 1.6,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(Icons.check, size: 18, color: Colors.white)
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedItems.isNotEmpty ? AppColors.primary : Colors.grey[400],
+                foregroundColor: Colors.white,
+                elevation: _selectedItems.isNotEmpty ? 2 : 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: _selectedItems.isNotEmpty
+                  ? () {
+                      for (final item in _selectedItems) {
+                        widget.onAddItem(item);
+                      }
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã thêm ${_selectedItems.length} món vào tủ lạnh!'),
+                          backgroundColor: AppColors.success,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  : null,
+              icon: const Icon(Icons.check_circle_outline),
+              label: Text(
+                _selectedItems.isNotEmpty
+                    ? 'Thêm ${_selectedItems.length} nguyên liệu đã chọn'
+                    : 'Chọn các món để thêm vào tủ',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
