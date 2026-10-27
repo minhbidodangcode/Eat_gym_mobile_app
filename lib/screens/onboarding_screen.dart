@@ -39,21 +39,137 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     NutritionGoal.muscleGain => 'bulking', NutritionGoal.fatLoss => 'cutting', NutritionGoal.maintenance => 'maintenance',
   };
 
+  String? _validateProfileForm() {
+    if (_model.age < 13 || _model.age > 120) {
+      return 'Độ tuổi hợp lệ phải từ 13 đến 120 tuổi. Vui lòng kiểm tra lại ngày sinh.';
+    }
+    if (_model.heightCm < 50 || _model.heightCm > 250) {
+      return 'Vui lòng nhập chiều cao hợp lệ (từ 50cm đến 250cm).';
+    }
+    if (_model.weightKg < 20 || _model.weightKg > 300) {
+      return 'Vui lòng nhập cân nặng hợp lệ (từ 20kg đến 300kg).';
+    }
+    if (_model.selectedAllergies.isEmpty) {
+      return 'Vui lòng chọn thông tin dị ứng hoặc bấm "Không có".';
+    }
+    if (_model.calories < 1000 || _model.calories > 5000) {
+      return 'Mục tiêu calo phải từ 1,000 đến 5,000 kcal/ngày.';
+    }
+    return null;
+  }
+
   Future<void> _finish() async {
+    final validationError = _validateProfileForm();
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(validationError)),
+            ],
+          ),
+          backgroundColor: Colors.redAccent[700],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     try {
       final birth = _model.dateOfBirth;
       final birthday = '${birth.year.toString().padLeft(4, '0')}-${birth.month.toString().padLeft(2, '0')}-${birth.day.toString().padLeft(2, '0')}';
-      await ApiService.saveProfile(
-        sex: _model.gender == Gender.male ? 'male' : 'female', dateOfBirth: birthday,
-        heightCm: _model.heightCm, weightKg: _model.weightKg,
-        activityLevel: _activity, fitnessGoal: _goal,
+      
+      // 1. Lưu cục bộ trước để không bao giờ làm mất dữ liệu của người dùng
+      final profilePayload = <String, dynamic>{
+        'sex': _model.gender == Gender.male ? 'male' : 'female',
+        'dateOfBirth': birthday,
+        'heightCm': _model.heightCm,
+        'weightKg': _model.weightKg,
+        'activityLevel': _activity,
+        'fitnessGoal': _goal,
+        'allergies': _model.effectiveAllergies.toList(),
+        'dietaryPreferences': _model.selectedPreferences.toList(),
+        'targetMacros': {
+          'calories': _model.calories,
+          'protein': _model.macros.proteinGrams,
+          'carbs': _model.macros.carbsGrams,
+          'fat': _model.macros.fatGrams,
+        },
+      };
+      await ApiService.saveLocalProfile(profilePayload);
+      await ApiService.saveOnboardingPreferences(
+        allergies: _model.effectiveAllergies,
+        preferences: _model.selectedPreferences,
       );
-      await ApiService.saveOnboardingPreferences(allergies: _model.selectedAllergies, preferences: _model.selectedPreferences);
+
+      // 2. Đồng bộ lên Server Backend
+      bool syncSuccess = true;
+      String? syncErrorMsg;
+      try {
+        await ApiService.saveProfile(
+          sex: _model.gender == Gender.male ? 'male' : 'female',
+          dateOfBirth: birthday,
+          heightCm: _model.heightCm,
+          weightKg: _model.weightKg,
+          activityLevel: _activity,
+          fitnessGoal: _goal,
+          allergies: _model.effectiveAllergies.toList(),
+          dietaryPreferences: _model.selectedPreferences.toList(),
+          targetMacros: {
+            'calories': _model.calories,
+            'protein': _model.macros.proteinGrams,
+            'carbs': _model.macros.carbsGrams,
+            'fat': _model.macros.fatGrams,
+          },
+        );
+      } catch (error) {
+        syncSuccess = false;
+        syncErrorMsg = error.toString().replaceFirst('Exception: ', '');
+      }
+
       if (!mounted) return;
+
+      if (!syncSuccess && syncErrorMsg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Đã lưu hồ sơ vào máy (Chờ server đồng bộ: $syncErrorMsg)')),
+              ],
+            ),
+            backgroundColor: Colors.orange[800],
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+
       Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const MainScreen()), (_) => false);
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Chưa thể lưu hồ sơ: $error')));
+      if (mounted) {
+        final cleanMsg = error.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Lỗi: $cleanMsg')),
+              ],
+            ),
+            backgroundColor: Colors.redAccent[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

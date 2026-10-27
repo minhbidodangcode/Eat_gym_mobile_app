@@ -79,11 +79,12 @@ class PhysicalInfoCard extends StatelessWidget {
   }
 
   Future<void> _pickDateOfBirth(BuildContext context) async {
+    final now = DateTime.now();
     final selected = await showDatePicker(
       context: context,
       initialDate: model.dateOfBirth,
-      firstDate: DateTime(DateTime.now().year - 120),
-      lastDate: DateTime(DateTime.now().year - 13),
+      firstDate: DateTime(now.year - 120, 1, 1),
+      lastDate: DateTime(now.year - 13, now.month, now.day),
       helpText: 'CHỌN NGÀY SINH',
     );
     if (selected != null) model.setDateOfBirth(selected);
@@ -96,18 +97,9 @@ class PhysicalInfoCard extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8.0, left: 2, right: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '01 / THÔNG TIN THỂ CHẤT',
-                style: AppTypography.badge(color: AppColors.outline),
-              ),
-              Text(
-                'Độ chính xác: 98%',
-                style: AppTypography.labelCaption(color: AppColors.onSurface),
-              ),
-            ],
+          child: Text(
+            '01 / THÔNG TIN THỂ CHẤT',
+            style: AppTypography.badge(color: AppColors.outline),
           ),
         ),
         Container(
@@ -145,8 +137,8 @@ class PhysicalInfoCard extends StatelessWidget {
                     child: _buildMetricTile(
                       context,
                       label: 'NGÀY SINH',
-                      value: '${model.dateOfBirth.day.toString().padLeft(2, '0')}/${model.dateOfBirth.month.toString().padLeft(2, '0')}',
-                      unit: '${model.age} tuổi',
+                      value: '${model.age} tuổi',
+                      unit: '${model.dateOfBirth.day.toString().padLeft(2, '0')}/${model.dateOfBirth.month.toString().padLeft(2, '0')}/${model.dateOfBirth.year}',
                       onTap: () => _pickDateOfBirth(context),
                     ),
                   ),
@@ -242,16 +234,24 @@ class PhysicalInfoCard extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelCaption(color: AppColors.outline),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
-            Text(
-              value,
-              style: AppTypography.metricValue(color: AppColors.onSurface),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: AppTypography.metricValue(color: AppColors.onSurface),
+                maxLines: 1,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               unit,
               style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

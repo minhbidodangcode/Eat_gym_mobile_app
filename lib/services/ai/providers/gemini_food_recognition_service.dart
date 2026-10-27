@@ -20,7 +20,6 @@ class GeminiFoodRecognitionService implements FoodRecognitionService {
     this.fallbackService,
   });
 
-  static const String _defaultModel = 'gemini-3.8-flash';
   static const List<String> _preferredModels = [
     'gemini-3.8-flash',
     'gemini-flash-latest',
@@ -152,7 +151,7 @@ TUYỆT ĐỐI KHÔNG xuất văn bản giải thích thừa, chỉ xuất chu�
         debugPrint('Gemini API Error: Không có model nào phản hồi thành công.');
         if (fallbackService != null) {
           debugPrint('⚠️ Đang chuyển sang Local Docker AI Service do Gemini không khả dụng...');
-          return fallbackService!.recognizeIngredients(image, confidence: confidence);
+          return await fallbackService!.recognizeIngredients(image, confidence: confidence);
         }
         throw Exception('Lỗi gọi Gemini API: Không kết nối được model nào.');
       }
@@ -170,14 +169,14 @@ TUYỆT ĐỐI KHÔNG xuất văn bản giải thích thừa, chỉ xuất chu�
 
       final results = parseGeminiResponse(text, confidence: confidence);
       if (results.isEmpty && fallbackService != null) {
-        return fallbackService!.recognizeIngredients(image, confidence: confidence);
+        return await fallbackService!.recognizeIngredients(image, confidence: confidence);
       }
       return results;
     } catch (e) {
       debugPrint('Gemini Food Recognition exception: $e');
       if (fallbackService != null) {
         debugPrint('⚠️ Chuyển sang fallback Local Docker AI...');
-        return fallbackService!.recognizeIngredients(image, confidence: confidence);
+        return await fallbackService!.recognizeIngredients(image, confidence: confidence);
       }
       rethrow;
     }

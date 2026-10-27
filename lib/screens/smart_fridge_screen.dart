@@ -96,9 +96,8 @@ class SmartFridgeScreen extends StatefulWidget {
 
 }
 
-class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTickerProviderStateMixin {
+class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
   static List<Map<String, dynamic>>? _cachedAllRecipes;
-
 
   static const String _prefsKey = 'eatgym_smart_fridge_items_v4';
 
@@ -108,465 +107,83 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
 
   bool _isLoading = true;
 
-  bool _isFridgeDoorOpen = true; // Trạng thái mở cánh tủ lạnh
-
-  late AnimationController _doorAnimController;
-
-  late Animation<double> _doorAnimation;
-
   @override
-
   void initState() {
-
     super.initState();
-
-    _doorAnimController = AnimationController(
-
-      vsync: this,
-
-      duration: const Duration(milliseconds: 600),
-
-    );
-
-    _doorAnimation = CurvedAnimation(
-
-      parent: _doorAnimController,
-
-      curve: Curves.easeInOutBack,
-
-    );
-
-    _doorAnimController.value = 1.0; // Mặc định mở cửa
-
     _loadFridgeItems();
-
   }
 
-  @override
-
-  void dispose() {
-
-    _doorAnimController.dispose();
-
-    super.dispose();
-
+  Future<String> _getUserFridgeKey() async {
+    final userId = await ApiService.getUserId() ?? 'guest';
+    return 'smart_fridge_items_$userId';
   }
 
-  /// Tải danh sách nguyên liệu từ bộ nhớ máy hoặc pre-seed
-
+  /// Tải danh sách nguyên liệu từ backend API hoặc bộ nhớ riêng của tài khoản
   Future<void> _loadFridgeItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonStr = prefs.getString(_prefsKey);
-
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        final List<dynamic> decoded = jsonDecode(jsonStr);
-        final loaded = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-        final updatedList = <Map<String, dynamic>>[];
-
-        for (var item in loaded) {
-          var n = (item['name'] ?? '').toString().trim();
-          var lower = n.toLowerCase();
-
-          // 0. Bỏ Nhãn hộp
-          if (lower.contains('nhãn hộp')) {
-            continue;
-          }
-
-          // 1. Đổi hết heo -> lợn
-          if (lower.contains('heo')) {
-            n = n.replaceAll('heo', 'lợn').replaceAll('Heo', 'Lợn');
-            item['name'] = n;
-            lower = n.toLowerCase();
-          }
-
-          // 2. Đổi thơm -> dứa (trừ dầu mè thơm)
-          if (lower.contains('thơm') && !lower.contains('dầu mè')) {
-            n = n.replaceAll('thơm', 'dứa').replaceAll('Thơm', 'Dứa');
-            item['name'] = n;
-            lower = n.toLowerCase();
-          }
-
-          // 3. Chuẩn hóa tên chung chung
-          if (lower == 'nước ngọt') {
-            item['name'] = 'CocaCola';
-            item['icon'] = '🥤';
-            item['unit'] = 'lon';
-            item['kcalPer100g'] = 42;
-          } else if (lower == 'nước sốt') {
-            item['name'] = 'Sốt cà chua';
-            item['icon'] = '🥫';
-            item['unit'] = 'hũ';
-            item['kcalPer100g'] = 80;
-          } else if (lower == 'hải sản') {
-            item['name'] = 'Mực ống tươi';
-            item['icon'] = '🦑';
-            item['kcalPer100g'] = 85;
-          } else if (lower == 'cá') {
-            item['name'] = 'Phi lê cá hồi';
-            item['icon'] = '🐟';
-            item['kcalPer100g'] = 208;
-          } else if (lower == 'tôm') {
-            item['name'] = 'Tôm thẻ tươi';
-            item['icon'] = '🦐';
-            item['kcalPer100g'] = 99;
-          } else if (lower == 'thịt bò') {
-            item['name'] = 'Thịt thăn bò';
-            item['icon'] = '🥩';
-          } else if (lower == 'thịt heo' || lower == 'thịt lợn') {
-            item['name'] = 'Thịt nạc lợn';
-            item['icon'] = '🐖';
-          }
-
-          // 4. Chuẩn hóa icon theo tên nguyên liệu cụ thể
-          final detected = IngredientNormalizer.detectIcon(item['name'] ?? '');
-          if (detected != '🥗') {
-            item['icon'] = detected;
-          } else if (item['icon'] == null || item['icon'].toString().isEmpty) {
-            item['icon'] = detected;
-          }
-          updatedList.add(item);
-        }
-
-        _fridgeItems = updatedList;
-        _saveFridgeItems();
-      } else {
-        // Khởi tạo sẵn một số món mẫu phổ biến trong tủ lạnh gymer (tên cụ thể, icon chuẩn)
-        _fridgeItems = [
-          // Ngăn đông (Hàng 1)
-          {
-            'id': 'f_1',
-            'name': 'Thịt thăn bò',
-            'icon': '🥩',
-            'weight': 500,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 142,
-            'protein': 26,
-            'carbs': 0,
-            'fat': 3.5,
-          },
-          {
-            'id': 'f_2',
-            'name': 'Thịt nạc lợn',
-            'icon': '🐖',
-            'weight': 400,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 143,
-            'protein': 26,
-            'carbs': 0,
-            'fat': 3.5,
-          },
-          {
-            'id': 'f_3',
-            'name': 'Ức gà tươi',
-            'icon': '🍗',
-            'weight': 600,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 120,
-            'protein': 26,
-            'carbs': 0,
-            'fat': 1.5,
-          },
-          {
-            'id': 'f_4',
-            'name': 'Phi lê cá hồi',
-            'icon': '🐟',
-            'weight': 350,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 208,
-            'protein': 22,
-            'carbs': 0,
-            'fat': 13,
-          },
-
-          // Ngăn đông (Hàng 2)
-          {
-            'id': 'f_5',
-            'name': 'Tôm thẻ tươi',
-            'icon': '🦐',
-            'weight': 300,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 99,
-            'protein': 24,
-            'carbs': 0.2,
-            'fat': 0.3,
-          },
-          {
-            'id': 'f_6',
-            'name': 'Mực ống tươi',
-            'icon': '🦑',
-            'weight': 300,
-            'unit': 'g',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 85,
-            'protein': 18,
-            'carbs': 1.4,
-            'fat': 1.1,
-          },
-          {
-            'id': 'f_7',
-            'name': 'Đá viên tinh khiết',
-            'icon': '🧊',
-            'weight': 1,
-            'unit': 'khay',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 0,
-            'protein': 0,
-            'carbs': 0,
-            'fat': 0,
-          },
-          {
-            'id': 'f_8',
-            'name': 'Kem sữa chua',
-            'icon': '🍦',
-            'weight': 1,
-            'unit': 'hộp',
-            'compartment': FridgeClassifier.freezer,
-            'kcalPer100g': 120,
-            'protein': 3.5,
-            'carbs': 18,
-            'fat': 3.0,
-          },
-
-          // Ngăn mát - Kệ 1 (Sữa trứng protein)
-          {
-            'id': 'c_1',
-            'name': 'Trứng gà ta',
-            'icon': '🥚',
-            'weight': 10,
-            'unit': 'quả',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 155,
-            'protein': 13,
-            'carbs': 1.1,
-            'fat': 11,
-          },
-          {
-            'id': 'c_2',
-            'name': 'Sữa tươi tiệt trùng',
-            'icon': '🥛',
-            'weight': 1000,
-            'unit': 'ml',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 60,
-            'protein': 3.2,
-            'carbs': 4.8,
-            'fat': 3.3,
-          },
-          {
-            'id': 'c_3',
-            'name': 'Phô mai lát',
-            'icon': '🧀',
-            'weight': 200,
-            'unit': 'g',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 350,
-            'protein': 20,
-            'carbs': 2.0,
-            'fat': 28,
-          },
-          {
-            'id': 'c_4',
-            'name': 'Bơ lạt',
-            'icon': '🧈',
-            'weight': 200,
-            'unit': 'g',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 717,
-            'protein': 0.8,
-            'carbs': 0.1,
-            'fat': 81,
-          },
-
-          // Ngăn mát - Kệ 2 (Đồ uống & Sốt tương)
-          {
-            'id': 'c_5',
-            'name': 'Tương cà chua',
-            'icon': '🥫',
-            'weight': 1,
-            'unit': 'chai',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 102,
-            'protein': 1.2,
-            'carbs': 24,
-            'fat': 0.2,
-          },
-          {
-            'id': 'c_6',
-            'name': 'Sữa chua dâu',
-            'icon': '🍓',
-            'weight': 4,
-            'unit': 'hũ',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 85,
-            'protein': 3.5,
-            'carbs': 14,
-            'fat': 1.5,
-          },
-          {
-            'id': 'c_7',
-            'name': 'Sốt cà chua',
-            'icon': '🥫',
-            'weight': 1,
-            'unit': 'hũ',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 80,
-            'protein': 1.5,
-            'carbs': 14,
-            'fat': 1.0,
-          },
-          {
-            'id': 'c_8',
-            'name': 'CocaCola',
-            'icon': '🥤',
-            'weight': 2,
-            'unit': 'lon',
-            'compartment': FridgeClassifier.cooler,
-            'kcalPer100g': 42,
-            'protein': 0,
-            'carbs': 10.6,
-            'fat': 0,
-          },
-
-          // Ngăn mát - Hộc rau quả trái (Rau xanh & Củ)
-          {
-            'id': 'v_1',
-            'name': 'Bông cải xanh',
-            'icon': '🥦',
-            'weight': 1,
-            'unit': 'cây',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 0,
-            'kcalPer100g': 34,
-            'protein': 2.8,
-            'carbs': 7,
-            'fat': 0.4,
-          },
-          {
-            'id': 'v_2',
-            'name': 'Cải thìa',
-            'icon': '🥬',
-            'weight': 1,
-            'unit': 'bó',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 0,
-            'kcalPer100g': 13,
-            'protein': 1.5,
-            'carbs': 2.2,
-            'fat': 0.2,
-          },
-          {
-            'id': 'v_3',
-            'name': 'Cà chua bi',
-            'icon': '🍅',
-            'weight': 500,
-            'unit': 'g',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 0,
-            'kcalPer100g': 18,
-            'protein': 0.9,
-            'carbs': 3.9,
-            'fat': 0.2,
-          },
-          {
-            'id': 'v_4',
-            'name': 'Cà rốt',
-            'icon': '🥕',
-            'weight': 1,
-            'unit': 'củ',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 0,
-            'kcalPer100g': 41,
-            'protein': 0.9,
-            'carbs': 10,
-            'fat': 0.2,
-          },
-          {
-            'id': 'v_5',
-            'name': 'Tỏi',
-            'icon': '🧄',
-            'weight': 1,
-            'unit': 'củ',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 0,
-            'kcalPer100g': 149,
-            'protein': 6.4,
-            'carbs': 33,
-            'fat': 0.5,
-          },
-
-          // Ngăn mát - Hộc rau quả phải (Trái cây & Hành củ)
-          {
-            'id': 'v_6',
-            'name': 'Hành tây',
-            'icon': '🧅',
-            'weight': 1,
-            'unit': 'củ',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 1,
-            'kcalPer100g': 40,
-            'protein': 1.1,
-            'carbs': 9,
-            'fat': 0.1,
-          },
-          {
-            'id': 'v_7',
-            'name': 'Táo đỏ',
-            'icon': '🍎',
-            'weight': 1,
-            'unit': 'quả',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 1,
-            'kcalPer100g': 52,
-            'protein': 0.3,
-            'carbs': 14,
-            'fat': 0.2,
-          },
-          {
-            'id': 'v_8',
-            'name': 'Chuối tiêu',
-            'icon': '🍌',
-            'weight': 1,
-            'unit': 'nải',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 1,
-            'kcalPer100g': 89,
-            'protein': 1.1,
-            'carbs': 23,
-            'fat': 0.3,
-          },
-          {
-            'id': 'v_9',
-            'name': 'Cam sành',
-            'icon': '🍊',
-            'weight': 1,
-            'unit': 'quả',
-            'compartment': FridgeClassifier.cooler,
-            'isDrawer': true,
-            'drawerIndex': 1,
-            'kcalPer100g': 47,
-            'protein': 0.9,
-            'carbs': 12,
-            'fat': 0.1,
-          },
-        ];
-
-        _saveFridgeItems();
+      // Xóa khóa mock dùng chung cũ 'eatgym_smart_fridge_items_v4' nếu còn lưu trên máy
+      if (prefs.containsKey(_prefsKey)) {
+        await prefs.remove(_prefsKey);
       }
-    } catch (_) {}
+
+      final userKey = await _getUserFridgeKey();
+      bool loadedFromApi = false;
+
+      // 1. Đồng bộ từ cơ sở dữ liệu thật của tài khoản (GET /api/inventory)
+      try {
+        final res = await ApiService.getInventory();
+        if (res['items'] != null) {
+          final List<dynamic> itemsList = res['items'];
+          _fridgeItems = itemsList.map((e) {
+            final name = e['name']?.toString() ?? '';
+            final cat = e['category']?.toString();
+            final comp = cat == 'freezer'
+                ? FridgeClassifier.freezer
+                : (cat == 'cooler' ? FridgeClassifier.cooler : FridgeClassifier.classify(name));
+            var icon = e['icon']?.toString();
+            if (icon == null || icon.isEmpty || icon == '🥗') {
+              final detected = IngredientNormalizer.detectIcon(name);
+              if (detected != '🥗') {
+                icon = detected;
+              } else {
+                icon = icon ?? '🥗';
+              }
+            }
+            return <String, dynamic>{
+              'id': e['id']?.toString() ?? 'inv_${DateTime.now().microsecondsSinceEpoch}',
+              'name': name,
+              'icon': icon,
+              'weight': (e['quantity'] as num?)?.toInt() ?? 1,
+              'unit': e['unit']?.toString() ?? 'g',
+              'compartment': comp,
+              'kcalPer100g': (e['calories'] as num?)?.toInt() ?? 0,
+              'protein': (e['protein'] as num?)?.toInt() ?? 0,
+              'carbs': (e['carbs'] as num?)?.toInt() ?? 0,
+              'fat': (e['fat'] as num?)?.toInt() ?? 0,
+            };
+          }).toList();
+          await prefs.setString(userKey, jsonEncode(_fridgeItems));
+          loadedFromApi = true;
+        }
+      } catch (_) {
+        // Mất mạng hoặc chạy offline
+      }
+
+      // 2. Nếu không lấy được từ API, fallback về bộ nhớ cục bộ CỦA TÀI KHOẢN ĐÓ
+      if (!loadedFromApi) {
+        final jsonStr = prefs.getString(userKey);
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(jsonStr);
+          _fridgeItems = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        } else {
+          // Tài khoản mới chưa thêm món -> Tủ lạnh trống hoàn toàn
+          _fridgeItems = [];
+        }
+      }
+    } catch (_) {
+      _fridgeItems = [];
+    }
 
     _syncToGlobalSession();
     if (mounted) {
@@ -574,17 +191,66 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
     }
   }
   Future<void> _saveFridgeItems() async {
-
     try {
-
       final prefs = await SharedPreferences.getInstance();
-
-      await prefs.setString(_prefsKey, jsonEncode(_fridgeItems));
-
+      final userKey = await _getUserFridgeKey();
+      await prefs.setString(userKey, jsonEncode(_fridgeItems));
     } catch (_) {}
-
     _syncToGlobalSession();
+  }
 
+  /// Dọn sạch tủ lạnh (Xóa toàn bộ nguyên liệu của tài khoản)
+  Future<void> _clearAllFridgeItems() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_sweep, color: AppColors.fire, size: 26),
+            const SizedBox(width: 8),
+            Text('Dọn sạch tủ lạnh', style: AppTypography.titleMedium(color: AppColors.onSurface)),
+          ],
+        ),
+        content: const Text(
+          'Bạn có chắc chắn muốn bỏ toàn bộ nguyên liệu ra khỏi tủ lạnh không? Hành động này sẽ làm trống tủ lạnh tài khoản của bạn.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.fire,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Dọn sạch ngay'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() {
+        _fridgeItems.clear();
+        _selectedItemIds.clear();
+      });
+      await _saveFridgeItems();
+      await ApiService.clearInventory();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✨ Đã dọn sạch toàn bộ nguyên liệu trong tủ lạnh!'),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _syncToGlobalSession() {
@@ -606,32 +272,6 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
       } else {
 
         _selectedItemIds.add(id);
-
-      }
-
-    });
-
-  }
-
-  void _selectAllInCompartment(String compartment) {
-
-    final items = _fridgeItems.where((i) => i['compartment'] == compartment).toList();
-
-    final allSelected = items.every((i) => _selectedItemIds.contains(i['id']));
-
-    setState(() {
-
-      for (final item in items) {
-
-        if (allSelected) {
-
-          _selectedItemIds.remove(item['id']);
-
-        } else {
-
-          _selectedItemIds.add(item['id'] as String);
-
-        }
 
       }
 
@@ -690,14 +330,26 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
     };
 
     setState(() {
-
       _fridgeItems.insert(0, newItem);
-
       _selectedItemIds.add(newItem['id'] as String); // Tự động chọn món vừa thêm
-
     });
 
     _saveFridgeItems();
+
+    // Đồng bộ tức thời lên cơ sở dữ liệu kho nguyên liệu (user_inventory)
+    ApiService.addInventoryBatch([
+      {
+        'name': newItem['name'],
+        'quantity': newItem['weight'],
+        'unit': newItem['unit'],
+        'calories': newItem['kcalPer100g'],
+        'protein': newItem['protein'],
+        'carbs': newItem['carbs'],
+        'fat': newItem['fat'],
+        'category': comp == FridgeClassifier.freezer ? 'freezer' : 'cooler',
+        'icon': newItem['icon'],
+      }
+    ]).catchError((_) => <String, dynamic>{});
 
     ScaffoldMessenger.of(context).showSnackBar(
 
@@ -1052,19 +704,16 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
             TextButton(
 
               onPressed: () {
-
+                final itemId = item['id'];
                 setState(() {
-
-                  _fridgeItems.removeWhere((i) => i['id'] == item['id']);
-
-                  _selectedItemIds.remove(item['id']);
-
+                  _fridgeItems.removeWhere((i) => i['id'] == itemId);
+                  _selectedItemIds.remove(itemId);
                 });
-
                 _saveFridgeItems();
-
+                if (itemId != null) {
+                  ApiService.deleteInventoryItem(itemId.toString());
+                }
                 Navigator.pop(ctx);
-
               },
 
               style: TextButton.styleFrom(foregroundColor: AppColors.fire),
@@ -2112,6 +1761,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
     return matchedList.take(30).toList();
   }
 
+  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
@@ -2125,13 +1775,53 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
     final coolerShelves = _chunkItems(coolerItems, 4);
 
     final selectedCount = _selectedItemIds.length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9), // Nền sáng sạch sẽ, tôn dáng chiếc tủ lạnh retro
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF1F5F9), // Nền động theo chế độ Sáng / Tối
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'TỦ LẠNH GYMER (${_fridgeItems.length} món)',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                    ),
+                  ),
+                  if (_fridgeItems.isNotEmpty)
+                    InkWell(
+                      onTap: _clearAllFridgeItems,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.delete_outline, size: 14, color: AppColors.fire),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Dọn sạch tủ',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.fire,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
             // KHUNG MINH HỌA TỦ LẠNH MỞ CÁNH TRÁI (Không còn thanh filter chip thừa)
             Expanded(
@@ -2395,21 +2085,53 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
                         // Các hàng kệ thức ăn ngăn đông (scroll mượt nếu có nhiều món)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: freezerShelves.map((shelf) {
-                                return Column(
-                                  children: [
-                                    _buildShelfRow(shelf),
-                                    _buildWhiteShelfBar(),
-                                    const SizedBox(height: 6),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                          child: freezerShelves.isEmpty
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.ac_unit, color: const Color(0xFF38BDF8).withValues(alpha: 0.65), size: 26),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Ngăn đông trống',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF0369A1),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'Thịt, cá, tôm cấp đông sẽ xuất hiện ở đây',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: const Color(0xFF0284C7).withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        _buildWhiteShelfBar(),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: freezerShelves.map((shelf) {
+                                      return Column(
+                                        children: [
+                                          _buildShelfRow(shelf),
+                                          _buildWhiteShelfBar(),
+                                          const SizedBox(height: 6),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -2439,20 +2161,55 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> with SingleTicker
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          children: coolerShelves.map((shelf) {
-                            return Column(
-                              children: [
-                                _buildShelfRow(shelf),
-                                _buildWhiteShelfBar(isWarm: true),
-                                const SizedBox(height: 8),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                      child: coolerShelves.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.kitchen_outlined, color: const Color(0xFFD97706).withValues(alpha: 0.6), size: 36),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Tủ lạnh đang trống',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF78350F),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Tài khoản mới bắt đầu với tủ lạnh trống.\nBấm nút + màu cam hoặc dùng 🎤 giọng nói\nđể cất nguyên liệu vào tủ!',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: const Color(0xFF92400E).withValues(alpha: 0.85),
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildWhiteShelfBar(isWarm: true),
+                                    const SizedBox(height: 28),
+                                    _buildWhiteShelfBar(isWarm: true),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                children: coolerShelves.map((shelf) {
+                                  return Column(
+                                    children: [
+                                      _buildShelfRow(shelf),
+                                      _buildWhiteShelfBar(isWarm: true),
+                                      const SizedBox(height: 8),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                     ),
                   ),
                 ),

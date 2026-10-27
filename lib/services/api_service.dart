@@ -30,12 +30,54 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
     if (token == null || isTokenExpired(token)) {
-      try {
-        final data = await login('demo@eatgym.com', '12345678');
-        token = data['accessToken']?.toString();
-      } catch (_) {}
+      return null;
     }
     return token;
+  }
+
+  static Future<Map<String, dynamic>?> getJwtPayload() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null || token.isEmpty || token == 'dummy_token') return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      return Map<String, dynamic>.from(json.decode(decoded));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> getUserId() async {
+    final token = await _getToken();
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final Map<String, dynamic> data = json.decode(decoded);
+      return data['sub']?.toString() ?? data['userId']?.toString() ?? data['id']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('user_email');
+    if (cached != null && cached.isNotEmpty) return cached;
+    final payload = await getJwtPayload();
+    if (payload != null && payload['email'] != null) {
+      final email = payload['email'].toString();
+      await prefs.setString('user_email', email);
+      return email;
+    }
+    return null;
   }
 
   static Map<String, String> _headers(String? token) {
@@ -64,6 +106,14 @@ class ApiService {
       final data = json.decode(response.body);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', data['accessToken']);
+      await prefs.setString('user_email', email);
+      if (data['user'] != null) {
+        final user = data['user'];
+        if (user['email'] != null) await prefs.setString('user_email', user['email'].toString());
+        if (user['fullName'] != null) await prefs.setString('user_full_name', user['fullName'].toString());
+        if (user['role'] != null) await prefs.setString('user_role', user['role'].toString());
+        await prefs.setString('user_data', json.encode(user));
+      }
       return data;
     } else {
       throw Exception('Failed to login: ${response.body}');
@@ -75,38 +125,174 @@ class ApiService {
     final token = prefs.getString('auth_token');
     if (token == null || token.isEmpty || token == 'dummy_token') return false;
     if (isTokenExpired(token)) {
-      try {
-        final res = await login('demo@eatgym.com', '12345678');
-        return res.containsKey('accessToken');
-      } catch (_) {
-        return false;
-      }
+      await logout();
+      return false;
     }
     return true;
   }
 
+  static Future<Map<String, dynamic>?> getUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = await _getToken();
+    if (token != null) {
+      try {
+        final response = await http.get(
+          Uri.parse('$baseUrl/auth/me'),
+          headers: _headers(token),
+        ).timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final user = Map<String, dynamic>.from(json.decode(response.body)['user']);
+          await prefs.setString('user_data', json.encode(user));
+          if (user['email'] != null) await prefs.setString('user_email', user['email'].toString());
+          if (user['fullName'] != null) await prefs.setString('user_full_name', user['fullName'].toString());
+          if (user['role'] != null) await prefs.setString('user_role', user['role'].toString());
+          return user;
+        }
+      } catch (_) {}
+    }
+
+    // Fallback 1: cached user_data
+    final cachedUserData = prefs.getString('user_data');
+    if (cachedUserData != null && cachedUserData.isNotEmpty) {
+      try {
+        return Map<String, dynamic>.from(json.decode(cachedUserData));
+      } catch (_) {}
+    }
+
+    // Fallback 2: JWT payload (contains email, role, sub)
+    final jwt = await getJwtPayload();
+    if (jwt != null) {
+      final email = jwt['email']?.toString() ?? prefs.getString('user_email');
+      final role = jwt['role']?.toString() ?? prefs.getString('user_role') ?? 'ATHLETE';
+      final fullName = prefs.getString('user_full_name');
+      return {
+        'id': jwt['sub']?.toString(),
+        'email': email,
+        'fullName': fullName ?? (email != null && email.contains('@') ? email.split('@')[0] : 'Vận động viên'),
+        'role': role,
+      };
+    }
+
+    // Fallback 3: user_email in prefs
+    final savedEmail = prefs.getString('user_email');
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      return {
+        'email': savedEmail,
+        'fullName': prefs.getString('user_full_name') ?? savedEmail.split('@')[0],
+        'role': prefs.getString('user_role') ?? 'ATHLETE',
+      };
+    }
+
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> changePassword(String oldPassword, String newPassword) async {
+    final token = await _getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/change-password'),
+      headers: _headers(token),
+      body: json.encode({'oldPassword': oldPassword, 'newPassword': newPassword}),
+    );
+    final data = json.decode(response.body);
+    if (response.statusCode == 200) {
+      return data;
+    } else {
+      throw Exception(data['error']?['message'] ?? data['message'] ?? 'Đổi mật khẩu thất bại.');
+    }
+  }
+
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final userId = await getUserId();
+    if (userId != null) {
+      await prefs.remove('smart_fridge_items_$userId');
+    }
+    await prefs.remove('eatgym_smart_fridge_items_v4');
     await prefs.remove('auth_token');
     await prefs.remove('user_profile');
+    await prefs.remove('user_email');
+    await prefs.remove('user_full_name');
+    await prefs.remove('user_role');
+    await prefs.remove('user_data');
   }
 
   // ---------------------------------------------------------
   // HỒ SƠ KHỞI TẠO (ONBOARDING PROFILE)
   // ---------------------------------------------------------
 
+  static Future<void> saveLocalProfile(Map<String, dynamic> profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_profile', json.encode(profile));
+  }
+
+  static Future<Map<String, dynamic>?> getLocalProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('user_profile');
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        return Map<String, dynamic>.from(json.decode(cached));
+      } catch (_) {}
+    }
+    return null;
+  }
+
   /// Trả về `null` khi tài khoản chưa tạo hồ sơ lần đầu.
   static Future<Map<String, dynamic>?> getProfile() async {
     final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/profile'),
-      headers: _headers(token),
-    );
-    if (response.statusCode == 200) {
-      return Map<String, dynamic>.from(json.decode(response.body)['profile']);
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile'),
+        headers: _headers(token),
+      );
+      if (response.statusCode == 200) {
+        final profile = Map<String, dynamic>.from(json.decode(response.body)['profile']);
+        await saveLocalProfile(profile);
+        return profile;
+      }
+      if (response.statusCode == 404) {
+        return await getLocalProfile();
+      }
+    } catch (_) {
+      return await getLocalProfile();
     }
-    if (response.statusCode == 404) return null;
-    throw Exception('Không thể tải hồ sơ: ${response.body}');
+    return await getLocalProfile();
+  }
+
+  static String parseApiError(String responseBody) {
+    try {
+      final decoded = json.decode(responseBody);
+      if (decoded is Map) {
+        String msg = '';
+        if (decoded['error'] is Map && (decoded['error'] as Map).containsKey('message')) {
+          msg = (decoded['error'] as Map)['message'].toString();
+        } else if (decoded.containsKey('message')) {
+          msg = decoded['message'].toString();
+        }
+
+        if (msg.isNotEmpty) {
+          if (msg.contains('dateOfBirth must use YYYY-MM-DD format')) {
+            return 'Ngày sinh phải đúng định dạng YYYY-MM-DD.';
+          }
+          if (msg.contains('between 13 and 120')) {
+            return 'Độ tuổi người dùng phải từ 13 đến 120 tuổi.';
+          }
+          if (msg.contains('sex must be either')) {
+            return 'Giới tính không hợp lệ.';
+          }
+          if (msg.contains('heightCm')) {
+            return 'Chiều cao không hợp lệ (50 - 300 cm).';
+          }
+          if (msg.contains('weightKg')) {
+            return 'Cân nặng không hợp lệ (10 - 500 kg).';
+          }
+          if (msg.contains('activityLevel')) {
+            return 'Mức độ vận động không hợp lệ.';
+          }
+          return msg;
+        }
+      }
+    } catch (_) {}
+    return responseBody;
   }
 
   static Future<Map<String, dynamic>> saveProfile({
@@ -116,24 +302,31 @@ class ApiService {
     required double weightKg,
     required String activityLevel,
     required String fitnessGoal,
+    List<String>? allergies,
+    List<String>? dietaryPreferences,
+    Map<String, dynamic>? targetMacros,
   }) async {
     final token = await _getToken();
+    final payload = <String, dynamic>{
+      'sex': sex,
+      'dateOfBirth': dateOfBirth,
+      'heightCm': heightCm,
+      'weightKg': weightKg,
+      'activityLevel': activityLevel,
+      'fitnessGoal': fitnessGoal,
+      if (allergies != null) 'allergies': allergies,
+      if (dietaryPreferences != null) 'dietaryPreferences': dietaryPreferences,
+      if (targetMacros != null) 'targetMacros': targetMacros,
+    };
     final response = await http.put(
       Uri.parse('$baseUrl/profile'),
       headers: _headers(token),
-      body: json.encode({
-        'sex': sex,
-        'dateOfBirth': dateOfBirth,
-        'heightCm': heightCm,
-        'weightKg': weightKg,
-        'activityLevel': activityLevel,
-        'fitnessGoal': fitnessGoal,
-      }),
+      body: json.encode(payload),
     );
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(json.decode(response.body));
     }
-    throw Exception('Không thể lưu hồ sơ: ${response.body}');
+    throw Exception(parseApiError(response.body));
   }
 
   static Future<void> saveOnboardingPreferences({
@@ -159,10 +352,74 @@ class ApiService {
       final data = json.decode(response.body);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', data['accessToken']);
+      await prefs.setString('user_email', email);
+      await prefs.setString('user_full_name', fullName);
+      if (data['user'] != null) {
+        await prefs.setString('user_data', json.encode(data['user']));
+      }
       return data;
     } else {
       throw Exception('Failed to register: ${response.body}');
     }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+    final url = Uri.parse('$baseUrl/auth/reset-password');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: json.encode({'email': email, 'newPassword': newPassword}),
+    );
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception(parseApiError(response.body));
+    }
+  }
+
+  // ---------------------------------------------------------
+  // CHỈ SỐ VÓC DÁNG (BODY STATS & HISTORY)
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> getBodyStatsHistory() async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/profile/stats');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is Map && data['history'] is List) {
+        return List<Map<String, dynamic>>.from(data['history']);
+      }
+      return [];
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> addBodyStat({
+    required String measuredOn,
+    required double weightKg,
+    double? heightCm,
+    double? bodyFatPercent,
+  }) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/profile/stats');
+    final response = await http.post(
+      url,
+      headers: _headers(token),
+      body: json.encode({
+        'measuredOn': measuredOn,
+        'weightKg': weightKg,
+        if (heightCm != null) 'heightCm': heightCm,
+        if (bodyFatPercent != null) 'bodyFatPercent': bodyFatPercent,
+      }),
+    );
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return json.decode(response.body);
+    }
+    throw Exception(parseApiError(response.body));
   }
 
   // ---------------------------------------------------------
@@ -225,6 +482,22 @@ class ApiService {
     } else {
       throw Exception('Failed to consume inventory: ${response.body}');
     }
+  }
+
+  static Future<void> deleteInventoryItem(String id) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/inventory/$id');
+    try {
+      await http.delete(url, headers: _headers(token));
+    } catch (_) {}
+  }
+
+  static Future<void> clearInventory() async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/inventory');
+    try {
+      await http.delete(url, headers: _headers(token));
+    } catch (_) {}
   }
 
   // ---------------------------------------------------------

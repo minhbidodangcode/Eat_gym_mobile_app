@@ -7,12 +7,13 @@ class NutritionAdvancedApiService {
   // Hàm lấy token, tương tự như ApiService
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token') ?? 'dummy_token'; 
+    return prefs.getString('auth_token'); 
   }
 
   static Map<String, String> _headers(String? token) {
     return {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -141,5 +142,35 @@ class NutritionAdvancedApiService {
     );
     if (response.statusCode == 201) return json.decode(response.body);
     throw Exception('Failed to allocate compensation: ${response.body}');
+  }
+
+  /// Lấy danh sách các lần lệch calo (Deviations)
+  static Future<List<Map<String, dynamic>>> getDeviations() async {
+    final token = await _getToken();
+    final url = Uri.parse('${ApiService.baseUrl}/deviations');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is Map && data['deviations'] is List) {
+        return List<Map<String, dynamic>>.from(data['deviations']);
+      }
+      return [];
+    }
+    return [];
+  }
+
+  /// Lấy danh sách các mẻ Meal Prep đã lưu
+  static Future<List<Map<String, dynamic>>> getMealPrepBatches() async {
+    final token = await _getToken();
+    final url = Uri.parse('${ApiService.baseUrl}/batches');
+    final response = await http.get(url, headers: _headers(token));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is Map && data['batches'] is List) {
+        return List<Map<String, dynamic>>.from(data['batches']);
+      }
+      return [];
+    }
+    return [];
   }
 }

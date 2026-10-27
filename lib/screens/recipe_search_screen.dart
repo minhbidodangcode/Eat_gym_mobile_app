@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'cooking_timer_screen.dart';
 import '../services/api_service.dart';
+import '../services/settings_service.dart';
 import '../services/ai/ingredient_normalizer.dart';
+import 'profile_screen.dart';
 
 /// Trang Nấu Ăn thiết kế theo phong cách Lướt Bảng Tin Instagram (Instagram Recipe Feed)
 
@@ -318,6 +320,22 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
   final Map<String, List<Map<String, String>>> _commentsMap = {};
   static const String _userPostsKey = 'eatgym_user_created_recipes_v2';
   List<Map<String, dynamic>> _userPosts = [];
+
+  // Getters & helper methods cho ProfileScreen (Instagram profile)
+  List<Map<String, dynamic>> get userPosts => _userPosts;
+  List<Map<String, dynamic>> get feedPosts => _feedPosts;
+  Set<String> get savedRecipeIds => _savedRecipeIds;
+  Set<String> get likedRecipeIds => _likedRecipeIds;
+  void showRecipeDetails(Map<String, dynamic> recipe, {BuildContext? customContext}) => _showRecipeDetailsModal(recipe, customContext: customContext);
+  void deleteUserPost(String id) {
+    setState(() {
+      _userPosts.removeWhere((p) => p['id'] == id);
+      _feedPosts.removeWhere((p) => p['id'] == id);
+    });
+    _saveUserPosts();
+  }
+  void toggleSaveRecipe(String id, String title) => _toggleSave(id, title);
+  void toggleLikeRecipe(String id) => _toggleLike(id);
 
   final List<Map<String, String>> _stories = [
     {'label': 'Tất cả', 'icon': '🌟', 'tag': 'Tất cả'},
@@ -673,14 +691,48 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          !isSaved
-              ? 'Đã lưu "$title" vào Bộ sưu tập của bạn! 🔖'
-              : 'Đã xóa "$title" khỏi Bộ sưu tập!',
-        ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: !isSaved ? AppColors.primary : Colors.grey[800],
+        elevation: 8,
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: !isSaved ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+            width: 1.5,
+          ),
+        ),
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: !isSaved
+                    ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                    : const Color(0xFFEF4444).withValues(alpha: 0.2),
+              ),
+              child: Icon(
+                !isSaved ? Icons.bookmark_added_rounded : Icons.bookmark_remove_rounded,
+                color: !isSaved ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                !isSaved
+                    ? 'Đã lưu "$title" vào Bộ sưu tập của bạn!'
+                    : 'Đã xóa "$title" khỏi Bộ sưu tập!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.5,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -688,11 +740,12 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
   void _showCommentsSheet(String recipeId, String recipeTitle) {
     final comments = _commentsMap[recipeId] ?? [];
     final textCtrl = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -834,9 +887,10 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
   }
 
   void _showShareSheet(Map<String, dynamic> recipe) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -884,12 +938,12 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                       },
                     ),
                     _buildShareAction(
-                      icon: Icons.history_edu,
-                      label: 'Thêm vào Story',
+                      icon: Icons.share_rounded,
+                      label: 'Chia sẻ khác',
                       onTap: () {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Đã chia sẻ công thức lên Story EatGym! 📸')),
+                          const SnackBar(content: Text('Đã mở hộp thoại chia sẻ công thức! 📲')),
                         );
                       },
                     ),
@@ -926,13 +980,16 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     );
   }
 
-  void _showRecipeDetailsModal(Map<String, dynamic> recipe) {
+  void _showRecipeDetailsModal(Map<String, dynamic> recipe, {BuildContext? customContext}) {
     final ingredients = recipe['ingredients'] as List? ?? [];
+    final activeContext = customContext ?? context;
+    final isDark = Theme.of(activeContext).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
 
     showModalBottomSheet(
-      context: context,
+      context: activeContext,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -952,13 +1009,12 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
+                        color: isDark ? Colors.white24 : AppColors.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-const SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   // Ảnh minh họa món ăn chi tiết
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
@@ -968,7 +1024,94 @@ const SizedBox(height: 12),
                       child: _buildRecipeImage(recipe['image'], fit: BoxFit.cover),
                     ),
                   ),
+                  const SizedBox(height: 14),
+
+                  // Thanh thông tin tác giả (Bấm vào xem trang cá nhân tác giả hoặc bản thân)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ProfileScreen(authorData: recipe)),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 17,
+                            backgroundImage: NetworkImage(recipe['authorAvatar'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                            backgroundColor: isDark ? const Color(0xFF26322C) : Colors.grey[200],
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
                                     Text(
+                                      recipe['authorName'] ?? 'Tác giả',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13.5,
+                                        color: isDark ? Colors.white : AppColors.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    if (recipe['isMine'] == true)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? primaryAccent : AppColors.primary,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'CỦA TÔI',
+                                          style: TextStyle(
+                                            color: isDark ? Colors.black : Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      const Icon(Icons.verified, size: 14, color: Colors.blueAccent),
+                                  ],
+                                ),
+                                Text(
+                                  recipe['authorBadge'] ?? 'Đầu bếp EatClean',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? const Color(0xFF94A3B8) : AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            'Xem trang cá nhân',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? primaryAccent : AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, size: 16, color: isDark ? primaryAccent : AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  Text(
                     recipe['title'] ?? '',
                     style: AppTypography.headline(color: AppColors.onSurface).copyWith(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
@@ -1086,24 +1229,23 @@ const SizedBox(height: 12),
       return tags.any((t) => t.contains(filterLower)) || title.contains(filterLower);
     }).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
       appBar: null, // Đã chuyển lên AppHeader chính để tránh bị 2 tầng header
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? Center(child: CircularProgressIndicator(color: primaryAccent))
           : RefreshIndicator(
               onRefresh: _loadFeed,
-              color: AppColors.primary,
+              color: primaryAccent,
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
-                  // 1. THANH STORIES GIỐNG INSTAGRAM
+                  // 1. THANH CHỦ ĐỀ CÔNG THỨC (Đã bỏ story tròn)
                   SliverToBoxAdapter(
-                    child: _buildInstagramStoriesBar(),
-                  ),
-
-                  const SliverToBoxAdapter(
-                    child: Divider(height: 1, thickness: 0.5, color: Colors.black12),
+                    child: _buildCategoryFilterChips(isDark, primaryAccent),
                   ),
 
                   // 2. DANH SÁCH BÀI ĐĂNG CÔNG THỨC KIỂU INSTAGRAM FEED
@@ -1112,7 +1254,7 @@ const SizedBox(height: 12),
                       child: Center(
                         child: Text(
                           'Chưa có công thức cho mục "$_selectedFilter"',
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600]),
                         ),
                       ),
                     )
@@ -1121,7 +1263,7 @@ const SizedBox(height: 12),
                       delegate: SliverChildBuilderDelegate(
                         (context, idx) {
                           final post = filteredPosts[idx];
-                          return _buildInstagramPostCard(post);
+                          return _buildInstagramPostCard(post, isDark, primaryAccent);
                         },
                         childCount: filteredPosts.length,
                       ),
@@ -1132,62 +1274,15 @@ const SizedBox(height: 12),
     );
   }
 
-  /// App Bar phong cách Instagram
-  PreferredSizeWidget _buildInstagramTopBar() {
-    return AppBar(
-      backgroundColor: AppColors.surface,
-      elevation: 0,
-      centerTitle: false,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'EatGym Kitchen',
-            style: GoogleFonts.grandHotel(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: AppColors.onSurface,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.black87),
-        ],
-      ),
-      actions: [
-        // Nút Tim / Thông báo
-        IconButton(
-          icon: const Icon(Icons.favorite_border, color: AppColors.onSurface, size: 26),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Bạn đang có 28 người thích công thức nấu ăn của bạn! ❤️'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        ),
-        // Nút Lưu bộ sưu tập
-        IconButton(
-          icon: Badge(
-            isLabelVisible: _savedRecipeIds.isNotEmpty,
-            label: Text('${_savedRecipeIds.length}'),
-            child: const Icon(Icons.bookmark_border, color: AppColors.onSurface, size: 26),
-          ),
-          onPressed: () {
-            showSavedCollectionSheet();
-          },
-        ),
-        const SizedBox(width: 4),
-      ],
-    );
-  }
-
   /// 4. Hiển thị danh sách công thức đã lưu có thanh tìm kiếm (Yêu cầu 4)
   void showSavedCollectionSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         String searchQuery = '';
@@ -1211,7 +1306,7 @@ const SizedBox(height: 12),
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
+                        color: isDark ? Colors.white24 : AppColors.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1222,16 +1317,20 @@ const SizedBox(height: 12),
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.bookmark, color: AppColors.primary, size: 24),
+                          Icon(Icons.bookmark, color: isDark ? primaryAccent : AppColors.primary, size: 24),
                           const SizedBox(width: 8),
                           Text(
                             'CÔNG THỨC ĐÃ LƯU (${savedPosts.length})',
-                            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: GoogleFonts.spaceGrotesk(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: Icon(Icons.close, size: 20, color: isDark ? Colors.white70 : Colors.black87),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -1241,12 +1340,14 @@ const SizedBox(height: 12),
                   // Thanh tìm kiếm trong công thức đã lưu
                   TextField(
                     onChanged: (val) => setSheetState(() => searchQuery = val),
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm công thức đã lưu...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
+                      hintStyle: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600]),
+                      prefixIcon: Icon(Icons.search, size: 20, color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600]),
                       isDense: true,
                       filled: true,
-                      fillColor: AppColors.surfaceContainerLow,
+                      fillColor: isDark ? const Color(0xFF202623) : AppColors.surfaceContainerLow,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -1261,24 +1362,31 @@ const SizedBox(height: 12),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.bookmark_border, size: 56, color: Colors.grey),
+                                Icon(Icons.bookmark_border, size: 56, color: isDark ? Colors.white30 : Colors.grey),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Bạn chưa lưu công thức nào',
-                                  style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
+                                Text(
                                   'Bấm vào biểu tượng 🔖 trên các bài đăng để lưu công thức yêu thích vào đây nhé!',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                  style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey, fontSize: 13),
                                 ),
                               ],
                             ),
                           )
                         : filtered.isEmpty
                             ? Center(
-                                child: Text('Không tìm thấy công thức nào khớp với "$searchQuery"'),
+                                child: Text(
+                                  'Không tìm thấy công thức nào khớp với "$searchQuery"',
+                                  style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey[700]),
+                                ),
                               )
                             : ListView.separated(
                                 itemCount: filtered.length,
@@ -1288,9 +1396,9 @@ const SizedBox(height: 12),
                                   return Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: AppColors.surfaceContainerLow,
+                                      color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
                                       borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
+                                      border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outlineVariant.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       children: [
@@ -1302,7 +1410,7 @@ const SizedBox(height: 12),
                                             child: Image.network(
                                               p['image'],
                                               fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.restaurant)),
+                                              errorBuilder: (_, __, ___) => Container(color: isDark ? const Color(0xFF26322C) : Colors.grey[200], child: const Icon(Icons.restaurant)),
                                             ),
                                           ),
                                         ),
@@ -1313,14 +1421,18 @@ const SizedBox(height: 12),
                                             children: [
                                               Text(
                                                 p['title'] ?? '',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13.5,
+                                                  color: isDark ? Colors.white : Colors.black87,
+                                                ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
                                                 '⏱️ ${p['time']}p • 🔥 ${p['kcal']} kcal • 🍗 ${p['protein']}g Pro',
-                                                style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                                style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : Colors.grey[700]),
                                               ),
                                               const SizedBox(height: 6),
                                               GestureDetector(
@@ -1330,14 +1442,14 @@ const SizedBox(height: 12),
                                                 },
                                                 child: Text(
                                                   'Xem chi tiết & Nấu ngay →',
-                                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? primaryAccent : AppColors.primary),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.bookmark, color: AppColors.primary),
+                                          icon: Icon(Icons.bookmark, color: isDark ? primaryAccent : AppColors.primary),
                                           tooltip: 'Bỏ lưu',
                                           onPressed: () {
                                             _toggleSave(p['id'], p['title'] ?? '');
@@ -1361,10 +1473,13 @@ const SizedBox(height: 12),
 
   /// 5. Hiển thị danh sách các bài đăng công thức của tôi (Yêu cầu 5)
   void showMyPostsSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         return StatefulBuilder(
@@ -1380,7 +1495,7 @@ const SizedBox(height: 12),
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
+                        color: isDark ? Colors.white24 : AppColors.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1395,12 +1510,16 @@ const SizedBox(height: 12),
                           const SizedBox(width: 8),
                           Text(
                             'BÀI ĐĂNG CỦA TÔI (${_userPosts.length})',
-                            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: GoogleFonts.spaceGrotesk(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: Icon(Icons.close, size: 20, color: isDark ? Colors.white70 : Colors.black87),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -1408,9 +1527,9 @@ const SizedBox(height: 12),
                   const SizedBox(height: 4),
                   Text(
                     'Quản lý lượt tim, bình luận, sửa hoặc gỡ công thức của bạn',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600]),
                   ),
-                  const Divider(height: 20),
+                  Divider(height: 20, color: isDark ? Colors.white12 : Colors.grey[300]),
 
                   Expanded(
                     child: _userPosts.isEmpty
@@ -1418,23 +1537,27 @@ const SizedBox(height: 12),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.edit_note, size: 64, color: Colors.grey),
+                                Icon(Icons.edit_note, size: 64, color: isDark ? Colors.white30 : Colors.grey),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Bạn chưa đăng công thức nào',
-                                  style: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
+                                Text(
                                   'Bấm vào dấu [+] cạnh chữ EatGym Kitchen để chia sẻ công thức đầu tiên của bạn nhé!',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                  style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey, fontSize: 13),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: AppColors.onPrimary,
+                                    backgroundColor: isDark ? primaryAccent : AppColors.primary,
+                                    foregroundColor: isDark ? Colors.black : AppColors.onPrimary,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   onPressed: () {
@@ -1459,9 +1582,9 @@ const SizedBox(height: 12),
                               return Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerLow,
+                                  color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
+                                  border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outlineVariant.withValues(alpha: 0.3)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,7 +1599,7 @@ const SizedBox(height: 12),
                                             child: Image.network(
                                               post['image'],
                                               fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.restaurant)),
+                                              errorBuilder: (_, __, ___) => Container(color: isDark ? const Color(0xFF26322C) : Colors.grey[200], child: const Icon(Icons.restaurant)),
                                             ),
                                           ),
                                         ),
@@ -1487,14 +1610,18 @@ const SizedBox(height: 12),
                                             children: [
                                               Text(
                                                 post['title'] ?? '',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: isDark ? Colors.white : Colors.black87,
+                                                ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                               const SizedBox(height: 3),
                                               Text(
                                                 'Đăng ${post['postedTime'] ?? "vừa xong"}',
-                                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                                style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600]),
                                               ),
                                               const SizedBox(height: 4),
                                               Row(
@@ -1502,7 +1629,7 @@ const SizedBox(height: 12),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.red.withValues(alpha: 0.1),
+                                                      color: Colors.red.withValues(alpha: 0.12),
                                                       borderRadius: BorderRadius.circular(12),
                                                     ),
                                                     child: Row(
@@ -1517,7 +1644,7 @@ const SizedBox(height: 12),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.blue.withValues(alpha: 0.1),
+                                                      color: Colors.blue.withValues(alpha: 0.12),
                                                       borderRadius: BorderRadius.circular(12),
                                                     ),
                                                     child: Row(
@@ -1536,7 +1663,7 @@ const SizedBox(height: 12),
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    const Divider(height: 1),
+                                    Divider(height: 1, color: isDark ? Colors.white12 : Colors.grey[300]),
                                     const SizedBox(height: 8),
 
                                     // 3 Nút thao tác: Xem chi tiết & bình luận / Chỉnh sửa / Gỡ bài
@@ -1549,8 +1676,8 @@ const SizedBox(height: 12),
                                             Navigator.pop(ctx);
                                             _showRecipeDetailsModal(post);
                                           },
-                                          icon: const Icon(Icons.visibility_outlined, size: 16),
-                                          label: const Text('Xem & Bình luận', style: TextStyle(fontSize: 11.5)),
+                                          icon: Icon(Icons.visibility_outlined, size: 16, color: isDark ? primaryAccent : AppColors.primary),
+                                          label: Text('Xem & Bình luận', style: TextStyle(fontSize: 11.5, color: isDark ? primaryAccent : AppColors.primary)),
                                         ),
                                         TextButton.icon(
                                           style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
@@ -1585,15 +1712,17 @@ const SizedBox(height: 12),
   }
 
   void _confirmDeletePost(String id, void Function(void Function()) setSheetState) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('Xác nhận gỡ bài đăng?'),
-        content: const Text('Bài đăng công thức này sẽ bị xóa khỏi EatGym Kitchen và không thể khôi phục lại.'),
+        backgroundColor: isDark ? const Color(0xFF191C1B) : Colors.white,
+        title: Text('Xác nhận gỡ bài đăng?', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+        content: Text('Bài đăng công thức này sẽ bị xóa khỏi EatGym Kitchen và không thể khôi phục lại.', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.black87)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Hủy'),
+            child: Text('Hủy', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey[700])),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
@@ -1617,16 +1746,16 @@ const SizedBox(height: 12),
   }
 
   /// 2. Nút [+] Mở form đăng công thức của riêng tôi (Yêu cầu 2)
-  void showCreateRecipeSheet() {
-    _openRecipeFormSheet(isEditing: false);
+  void showCreateRecipeSheet({BuildContext? customContext}) {
+    _openRecipeFormSheet(isEditing: false, customContext: customContext);
   }
 
   /// Mở form chỉnh sửa công thức của tôi (Yêu cầu 5)
-  void showEditRecipeSheet(Map<String, dynamic> existingPost) {
-    _openRecipeFormSheet(isEditing: true, initialData: existingPost);
+  void showEditRecipeSheet(Map<String, dynamic> existingPost, {BuildContext? customContext}) {
+    _openRecipeFormSheet(isEditing: true, initialData: existingPost, customContext: customContext);
   }
 
-  void _openRecipeFormSheet({required bool isEditing, Map<String, dynamic>? initialData}) {
+  void _openRecipeFormSheet({required bool isEditing, Map<String, dynamic>? initialData, BuildContext? customContext}) {
     final titleCtrl = TextEditingController(text: initialData?['title'] ?? '');
     final timeCtrl = TextEditingController(text: initialData != null ? '${initialData['time']}' : '20');
     final kcalCtrl = TextEditingController(text: initialData != null ? '${initialData['kcal']}' : '350');
@@ -1684,10 +1813,14 @@ const SizedBox(height: 12),
       stepCtrls.add({'step': TextEditingController(text: 'Áp chảo lửa vừa mỗi mặt 4-5 phút cho chín vàng.'), 'time': TextEditingController(text: '10')});
     }
 
+    final activeContext = customContext ?? context;
+    final isDark = Theme.of(activeContext).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     showModalBottomSheet(
-      context: context,
+      context: activeContext,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? const Color(0xFF191C1B) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         return StatefulBuilder(
@@ -1708,7 +1841,7 @@ const SizedBox(height: 12),
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.outlineVariant,
+                        color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1719,10 +1852,14 @@ const SizedBox(height: 12),
                     children: [
                       Text(
                         isEditing ? 'CHỈNH SỬA CÔNG THỨC CỦA TÔI' : 'ĐĂNG CÔNG THỨC GYMER CỦA BẠN',
-                        style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 15),
+                        style: GoogleFonts.spaceGrotesk(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: Icon(Icons.close, size: 20, color: isDark ? Colors.white70 : const Color(0xFF0F172A)),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -1738,17 +1875,28 @@ const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('1. Ảnh món ăn:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(
+                                '1. Ảnh món ăn:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
                               if (selectedImage.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.12),
+                                    color: (isDark ? primaryAccent : AppColors.primary).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     selectedImage.startsWith('http') ? 'Ảnh mẫu Gymer' : 'Ảnh từ thiết bị 📱',
-                                    style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? primaryAccent : AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -1759,10 +1907,12 @@ const SizedBox(height: 12),
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLow,
+                              color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: selectedImage.isNotEmpty ? AppColors.primary : AppColors.outlineVariant,
+                                color: selectedImage.isNotEmpty
+                                    ? (isDark ? primaryAccent : AppColors.primary)
+                                    : (isDark ? Colors.white12 : AppColors.outlineVariant),
                                 width: selectedImage.isNotEmpty ? 1.8 : 1.0,
                               ),
                             ),
@@ -1784,11 +1934,11 @@ const SizedBox(height: 12),
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey[500]),
+                                        Icon(Icons.add_a_photo_outlined, size: 36, color: isDark ? Colors.white30 : Colors.grey[500]),
                                         const SizedBox(height: 6),
                                         Text(
                                           'Chưa có ảnh món ăn',
-                                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                          style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600], fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -1799,7 +1949,7 @@ const SizedBox(height: 12),
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: isDark ? const Color(0xFF1D2320) : Colors.white,
                                     borderRadius: selectedImage.isNotEmpty
                                         ? const BorderRadius.vertical(bottom: Radius.circular(14))
                                         : BorderRadius.circular(14),
@@ -1832,8 +1982,8 @@ const SizedBox(height: 12),
                                           icon: const Icon(Icons.camera_alt, size: 16),
                                           label: const Text('Chụp ảnh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: Colors.white,
+                                            backgroundColor: isDark ? primaryAccent : AppColors.primary,
+                                            foregroundColor: isDark ? Colors.black : Colors.white,
                                             elevation: 0,
                                             padding: const EdgeInsets.symmetric(vertical: 9),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1868,8 +2018,8 @@ const SizedBox(height: 12),
                                           icon: const Icon(Icons.photo_library, size: 16),
                                           label: const Text('Từ thư viện', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                           style: OutlinedButton.styleFrom(
-                                            foregroundColor: AppColors.onSurface,
-                                            side: const BorderSide(color: AppColors.outlineVariant),
+                                            foregroundColor: isDark ? Colors.white : AppColors.onSurface,
+                                            side: BorderSide(color: isDark ? Colors.white24 : AppColors.outlineVariant),
                                             padding: const EdgeInsets.symmetric(vertical: 9),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                           ),
@@ -1884,9 +2034,9 @@ const SizedBox(height: 12),
                           const SizedBox(height: 10),
 
                           // Tùy chọn ảnh mẫu chuẩn Gymer
-                          const Text(
+                          Text(
                             'Hoặc chọn nhanh ảnh mẫu Gymer chất lượng cao:',
-                            style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                            style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : Colors.grey, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 6),
                           SizedBox(
@@ -1906,7 +2056,7 @@ const SizedBox(height: 12),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: isChosen ? AppColors.primary : Colors.transparent,
+                                        color: isChosen ? (isDark ? primaryAccent : AppColors.primary) : Colors.transparent,
                                         width: 2.5,
                                       ),
                                     ),
@@ -1922,16 +2072,28 @@ const SizedBox(height: 12),
                           const SizedBox(height: 14),
 
                           // 2. Tên món ăn
-                          const Text('2. Tên công thức món ăn:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                            '2. Tên công thức món ăn:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: titleCtrl,
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                            cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                             decoration: InputDecoration(
                               hintText: 'VD: Ức gà cuộn măng tây sốt tiêu đen...',
+                              hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), fontSize: 13),
                               isDense: true,
                               filled: true,
-                              fillColor: AppColors.surfaceContainerLow,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                              fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF8FAFC),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -1944,18 +2106,31 @@ const SizedBox(height: 12),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('3. Thời gian nấu (phút):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                    Text(
+                                      '3. Thời gian nấu (phút):',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
                                     const SizedBox(height: 6),
                                     TextField(
                                       controller: timeCtrl,
                                       keyboardType: TextInputType.number,
+                                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                                      cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
                                         hintText: '20',
+                                        hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
                                         suffixText: 'phút',
+                                        suffixStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF0F172A), fontWeight: FontWeight.w600),
                                         isDense: true,
                                         filled: true,
-                                        fillColor: AppColors.surfaceContainerLow,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                                        fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF8FAFC),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                                       ),
                                     ),
                                   ],
@@ -1967,7 +2142,14 @@ const SizedBox(height: 12),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Độ khó:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                    Text(
+                                      'Độ khó:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
                                     const SizedBox(height: 6),
                                     Row(
                                       children: ['Dễ', 'Vừa', 'Khó'].map((diff) {
@@ -1975,11 +2157,12 @@ const SizedBox(height: 12),
                                         return Padding(
                                           padding: const EdgeInsets.only(right: 6),
                                           child: ChoiceChip(
-                                            label: Text(diff, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                                            label: Text(diff, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.w600)),
                                             selected: isSel,
                                             onSelected: (_) => setModalState(() => selectedDifficulty = diff),
-                                            selectedColor: AppColors.primary,
-                                            labelStyle: TextStyle(color: isSel ? Colors.white : Colors.black87),
+                                            selectedColor: isDark ? primaryAccent : const Color(0xFF0F172A),
+                                            labelStyle: TextStyle(color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF334155))),
+                                            backgroundColor: isDark ? const Color(0xFF202623) : const Color(0xFFF1F5F9),
                                             visualDensity: VisualDensity.compact,
                                           ),
                                         );
@@ -1993,17 +2176,24 @@ const SizedBox(height: 12),
                           const SizedBox(height: 14),
 
                           // 4. Chỉ số dinh dưỡng (Macros)
-                          const Text('4. Chỉ số Dinh dưỡng (Macros ước tính):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                            '4. Chỉ số Dinh dưỡng (Macros ước tính):',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Expanded(child: _buildMacroInputField('🔥 Kcal', kcalCtrl)),
+                              Expanded(child: _buildMacroInputField('🔥 Kcal', kcalCtrl, isDark: isDark, primaryAccent: primaryAccent)),
                               const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🍗 Pro(g)', proCtrl)),
+                              Expanded(child: _buildMacroInputField('🍗 Pro(g)', proCtrl, isDark: isDark, primaryAccent: primaryAccent)),
                               const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🍚 Carb(g)', carbsCtrl)),
+                              Expanded(child: _buildMacroInputField('🍚 Carb(g)', carbsCtrl, isDark: isDark, primaryAccent: primaryAccent)),
                               const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🥑 Fat(g)', fatCtrl)),
+                              Expanded(child: _buildMacroInputField('🥑 Fat(g)', fatCtrl, isDark: isDark, primaryAccent: primaryAccent)),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -2012,7 +2202,14 @@ const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('5. Nguyên liệu chuẩn bị:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(
+                                '5. Nguyên liệu chuẩn bị:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
                               TextButton.icon(
                                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                                 onPressed: () {
@@ -2020,8 +2217,8 @@ const SizedBox(height: 12),
                                     ingredientCtrls.add({'name': TextEditingController(), 'amount': TextEditingController(text: '100g')});
                                   });
                                 },
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text('Thêm', style: TextStyle(fontSize: 12)),
+                                icon: Icon(Icons.add, size: 16, color: isDark ? primaryAccent : const Color(0xFF2563EB)),
+                                label: Text('Thêm', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: isDark ? primaryAccent : const Color(0xFF2563EB))),
                               ),
                             ],
                           ),
@@ -2036,12 +2233,17 @@ const SizedBox(height: 12),
                                     flex: 6,
                                     child: TextField(
                                       controller: ing['name'],
+                                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
+                                      cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
                                         hintText: 'Tên nguyên liệu...',
+                                        hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), fontSize: 13),
                                         isDense: true,
                                         filled: true,
-                                        fillColor: AppColors.surfaceContainerLow,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                        fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF8FAFC),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                                       ),
                                     ),
                                   ),
@@ -2050,18 +2252,23 @@ const SizedBox(height: 12),
                                     flex: 3,
                                     child: TextField(
                                       controller: ing['amount'],
+                                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
+                                      cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
                                         hintText: '200g',
+                                        hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), fontSize: 13),
                                         isDense: true,
                                         filled: true,
-                                        fillColor: AppColors.surfaceContainerLow,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                        fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF8FAFC),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                                       ),
                                     ),
                                   ),
                                   if (ingredientCtrls.length > 1)
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 18),
+                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
                                       visualDensity: VisualDensity.compact,
                                       onPressed: () => setModalState(() => ingredientCtrls.removeAt(idx)),
                                     ),
@@ -2075,7 +2282,14 @@ const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('6. Các bước nấu & Thời gian từng bước:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(
+                                '6. Các bước nấu & Thời gian từng bước:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
                               TextButton.icon(
                                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                                 onPressed: () {
@@ -2083,8 +2297,8 @@ const SizedBox(height: 12),
                                     stepCtrls.add({'step': TextEditingController(), 'time': TextEditingController(text: '5')});
                                   });
                                 },
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text('Thêm bước', style: TextStyle(fontSize: 12)),
+                                icon: Icon(Icons.add, size: 16, color: isDark ? primaryAccent : const Color(0xFF2563EB)),
+                                label: Text('Thêm bước', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: isDark ? primaryAccent : const Color(0xFF2563EB))),
                               ),
                             ],
                           ),
@@ -2094,10 +2308,11 @@ const SizedBox(height: 12),
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerLow,
+                                  color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2105,29 +2320,36 @@ const SizedBox(height: 12),
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text('Bước ${idx + 1}:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                        Text('Bước ${idx + 1}:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : const Color(0xFF0F172A))),
                                         Row(
                                           children: [
-                                            const Icon(Icons.timer_outlined, size: 14, color: AppColors.primary),
+                                            Icon(Icons.timer_outlined, size: 15, color: isDark ? primaryAccent : const Color(0xFF2563EB)),
                                             const SizedBox(width: 4),
                                             SizedBox(
-                                              width: 50,
-                                              height: 30,
+                                              width: 54,
+                                              height: 32,
                                               child: TextField(
                                                 controller: st['time'],
                                                 keyboardType: TextInputType.number,
                                                 textAlign: TextAlign.center,
+                                                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold),
+                                                cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                                 decoration: InputDecoration(
                                                   isDense: true,
                                                   contentPadding: const EdgeInsets.all(4),
                                                   suffixText: 'p',
-                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                                  suffixStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
+                                                  fillColor: isDark ? const Color(0xFF202623) : Colors.white,
+                                                  filled: true,
+                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                                                 ),
                                               ),
                                             ),
                                             if (stepCtrls.length > 1)
                                               IconButton(
-                                                icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                                                 visualDensity: VisualDensity.compact,
                                                 onPressed: () => setModalState(() => stepCtrls.removeAt(idx)),
                                               ),
@@ -2135,16 +2357,21 @@ const SizedBox(height: 12),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     TextField(
                                       controller: st['step'],
                                       maxLines: 2,
+                                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, height: 1.35, fontWeight: FontWeight.w500),
+                                      cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
                                         hintText: 'Nội dung hướng dẫn thực hiện bước này...',
+                                        hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), fontSize: 13),
                                         isDense: true,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                                         filled: true,
-                                        fillColor: Colors.white,
+                                        fillColor: isDark ? const Color(0xFF202623) : Colors.white,
                                       ),
                                     ),
                                   ],
@@ -2155,17 +2382,29 @@ const SizedBox(height: 12),
                           const SizedBox(height: 14),
 
                           // 7. Chú thích & Mẹo Gymer
-                          const Text('7. Chú thích & Mẹo nấu ăn cho Gymer:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                            '7. Chú thích & Mẹo nấu ăn cho Gymer:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: tipsCtrl,
                             maxLines: 2,
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, height: 1.35, fontWeight: FontWeight.w500),
+                            cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                             decoration: InputDecoration(
                               hintText: 'VD: Bí quyết ướp thịt, mẹo canh lửa, lưu ý bảo quản...',
+                              hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8), fontSize: 13),
                               isDense: true,
                               filled: true,
-                              fillColor: AppColors.surfaceContainerLow,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                              fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF8FAFC),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: isDark ? primaryAccent : const Color(0xFF0F172A), width: 1.5)),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -2176,8 +2415,8 @@ const SizedBox(height: 12),
                             height: 48,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
+                                backgroundColor: isDark ? primaryAccent : AppColors.primary,
+                                foregroundColor: isDark ? Colors.black : Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               ),
                               onPressed: () {
@@ -2242,7 +2481,7 @@ const SizedBox(height: 12),
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(isEditing ? '✨ Đã cập nhật công thức thành công!' : '🎉 Đã đăng công thức lên EatGym Kitchen thành công!'),
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: isDark ? primaryAccent : AppColors.primary,
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
@@ -2268,36 +2507,45 @@ const SizedBox(height: 12),
     );
   }
 
-  Widget _buildMacroInputField(String label, TextEditingController ctrl) {
+  Widget _buildMacroInputField(String label, TextEditingController ctrl, {bool isDark = false, Color? primaryAccent}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A)),
+        ),
         const SizedBox(height: 4),
         TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
+          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w700),
+          cursorColor: isDark ? (primaryAccent ?? Colors.white) : const Color(0xFF0F172A),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 8),
             filled: true,
-            fillColor: AppColors.surfaceContainerLow,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF1F5F9),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? (primaryAccent ?? Colors.white) : const Color(0xFF0F172A), width: 1.5)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildInstagramStoriesBar() {
-    return SizedBox(
-      height: 102,
-      child: ListView.builder(
+  Widget _buildCategoryFilterChips(bool isDark, Color primaryAccent) {
+    return Container(
+      height: 48,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: _stories.length,
-        itemBuilder: (context, index) {
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (ctx, index) {
           final s = _stories[index];
           final isSelected = _selectedFilter == s['tag'];
 
@@ -2308,45 +2556,31 @@ const SizedBox(height: 12),
               });
             },
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (isDark ? primaryAccent : AppColors.darkNavy)
+                    : (isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected
+                      ? (isDark ? primaryAccent : AppColors.darkNavy)
+                      : (isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.outlineVariant.withValues(alpha: 0.6)),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Vòng tròn Gradient Instagram
-                  Container(
-                    width: 62,
-                    height: 62,
-                    padding: const EdgeInsets.all(2.5),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: isSelected
-                          ? const LinearGradient(
-                              colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCAF45)],
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                            )
-                          : LinearGradient(
-                              colors: [Colors.grey[300]!, Colors.grey[400]!],
-                            ),
-                    ),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        s['icon']!,
-                        style: const TextStyle(fontSize: 26),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  Text(s['icon']!, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
                   Text(
                     s['label']!,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12.5,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? AppColors.onSurface : AppColors.onSurfaceVariant,
+                      color: isSelected
+                          ? (isDark ? Colors.black : Colors.white)
+                          : (isDark ? const Color(0xFFE1E3E1) : AppColors.onSurface),
                     ),
                   ),
                 ],
@@ -2359,15 +2593,18 @@ const SizedBox(height: 12),
   }
 
   /// Từng bài đăng công thức (Instagram Feed Post Card)
-  Widget _buildInstagramPostCard(Map<String, dynamic> post) {
+  Widget _buildInstagramPostCard(Map<String, dynamic> post, bool isDark, Color primaryAccent) {
     final id = post['id'] as String;
     final isLiked = _likedRecipeIds.contains(id);
     final isSaved = _savedRecipeIds.contains(id);
     final totalLikes = (post['baseLikes'] as int) + (isLiked ? 1 : 0);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF151B18) : Colors.white,
+        border: isDark ? Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))) : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2376,55 +2613,77 @@ const SizedBox(height: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                // Avatar với viền Story gradient
-                Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCAF45)],
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 17,
-                    backgroundImage: NetworkImage(post['authorAvatar'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
-                    backgroundColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(width: 10),
+                // Bấm vào avatar hoặc tên tác giả để mở trang cá nhân
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            post['authorName'] ?? 'Gymer',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          const SizedBox(width: 4),
-                          if (post['isMine'] == true)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(4),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfileScreen(authorData: post),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: NetworkImage(post['authorAvatar'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+                          backgroundColor: isDark ? const Color(0xFF26322C) : Colors.grey[200],
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    post['authorName'] ?? 'Gymer',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  if (post['isMine'] == true)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? primaryAccent : AppColors.primary,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'CỦA TÔI',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.black : Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    const Icon(Icons.verified, size: 14, color: Colors.blueAccent),
+                                ],
                               ),
-                              child: const Text('CỦA TÔI', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                            )
-                          else
-                            const Icon(Icons.verified, size: 14, color: Colors.blueAccent),
-                        ],
-                      ),
-                      Text(
-                        '${post['location'] ?? "EatGym Kitchen"} • ${post['postedTime'] ?? "Vừa xong"}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      ),
-                    ],
+                              Text(
+                                '${post['location'] ?? "EatGym Kitchen"} • ${post['postedTime'] ?? "Vừa xong"}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.more_vert, size: 20),
+                  icon: Icon(Icons.more_vert, size: 20, color: isDark ? Colors.white : Colors.black87),
                   onPressed: () => _showShareSheet(post),
                 ),
               ],
@@ -2447,24 +2706,24 @@ const SizedBox(height: 12),
                           loadingBuilder: (ctx, child, progress) {
                             if (progress == null) return child;
                             return Container(
-                              color: Colors.grey[100],
-                              child: const Center(
-                                child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                              color: isDark ? const Color(0xFF1E2420) : Colors.grey[100],
+                              child: Center(
+                                child: CircularProgressIndicator(color: primaryAccent, strokeWidth: 2),
                               ),
                             );
                           },
                           errorBuilder: (ctx, err, stack) {
                             return Container(
-                              color: Colors.grey[200],
+                              color: isDark ? const Color(0xFF1E2420) : Colors.grey[200],
                               alignment: Alignment.center,
-                              child: const Icon(Icons.restaurant, size: 64, color: Colors.grey),
+                              child: Icon(Icons.restaurant, size: 64, color: isDark ? Colors.white38 : Colors.grey),
                             );
                           },
                         )
                       : Container(
-                          color: Colors.grey[200],
+                          color: isDark ? const Color(0xFF1E2420) : Colors.grey[200],
                           alignment: Alignment.center,
-                          child: const Icon(Icons.restaurant, size: 64, color: Colors.grey),
+                          child: Icon(Icons.restaurant, size: 64, color: isDark ? Colors.white38 : Colors.grey),
                         ),
                 ),
 
@@ -2530,19 +2789,19 @@ const SizedBox(height: 12),
                     IconButton(
                       icon: Icon(
                         isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: isLiked ? Colors.redAccent : Colors.black87,
+                        color: isLiked ? Colors.redAccent : (isDark ? Colors.white : Colors.black87),
                         size: 26,
                       ),
                       onPressed: () => _toggleLike(id),
                     ),
                     // Nút Bình luận
                     IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline, size: 24, color: Colors.black87),
+                      icon: Icon(Icons.chat_bubble_outline, size: 24, color: isDark ? Colors.white : Colors.black87),
                       onPressed: () => _showCommentsSheet(id, post['title'] ?? ''),
                     ),
                     // Nút Chia sẻ
                     IconButton(
-                      icon: const Icon(Icons.send_outlined, size: 24, color: Colors.black87),
+                      icon: Icon(Icons.send_outlined, size: 24, color: isDark ? Colors.white : Colors.black87),
                       onPressed: () => _showShareSheet(post),
                     ),
                   ],
@@ -2551,7 +2810,9 @@ const SizedBox(height: 12),
                 IconButton(
                   icon: Icon(
                     isSaved ? Icons.bookmark : Icons.bookmark_border,
-                    color: isSaved ? AppColors.onSurface : Colors.black87,
+                    color: isSaved
+                        ? (isDark ? primaryAccent : AppColors.onSurface)
+                        : (isDark ? Colors.white : Colors.black87),
                     size: 26,
                   ),
                   onPressed: () => _toggleSave(id, post['title'] ?? ''),
@@ -2577,7 +2838,11 @@ const SizedBox(height: 12),
                       ),
                       Positioned(
                         left: 12,
-                        child: CircleAvatar(radius: 9, backgroundColor: Colors.white, child: CircleAvatar(radius: 8, backgroundImage: NetworkImage(post['authorAvatar'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50'))),
+                        child: CircleAvatar(
+                          radius: 9,
+                          backgroundColor: isDark ? const Color(0xFF151B18) : Colors.white,
+                          child: CircleAvatar(radius: 8, backgroundImage: NetworkImage(post['authorAvatar'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50')),
+                        ),
                       ),
                     ],
                   ),
@@ -2586,7 +2851,7 @@ const SizedBox(height: 12),
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: AppTypography.bodySmall(color: AppColors.onSurface),
+                      style: AppTypography.bodySmall(color: isDark ? const Color(0xFFE1E3E1) : AppColors.onSurface),
                       children: [
                         const TextSpan(text: 'Có '),
                         const TextSpan(text: 'cminh_24', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -2611,7 +2876,7 @@ const SizedBox(height: 12),
                   onTap: () => _showRecipeDetailsModal(post),
                   child: RichText(
                     text: TextSpan(
-                      style: AppTypography.bodySmall(color: AppColors.onSurface),
+                      style: AppTypography.bodySmall(color: isDark ? Colors.white : AppColors.onSurface),
                       children: [
                         TextSpan(
                           text: '${post['authorName']}  ',
@@ -2628,7 +2893,11 @@ const SizedBox(height: 12),
                 const SizedBox(height: 4),
                 Text(
                   post['description'] ?? '',
-                  style: TextStyle(fontSize: 13, color: Colors.grey[800], height: 1.35),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? const Color(0xFF94A3B8) : Colors.grey[800],
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 // Hashtags
@@ -2655,8 +2924,7 @@ const SizedBox(height: 12),
             ),
           ),
 
-          // ĐÃ XÓA MỤC 7 (Bình luận xem trước) VÀ MỤC 8 (Nút "Xem công thức & Bắt đầu nấu") theo đúng YÊU CẦU 3!
-          const Divider(height: 20, thickness: 0.5, color: Colors.black12),
+          const Divider(height: 20, thickness: 0.5, color: Colors.transparent),
         ],
       ),
     );
@@ -2676,3 +2944,4 @@ const SizedBox(height: 12),
     );
   }
 }
+

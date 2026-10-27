@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../screens/settings_screen.dart';
 
 class BadgesHeader extends StatelessWidget {
   final VoidCallback? onAvatarTap;
@@ -61,6 +62,37 @@ class BadgesHeader extends StatelessWidget {
               ],
             ),
 
+            // Nút mở Cài đặt hệ thống (SettingsScreen)
+            InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E2420)
+                      : const Color(0xFFF1F3F4),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Icon(
+                  Icons.settings_outlined,
+                  size: 20,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : const Color(0xFF191C1D),
+                ),
+              ),
+            ),
           ],
         ),
 

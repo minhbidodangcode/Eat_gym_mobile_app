@@ -23,18 +23,9 @@ class NutritionGoalCard extends StatelessWidget {
         // Section Header
         Padding(
           padding: const EdgeInsets.only(bottom: 8.0, left: 2, right: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '02 / MỤC TIÊU DINH DƯỠNG',
-                style: AppTypography.badge(color: AppColors.outline),
-              ),
-              Text(
-                'AI Auto-Macro v2.4',
-                style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
-              ),
-            ],
+          child: Text(
+            '02 / MỤC TIÊU DINH DƯỠNG',
+            style: AppTypography.badge(color: AppColors.outline),
           ),
         ),
 
@@ -79,18 +70,17 @@ class NutritionGoalCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top: Energy display & Deficit badge
-                    // Đã thay Row thành Wrap để chống tràn màn hình (Overflowed by 9.1 pixels)
                     Wrap(
                       alignment: WrapAlignment.spaceBetween,
                       crossAxisAlignment: WrapCrossAlignment.end,
-                      spacing: 8, // Khoảng cách ngang giữa 2 thành phần nếu chúng chưa xuống dòng
-                      runSpacing: 8, // Khoảng cách dọc khi phần tử bị đẩy xuống dòng dưới
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'MỤC TIÊU NĂNG LƯỢNG',
+                              'CALO NẠP VÀO MỖI NGÀY',
                               style: AppTypography.labelCaption(
                                 color: AppColors.outline,
                               ),
@@ -99,12 +89,12 @@ class NutritionGoalCard extends StatelessWidget {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
-                              mainAxisSize: MainAxisSize.min, // Chống chiếm hết chiều ngang
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   numberFormat.format(model.calories),
                                   style: AppTypography.displayLarge(
-                                    color: AppColors.onSurface, // Sửa lỗi chữ mất tích: Đổi Colors.white thành AppColors.onSurface (Màu đen)
+                                    color: AppColors.onSurface,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -115,6 +105,11 @@ class NutritionGoalCard extends StatelessWidget {
                                   ),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Tiêu hao hàng ngày (TDEE): ${numberFormat.format(model.tdee)} kcal • BMR: ${numberFormat.format(model.bmr.round())} kcal',
+                              style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -137,13 +132,13 @@ class NutritionGoalCard extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.bolt,
-                                color: AppColors.onSurface, // Đổi icon thành màu tối
+                                color: AppColors.onSurface,
                                 size: 14,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 model.goal.badgeText,
-                                style: AppTypography.badge(color: AppColors.onSurface), // Đổi màu chữ badge thành màu tối
+                                style: AppTypography.badge(color: AppColors.onSurface),
                               ),
                             ],
                           ),
@@ -151,15 +146,44 @@ class NutritionGoalCard extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 10),
+                    // Explanation note for why calorie is higher/lower than TDEE
+                    Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerHigh.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 14, color: AppColors.onSurfaceVariant),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              switch (model.goal) {
+                                NutritionGoal.fatLoss =>
+                                  'Để giảm mỡ, bạn nạp ít hơn mức cơ thể đốt (${numberFormat.format(model.tdee)} kcal) để cơ thể dùng mỡ thừa.',
+                                NutritionGoal.maintenance =>
+                                  'Nạp bằng mức cơ thể tiêu thụ (${numberFormat.format(model.tdee)} kcal) để duy trì cân nặng ổn định.',
+                                NutritionGoal.muscleGain =>
+                                  'Nạp nhiều hơn mức cơ thể tiêu thụ (${numberFormat.format(model.tdee)} kcal) để xây dựng cơ bắp.',
+                              },
+                              style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
 
                     // Calorie Interactive Slider
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
                         trackHeight: 6,
-                        activeTrackColor: AppColors.primary, // Đổi thanh trượt màu đen
+                        activeTrackColor: AppColors.primary,
                         inactiveTrackColor: AppColors.surfaceContainerHigh,
-                        thumbColor: AppColors.primary, // Đổi cục nút trượt màu đen
+                        thumbColor: AppColors.primary,
                         thumbShape: const RoundSliderThumbShape(
                           enabledThumbRadius: 9,
                           elevation: 6,
@@ -171,10 +195,10 @@ class NutritionGoalCard extends StatelessWidget {
                         ),
                       ),
                       child: Slider(
-                        value: model.calories.toDouble(),
-                        min: 1500,
-                        max: 3500,
-                        divisions: 40,
+                        value: model.calories.toDouble().clamp(1000.0, 4500.0),
+                        min: 1000,
+                        max: 4500,
+                        divisions: 70,
                         onChanged: (val) {
                           model.setCalories(val.round());
                         },

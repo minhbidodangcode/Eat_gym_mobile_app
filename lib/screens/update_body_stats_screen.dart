@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
 class UpdateBodyStatsScreen extends StatefulWidget {
@@ -10,8 +13,11 @@ class UpdateBodyStatsScreen extends StatefulWidget {
 
 class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
   int selectedTabIndex = 0;
-  double weight = 72.4;
-  double bodyFat = 17.8;
+  double weight = 70.0;
+  double targetWeight = 68.0;
+  double bodyFat = 17.5;
+  double targetFat = 15.0;
+  bool _isSaving = false;
   Map<String, int> measurements = {
     'Vòng ngực': 96,
     'Vòng eo': 78,
@@ -40,6 +46,51 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
       for (final entry in measurements.entries)
         entry.key: TextEditingController(text: entry.value.toString()),
     };
+    _loadInitialProfile();
+  }
+
+  Future<void> _loadInitialProfile() async {
+    try {
+      final profile = await ApiService.getLocalProfile() ?? await ApiService.getProfile();
+      final prefs = await SharedPreferences.getInstance();
+      final savedMeas = prefs.getString('body_measurements');
+      if (savedMeas != null && savedMeas.isNotEmpty) {
+        final Map<String, dynamic> decoded = jsonDecode(savedMeas);
+        for (final k in measurements.keys) {
+          if (decoded.containsKey(k)) {
+            measurements[k] = (decoded[k] as num).toInt();
+            _measurementControllers[k]?.text = measurements[k].toString();
+          }
+        }
+      }
+      final savedFat = prefs.getDouble('body_fat_percent');
+      if (savedFat != null && savedFat > 0) {
+        bodyFat = savedFat;
+      }
+      final savedTargetFat = prefs.getDouble('target_fat_percent');
+      if (savedTargetFat != null && savedTargetFat > 0) {
+        targetFat = savedTargetFat;
+      }
+      if (profile != null) {
+        final w = (profile['weightKg'] as num?)?.toDouble();
+        if (w != null && w > 0) {
+          weight = w;
+        }
+      }
+      final savedWeight = prefs.getDouble('body_weight_kg');
+      if (savedWeight != null && savedWeight > 0) {
+        weight = savedWeight;
+      }
+      final savedTargetWeight = prefs.getDouble('target_weight_kg');
+      if (savedTargetWeight != null && savedTargetWeight > 0) {
+        targetWeight = savedTargetWeight;
+      } else if (profile != null && profile['targetWeightKg'] != null) {
+        targetWeight = (profile['targetWeightKg'] as num).toDouble();
+      } else {
+        targetWeight = weight >= 5 ? weight - 3.0 : weight;
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   @override
@@ -166,10 +217,92 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
       children: [
         _buildWeightCard(),
         const SizedBox(height: 16),
+        _buildTargetWeightCard(),
+        const SizedBox(height: 16),
         _buildWeightInfoBoxes(),
         const SizedBox(height: 24),
         _buildNotesSection(),
       ],
+    );
+  }
+
+  Widget _buildTargetWeightCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.track_changes, size: 16, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                'MỤC TIÊU CÂN NẶNG',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildCircleButton(
+                icon: Icons.remove,
+                onTap: () {
+                  setState(() {
+                    targetWeight = double.parse((targetWeight - 0.5).clamp(35.0, 200.0).toStringAsFixed(1));
+                  });
+                },
+              ),
+              const SizedBox(width: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    targetWeight.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkNavy,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'kg',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              _buildCircleButton(
+                icon: Icons.add,
+                onTap: () {
+                  setState(() {
+                    targetWeight = double.parse((targetWeight + 0.5).clamp(35.0, 200.0).toStringAsFixed(1));
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -368,8 +501,90 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
       children: [
         _buildBodyFatCard(),
         const SizedBox(height: 16),
+        _buildTargetFatCard(),
+        const SizedBox(height: 16),
         _buildMeasurementSourceDropdown(),
       ],
+    );
+  }
+
+  Widget _buildTargetFatCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.track_changes, size: 16, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                'MỤC TIÊU TỶ LỆ MỠ',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildCircleButton(
+                icon: Icons.remove,
+                onTap: () {
+                  setState(() {
+                    targetFat = double.parse((targetFat - 0.5).clamp(5.0, 50.0).toStringAsFixed(1));
+                  });
+                },
+              ),
+              const SizedBox(width: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    targetFat.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkNavy,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    '%',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              _buildCircleButton(
+                icon: Icons.add,
+                onTap: () {
+                  setState(() {
+                    targetFat = double.parse((targetFat + 0.5).clamp(5.0, 50.0).toStringAsFixed(1));
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -609,6 +824,97 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
     );
   }
 
+  Future<void> _handleSave() async {
+    setState(() => _isSaving = true);
+    try {
+      // 1. Cập nhật measurements từ controllers
+      for (final entry in _measurementControllers.entries) {
+        final val = int.tryParse(entry.value.text);
+        if (val != null && val > 0) {
+          measurements[entry.key] = val;
+        }
+      }
+
+      // 2. Lưu vào SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('body_measurements', jsonEncode(measurements));
+      await prefs.setDouble('body_fat_percent', bodyFat);
+      await prefs.setDouble('body_weight_kg', weight);
+      await prefs.setDouble('target_weight_kg', targetWeight);
+      await prefs.setDouble('target_fat_percent', targetFat);
+
+      // Lưu lịch sử local để biểu đồ luôn hiển thị dữ liệu đo đạc thực tế
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      final historyListStr = prefs.getString('local_body_stats_history');
+      List<dynamic> historyList = [];
+      if (historyListStr != null && historyListStr.isNotEmpty) {
+        try {
+          historyList = jsonDecode(historyListStr);
+        } catch (_) {}
+      }
+      final existingIndex = historyList.indexWhere((e) => e is Map && e['measuredOn'] == todayStr);
+      final newEntry = {
+        'measuredOn': todayStr,
+        'weightKg': weight,
+        'bodyFatPercent': bodyFat,
+        'measurements': measurements,
+      };
+      if (existingIndex >= 0) {
+        historyList[existingIndex] = newEntry;
+      } else {
+        historyList.add(newEntry);
+      }
+      await prefs.setString('local_body_stats_history', jsonEncode(historyList));
+
+      // 3. Gửi lên backend API
+      try {
+        await ApiService.addBodyStat(
+          measuredOn: todayStr,
+          weightKg: weight,
+          bodyFatPercent: bodyFat,
+        );
+      } catch (_) {}
+
+      // 4. Đồng bộ hồ sơ người dùng nếu có thay đổi cân nặng & mục tiêu
+      final profile = await ApiService.getLocalProfile();
+      if (profile != null) {
+        profile['weightKg'] = weight;
+        profile['targetWeightKg'] = targetWeight;
+        await ApiService.saveLocalProfile(profile);
+        try {
+          await ApiService.saveProfile(
+            sex: profile['sex'] ?? 'male',
+            dateOfBirth: profile['dateOfBirth'] ?? '2000-01-01',
+            heightCm: (profile['heightCm'] as num?)?.toDouble() ?? 170.0,
+            weightKg: weight,
+            activityLevel: profile['activityLevel'] ?? 'moderate',
+            fitnessGoal: profile['fitnessGoal'] ?? 'maintenance',
+            allergies: profile['allergies'] != null ? List<String>.from(profile['allergies']) : null,
+            dietaryPreferences: profile['dietaryPreferences'] != null ? List<String>.from(profile['dietaryPreferences']) : null,
+            targetMacros: profile['targetMacros'] != null ? Map<String, dynamic>.from(profile['targetMacros']) : null,
+          );
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã cập nhật chỉ số vóc dáng thành công!'),
+          backgroundColor: Color(0xFF00E676),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.fire),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   Widget _buildSaveButton() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
@@ -616,9 +922,7 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
         width: double.infinity,
         height: 52,
         child: ElevatedButton(
-          onPressed: () {
-            // Handle save
-          },
+          onPressed: _isSaving ? null : _handleSave,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.darkNavy,
             foregroundColor: AppColors.white,
@@ -627,13 +931,19 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
-            'Lưu thay đổi',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text(
+                  'Lưu thay đổi',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
     );

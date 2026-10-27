@@ -134,22 +134,82 @@ class AppTypography {
       );
 }
 
+class AppColorsDark {
+  static const Color background = Color(0xFF0B0E0D); // Nền đen OLED thuần
+  static const Color surface = Color(0xFF111413); // Khối Card surface
+  static const Color surfaceContainer = Color(0xFF151B18); // Container
+  static const Color surfaceContainerHigh = Color(0xFF1A221E);
+  static const Color surfaceContainerLow = Color(0xFF191C1B);
+  static const Color surfaceContainerLowest = Color(0xFF0C0F0E);
+
+  static const Color outline = Color(0xFF859585);
+  static const Color outlineVariant = Color(0xFF3B4A3D);
+
+  static const Color primary = Color(0xFF00E676); // Neon Green
+  static const Color onPrimary = Color(0xFF003918);
+  static const Color onSurface = Color(0xFFE1E3E1); // Chữ trắng sáng
+  static const Color onSurfaceVariant = Color(0xFFBACBB9); // Chữ xám xanh nhẹ
+}
+
 class AppTheme {
-  // Đổi tên thành lightTheme để đúng chuẩn
-  static ThemeData get lightTheme {
+  // Dynamic theme supporting real-time telemetry accent color & high contrast
+  static ThemeData getDynamicTheme({
+    required Brightness brightness,
+    required Color primaryColor,
+    bool highContrast = false,
+  }) {
+    final isDark = brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF9FAFB);
+    final surface = isDark ? const Color(0xFF151B18) : Colors.white;
+    final text = isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A);
+    final border = highContrast
+        ? (isDark ? Colors.white.withValues(alpha: 0.35) : const Color(0xFF64748B))
+        : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0));
+
     return ThemeData(
-      brightness: Brightness.light, // Set Brightness sáng
-      scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        onPrimary: AppColors.onPrimary,
-        surface: AppColors.surface,
-        onSurface: AppColors.onSurface,
-        outline: AppColors.outline,
-        outlineVariant: AppColors.outlineVariant,
-      ),
+      brightness: brightness,
+      scaffoldBackgroundColor: bg,
+      colorScheme: isDark
+          ? ColorScheme.dark(
+              primary: primaryColor,
+              onPrimary: Colors.black,
+              surface: surface,
+              onSurface: text,
+              outline: border,
+            )
+          : ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              surface: surface,
+              onSurface: text,
+              outline: border,
+            ),
       useMaterial3: true,
-      textTheme: GoogleFonts.manropeTextTheme(ThemeData.light().textTheme),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: Color(0xFF0F172A),
+        contentTextStyle: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+      ),
+      textTheme: isDark
+          ? GoogleFonts.manropeTextTheme(ThemeData.dark().textTheme)
+          : GoogleFonts.manropeTextTheme(ThemeData.light().textTheme),
+    );
+  }
+
+  // Light Theme
+  static ThemeData get lightTheme {
+    return getDynamicTheme(
+      brightness: Brightness.light,
+      primaryColor: const Color(0xFF0F172A),
+    );
+  }
+
+  // Dark Theme (Kinetic Bio-Dark)
+  static ThemeData get darkTheme {
+    return getDynamicTheme(
+      brightness: Brightness.dark,
+      primaryColor: const Color(0xFF00E676),
     );
   }
 }

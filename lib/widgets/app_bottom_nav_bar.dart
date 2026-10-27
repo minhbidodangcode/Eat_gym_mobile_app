@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
+import '../services/settings_service.dart';
 
 class AppBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -15,25 +15,28 @@ class AppBottomNavBar extends StatelessWidget {
   static const List<Map<String, dynamic>> navItems = [
     {'icon': Icons.roofing, 'label': 'Home'},
     {'icon': Icons.kitchen_outlined, 'label': 'Tủ lạnh'},
-    {'icon': Icons.restaurant_menu, 'label': 'Nấu ăn'},
+    {'icon': Icons.restaurant_menu, 'label': 'FoodBlog'},
     {'icon': Icons.fitness_center, 'label': 'Vóc dáng'},
     {'icon': Icons.menu_book, 'label': 'Nhật ký'},
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.95),
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: AppColors.outline.withValues(alpha: 0.3),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),
@@ -61,8 +64,8 @@ class AppBottomNavBar extends StatelessWidget {
                         item['icon'] as IconData,
                         size: 24,
                         color: isSelected
-                            ? AppColors.onSurface
-                            : AppColors.onSurfaceVariant,
+                            ? primaryAccent
+                            : (isDark ? const Color(0xFF94A398) : const Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -71,8 +74,8 @@ class AppBottomNavBar extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected
-                              ? AppColors.onSurface
-                              : AppColors.onSurfaceVariant,
+                              ? primaryAccent
+                              : (isDark ? const Color(0xFF94A398) : const Color(0xFF64748B)),
                         ),
                       ),
                     ],

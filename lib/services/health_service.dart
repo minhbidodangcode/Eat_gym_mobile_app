@@ -20,6 +20,9 @@ class HealthService {
   bool _isAuthorized = false;
   bool get isAuthorized => _isAuthorized;
 
+  bool _isDeviceConnected = false;
+  bool get isDeviceConnected => _isDeviceConnected && _isAuthorized;
+
   bool _isHealthConnectInstalled = true;
   bool get isHealthConnectInstalled => _isHealthConnectInstalled;
 
@@ -33,7 +36,7 @@ class HealthService {
   int _todayHeartRate = 0;
   int get todayHeartRate => _todayHeartRate;
 
-  String _currentSource = 'Nothing X';
+  String _currentSource = '';
   String get currentSource => _currentSource;
 
   DateTime? _lastSyncTime;
@@ -47,16 +50,10 @@ class HealthService {
   ];
 
   String get healthSourceLabel {
-    if (kIsWeb) return 'Web Health Hub';
-    if (_currentSource.isNotEmpty && _currentSource != 'Smartwatch') {
-      return '$_currentSource (Smartwatch)';
+    if (!isDeviceConnected || _currentSource.isEmpty) {
+      return 'Chưa kết nối thiết bị';
     }
-    if (Platform.isAndroid) {
-      return 'Google Health Connect (Garmin, Samsung, Xiaomi...)';
-    } else if (Platform.isIOS) {
-      return 'Apple Health / HealthKit (Apple Watch, Garmin...)';
-    }
-    return 'Smartwatch Health Hub';
+    return _currentSource;
   }
 
   /// Trả về chuỗi ngày theo định dạng YYYY-MM-DD
@@ -73,7 +70,8 @@ class HealthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isAuthorized = prefs.getBool('health_authorized') ?? false;
-      _currentSource = prefs.getString('health_source') ?? 'Nothing X';
+      _isDeviceConnected = prefs.getBool('health_device_connected') ?? false;
+      _currentSource = prefs.getString('health_source') ?? '';
 
       final syncStr = prefs.getString('health_last_sync');
       DateTime? parsedSyncTime;
@@ -102,6 +100,36 @@ class HealthService {
 
       await _configurePlugin();
     } catch (_) {}
+  }
+
+  /// Kết nối thiết bị mới hoặc chọn nguồn theo dõi
+  Future<void> connectDevice(String sourceName) async {
+    _isDeviceConnected = true;
+    _currentSource = sourceName;
+    _isAuthorized = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('health_device_connected', true);
+    await prefs.setBool('health_authorized', true);
+    await prefs.setString('health_source', sourceName);
+  }
+
+  /// Ngắt kết nối thiết bị
+  Future<void> disconnectDevice() async {
+    _isDeviceConnected = false;
+    _isAuthorized = false;
+    _currentSource = '';
+    _todaySteps = 0;
+    _todayCaloriesBurned = 0;
+    _todayHeartRate = 0;
+    _lastSyncTime = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('health_device_connected', false);
+    await prefs.setBool('health_authorized', false);
+    await prefs.remove('health_source');
+    await prefs.remove('health_last_sync');
+    await prefs.setInt('health_today_steps', 0);
+    await prefs.setInt('health_today_calories', 0);
+    await prefs.setInt('health_today_heart_rate', 0);
   }
 
   Future<void> _configurePlugin() async {
@@ -154,11 +182,20 @@ class HealthService {
           _isAuthorized = await _health.requestAuthorization(_healthTypes);
         }
       } else {
-        _isAuthorized = true;
+        _isAuthorized = false;
+      }
+
+      if (_isAuthorized) {
+        _isDeviceConnected = true;
+        if (_currentSource.isEmpty) {
+          _currentSource = Platform.isIOS ? 'Apple Health' : 'Google Health Connect';
+        }
       }
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('health_authorized', _isAuthorized);
+      await prefs.setBool('health_device_connected', _isDeviceConnected);
+      await prefs.setString('health_source', _currentSource);
       return _isAuthorized;
     } catch (e) {
       debugPrint('Lỗi xin quyền Health: $e');
@@ -264,7 +301,9 @@ class HealthService {
             _todayHeartRate = latestHr;
           }
 
-          _currentSource = 'Google Health Connect (Nothing X)';
+          if (_currentSource.isEmpty) {
+            _currentSource = Platform.isIOS ? 'Apple Health' : 'Google Health Connect';
+          }
         } catch (e) {
           debugPrint('Lỗi đọc Health Connect data: $e');
         }
@@ -345,11 +384,13 @@ class HealthService {
     final syncNow = DateTime.now();
     _lastSyncTime = syncNow;
     _isAuthorized = true;
+    _isDeviceConnected = true;
 
     final targetDate = logDate ?? getTodayDateString(syncNow);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('health_authorized', true);
+    await prefs.setBool('health_device_connected', true);
     await prefs.setInt('health_today_steps', _todaySteps);
     await prefs.setInt('health_today_calories', _todayCaloriesBurned);
     await prefs.setInt('health_today_heart_rate', _todayHeartRate);

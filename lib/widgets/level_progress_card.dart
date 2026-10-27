@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/badges_and_report_model.dart';
+import '../services/settings_service.dart';
 
 class LevelProgressCard extends StatelessWidget {
   final BadgesAndReportModel model;
@@ -9,16 +10,22 @@ class LevelProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF191C1B),
+        color: isDark ? const Color(0xFF191C1B) : Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -36,10 +43,10 @@ class LevelProgressCard extends StatelessWidget {
                   Text(
                     'CẤP BẬC VẬN ĐỘNG VIÊN',
                     style: GoogleFonts.spaceGrotesk(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.1,
-                      color: const Color(0xFFC4C7C5),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -47,8 +54,8 @@ class LevelProgressCard extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.military_tech,
-                        size: 22,
-                        color: Colors.white,
+                        size: 24,
+                        color: Color(0xFFF59E0B),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -57,7 +64,7 @@ class LevelProgressCard extends StatelessWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.02,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
                       ),
                     ],
@@ -67,18 +74,21 @@ class LevelProgressCard extends StatelessWidget {
 
               // Level Pill Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: isDark ? primaryAccent.withValues(alpha: 0.15) : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isDark ? primaryAccent.withValues(alpha: 0.35) : const Color(0xFFBFDBFE),
+                  ),
                 ),
                 child: Text(
                   model.rankLevel,
                   style: GoogleFonts.spaceGrotesk(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
-                    color: Colors.white,
+                    letterSpacing: 0.2,
+                    color: isDark ? primaryAccent : const Color(0xFF1D4ED8),
                   ),
                 ),
               ),
@@ -94,17 +104,17 @@ class LevelProgressCard extends StatelessWidget {
               Text(
                 '${model.unlockedBadgesCount} / ${model.totalBadgesCount} Huy hiệu đạt được',
                 style: GoogleFonts.spaceGrotesk(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFFC4C7C5),
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${(model.rankProgress * 100).toInt()}% Hoàn thành',
                 style: GoogleFonts.spaceGrotesk(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
               ),
             ],
@@ -112,26 +122,20 @@ class LevelProgressCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // Glowing Linear Progress Bar
+          // Linear Progress Bar
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: Container(
-              height: 6,
+              height: 7,
               width: double.infinity,
-              color: Colors.white.withValues(alpha: 0.2),
+              color: isDark ? const Color(0xFF2D3748) : const Color(0xFFE2E8F0),
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
-                widthFactor: model.rankProgress,
+                widthFactor: model.rankProgress <= 0 ? 0.0 : model.rankProgress.clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: primaryAccent,
                     borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        blurRadius: 8,
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -145,7 +149,9 @@ class LevelProgressCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildStatBlock(
+                  isDark: isDark,
                   icon: Icons.local_fire_department,
+                  iconColor: const Color(0xFFEA580C),
                   value: '${model.streakDays}',
                   label: 'Ngày streak',
                 ),
@@ -153,7 +159,9 @@ class LevelProgressCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildStatBlock(
+                  isDark: isDark,
                   icon: Icons.task_alt,
+                  iconColor: const Color(0xFF16A34A),
                   value: '${model.macroTargetCount}',
                   label: 'Chuẩn Macro',
                 ),
@@ -161,8 +169,10 @@ class LevelProgressCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildStatBlock(
+                  isDark: isDark,
                   icon: Icons.verified,
-                  value: '1,420',
+                  iconColor: const Color(0xFFD97706),
+                  value: '${model.reputationPoints}',
                   label: 'Điểm uy tín',
                 ),
               ),
@@ -174,17 +184,19 @@ class LevelProgressCard extends StatelessWidget {
   }
 
   Widget _buildStatBlock({
+    required bool isDark,
     required IconData icon,
+    required Color iconColor,
     required String value,
     required String label,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF181D1B),
+        color: isDark ? const Color(0xFF111413) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0),
         ),
       ),
       child: Column(
@@ -192,8 +204,8 @@ class LevelProgressCard extends StatelessWidget {
         children: [
           Icon(
             icon,
-            size: 20,
-            color: Colors.white,
+            size: 22,
+            color: iconColor,
           ),
           const SizedBox(height: 4),
           Text(
@@ -201,7 +213,7 @@ class LevelProgressCard extends StatelessWidget {
             style: GoogleFonts.spaceGrotesk(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               height: 1.1,
             ),
           ),
@@ -209,9 +221,9 @@ class LevelProgressCard extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.spaceGrotesk(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFFC4C7C5),
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
         ],

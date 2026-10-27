@@ -21,10 +21,9 @@ import 'models/badges_and_report_model.dart';
 import 'screens/recipe_search_screen.dart';
 
 import 'screens/smart_fridge_screen.dart';
-
-import 'screens/update_body_stats_screen.dart';
-
 import 'screens/nutrition_diary_screen.dart';
+
+import 'screens/profile_screen.dart';
 
 import 'services/api_service.dart';
 
@@ -41,6 +40,7 @@ import 'widgets/voice_ingredient_sheet.dart';
 import 'screens/nutrigym_chatbot_screen.dart';
 
 import 'package:image_picker/image_picker.dart';
+import 'services/settings_service.dart';
 
 
 
@@ -225,43 +225,64 @@ Widget buildFoodIconWidget(String? icon, {double size = 22, String? name}) {
 }
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
-
+  await SettingsService.instance.init();
   final bool loggedIn = await ApiService.isLoggedIn();
-
   runApp(NutriGymApp(isLoggedIn: loggedIn));
-
 }
 
-
-
 class NutriGymApp extends StatelessWidget {
-
   final bool isLoggedIn;
-
   const NutriGymApp({super.key, this.isLoggedIn = false});
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
-    return MaterialApp(
-
-      title: 'NutriGym AI',
-
-      debugShowCheckedModeBanner: false,
-
-      theme: AppTheme.lightTheme,
-
-      home: AppStartupGate(isLoggedIn: isLoggedIn),
-
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: SettingsService.instance.themeModeNotifier,
+      builder: (context, currentThemeMode, _) {
+        return ValueListenableBuilder<double>(
+          valueListenable: SettingsService.instance.fontScaleNotifier,
+          builder: (context, fontScale, _) {
+            return ValueListenableBuilder<String>(
+              valueListenable: SettingsService.instance.accentColorNotifier,
+              builder: (context, _, __) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: SettingsService.instance.highContrastNotifier,
+                  builder: (context, highContrast, ___) {
+                    final primaryAccent = SettingsService.instance.currentColor;
+                    return MaterialApp(
+                      title: 'NutriGym AI',
+                      debugShowCheckedModeBanner: false,
+                      theme: AppTheme.getDynamicTheme(
+                        brightness: Brightness.light,
+                        primaryColor: primaryAccent,
+                        highContrast: highContrast,
+                      ),
+                      darkTheme: AppTheme.getDynamicTheme(
+                        brightness: Brightness.dark,
+                        primaryColor: primaryAccent,
+                        highContrast: highContrast,
+                      ),
+                      themeMode: currentThemeMode,
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(
+                            textScaler: TextScaler.linear(fontScale),
+                          ),
+                          child: child!,
+                        );
+                      },
+                      home: AppStartupGate(isLoggedIn: isLoggedIn),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
     );
-
   }
-
 }
 
 
@@ -356,7 +377,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
 
-    const BadgesAndReportScreen(),
+    const BadgesAndReportScreen(isSubPage: false),
 
     const SmartFridgeScreen(),
 
@@ -371,13 +392,10 @@ class _MainScreenState extends State<MainScreen> {
 
 
   @override
-
   Widget build(BuildContext context) {
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-
-      backgroundColor: AppColors.background,
-
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
       body: SafeArea(
 
         child: Column(
@@ -450,597 +468,270 @@ class _MainScreenState extends State<MainScreen> {
 
 
 
-// Widget Header tách biệt
-
+// Widget Header tách biệt - Thống nhất layout & hình ảnh cho tất cả các tab
 class AppHeader extends StatelessWidget {
-
   final int currentTab;
 
   const AppHeader({super.key, this.currentTab = 0});
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
-    if (currentTab == 2) {
-      // 1. Tab Nấu Ăn: Instagram Style Feed Header
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Tiêu đề: NUTRIGYM AI (ở trên) + EatGym Kitchen & Nút [+] đăng công thức (Yêu cầu 1 & 2)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'NUTRIGYM AI',
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'EatGym Kitchen',
-                      style: GoogleFonts.grandHotel(
-                        fontSize: 27,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Nút [+] ĐĂNG CÔNG THỨC (Thay nút mũi tên ⌄ theo yêu cầu 2)
-                    InkWell(
-                      onTap: () {
-                        RecipeSearchScreen.recipeScreenKey.currentState?.showCreateRecipeSheet();
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 1.5),
-                        ),
-                        child: const Icon(Icons.add, size: 18, color: AppColors.primary),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Dãy 4 nút ngang hàng: [Tim] [Lưu] [AI Robot gọn] [Profile]
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. NÚT TIM: Xem các bài đăng công thức của tôi (Yêu cầu 5)
-                IconButton(
-                  icon: const Icon(Icons.favorite_border, color: AppColors.onSurface, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(),
-                  onPressed: () {
-                    RecipeSearchScreen.recipeScreenKey.currentState?.showMyPostsSheet();
-                  },
-                ),
-                const SizedBox(width: 8),
-
-                // 2. NÚT LƯU: Xem các công thức đã lưu có tìm kiếm (Yêu cầu 4)
-                IconButton(
-                  icon: const Icon(Icons.bookmark_border, color: AppColors.onSurface, size: 24),
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(),
-                  onPressed: () {
-                    RecipeSearchScreen.recipeScreenKey.currentState?.showSavedCollectionSheet();
-                  },
-                ),
-                const SizedBox(width: 8),
-
-                // 3. NÚT AI ROBOT (Giữ hình robot AI, bỏ chữ AI CHAT để không bị tràn)
-
-                GestureDetector(
-
-                  onTap: () {
-
-                    Navigator.push(
-
-                      context,
-
-                      MaterialPageRoute(builder: (_) => const NutriGymChatbotScreen()),
-
-                    );
-
-                  },
-
-                  child: Container(
-
-                    width: 34,
-
-                    height: 34,
-
-                    decoration: BoxDecoration(
-
-                      gradient: const LinearGradient(
-
-                        colors: [AppColors.primary, Color(0xFF2563EB)],
-
-                      ),
-
-                      shape: BoxShape.circle,
-
-                      boxShadow: [
-
-                        BoxShadow(
-
-                          color: AppColors.primary.withValues(alpha: 0.25),
-
-                          blurRadius: 6,
-
-                          offset: const Offset(0, 2),
-
-                        ),
-
-                      ],
-
-                    ),
-
-                    child: const Icon(Icons.smart_toy, color: Colors.white, size: 18),
-
-                  ),
-
-                ),
-
-                const SizedBox(width: 8),
-
-
-
-                // 4. NÚT TRANG CÁ NHÂN (Avatar Profile)
-
-                Container(
-
-                  width: 34,
-
-                  height: 34,
-
-                  decoration: BoxDecoration(
-
-                    color: AppColors.surface,
-
-                    shape: BoxShape.circle,
-
-                    boxShadow: [
-
-                      BoxShadow(
-
-                        color: Colors.black.withValues(alpha: 0.05),
-
-                        blurRadius: 4,
-
-                        offset: const Offset(0, 2),
-
-                      ),
-
-                    ],
-
-                  ),
-
-                  child: IconButton(
-
-                    icon: const Icon(Icons.person_outline, color: AppColors.onSurface, size: 20),
-
-                    visualDensity: VisualDensity.compact,
-
-                    padding: EdgeInsets.zero,
-
-                    constraints: const BoxConstraints(),
-
-                    onPressed: () {
-
-                      showModalBottomSheet(
-
-                        context: context,
-
-                        backgroundColor: AppColors.surface,
-
-                        shape: const RoundedRectangleBorder(
-
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-
-                        ),
-
-                        builder: (context) => _buildProfileSheet(context),
-
-                      );
-
-                    },
-
-                  ),
-
-                ),
-
-              ],
-
-            ),
-
-          ],
-
-        ),
-
-      );
-
-    }
-
-
-
-    // Tiêu đề tương ứng cho từng Tab
-
-    String tabTitle;
+    // 1. Dữ liệu đồng nhất cho từng tab: Icon, Tiêu đề, Màu nhận diện
+    final IconData tabIcon;
+    final String tabTitle;
+    final List<Color> iconGradient;
 
     switch (currentTab) {
-
+      case 0:
+        tabTitle = 'Trang Chủ Gymer';
+        tabIcon = Icons.fitness_center_rounded;
+        iconGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
+        break;
       case 1:
-
-        tabTitle = 'Tủ Lạnh'; // Thay cho Quét Nguyên Liệu
-
+        tabTitle = 'Tủ Lạnh Thông Minh';
+        tabIcon = Icons.kitchen_rounded;
+        iconGradient = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
         break;
-
+      case 2:
+        tabTitle = 'FoodBlog Cộng Đồng';
+        tabIcon = Icons.restaurant_menu_rounded;
+        iconGradient = const [Color(0xFFEA580C), Color(0xFFF97316)];
+        break;
       case 3:
-
         tabTitle = 'Vóc Dáng & Chỉ Số';
-
+        tabIcon = Icons.monitor_weight_outlined;
+        iconGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
         break;
-
       case 4:
-
         tabTitle = 'Nhật Ký Dinh Dưỡng';
-
+        tabIcon = Icons.menu_book_rounded;
+        iconGradient = const [Color(0xFF16A34A), Color(0xFF22C55E)];
         break;
-
       default:
-
-        tabTitle = 'Quét Nguyên Liệu';
-
+        tabTitle = 'NutriGym';
+        tabIcon = Icons.fitness_center_rounded;
+        iconGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
 
-
-    return Padding(
-
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+            width: 1.0,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
-
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-
+          // Left: Icon đại diện + NUTRIGYM AI tag + Tên Tab đồng nhất font
           Row(
-
+            mainAxisSize: MainAxisSize.min,
             children: [
-
-              Column(
-
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-
-                  Text(
-
-                    'NUTRIGYM AI',
-
-                    style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
-
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: iconGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-
-                  Text(
-
-                    tabTitle,
-
-                    style: AppTypography.headline(color: AppColors.onSurface),
-
-                  ),
-
-                ],
-
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: iconGradient.first.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(tabIcon, color: Colors.white, size: 20),
               ),
-
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'NUTRIGYM AI',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          color: primaryAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: primaryAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'PRO',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: primaryAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    tabTitle,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
             ],
-
           ),
 
+          // Right: Bộ nút hành động đồng nhất trên cả 5 tabs: [AI Chatbot Robot] + [Avatar Instagram Profile]
           Row(
-
             mainAxisSize: MainAxisSize.min,
-
             children: [
-
-              // Nút Mở AI Chatbot Trợ Lý Dinh Dưỡng
-
-              GestureDetector(
-
-                onTap: () {
-
-                  Navigator.push(
-
-                    context,
-
-                    MaterialPageRoute(builder: (_) => const NutriGymChatbotScreen()),
-
-                  );
-
-                },
-
-                child: Container(
-
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-
-                  decoration: BoxDecoration(
-
-                    gradient: const LinearGradient(
-
-                      colors: [AppColors.primary, Color(0xFF2563EB)],
-
-                    ),
-
-                    borderRadius: BorderRadius.circular(20),
-
-                    boxShadow: [
-
-                      BoxShadow(
-
-                        color: AppColors.primary.withValues(alpha: 0.25),
-
-                        blurRadius: 8,
-
-                        offset: const Offset(0, 2),
-
+              // 1. Nút AI Chatbot Robot
+              Tooltip(
+                message: 'Trợ lý AI NutriGym',
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NutriGymChatbotScreen()),
+                    );
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [primaryAccent, const Color(0xFF2563EB)],
                       ),
-
-                    ],
-
-                  ),
-
-                  child: const Row(
-
-                    mainAxisSize: MainAxisSize.min,
-
-                    children: [
-
-                      Icon(Icons.smart_toy, color: Colors.white, size: 16),
-
-                      SizedBox(width: 5),
-
-                      Text(
-
-                        'AI CHAT',
-
-                        style: TextStyle(
-
-                          color: Colors.white,
-
-                          fontWeight: FontWeight.bold,
-
-                          fontSize: 12,
-
-                          letterSpacing: 0.5,
-
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryAccent.withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-
-                      ),
-
-                    ],
-
+                      ],
+                    ),
+                    child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 19),
                   ),
-
                 ),
-
               ),
-
               const SizedBox(width: 10),
 
-              Container(
-
-                decoration: BoxDecoration(
-
-                  color: AppColors.surface,
-
-                  shape: BoxShape.circle,
-
-                  boxShadow: [
-
-                    BoxShadow(
-
-                      color: Colors.black.withValues(alpha: 0.05),
-
-                      blurRadius: 4,
-
-                      offset: const Offset(0, 2),
-
-                    ),
-
-                  ],
-
-                ),
-
-                child: IconButton(
-
-                  icon: const Icon(Icons.person_outline, color: AppColors.onSurface),
-
-                  onPressed: () {
-
-                    showModalBottomSheet(
-
-                      context: context,
-
-                      backgroundColor: AppColors.surface,
-
-                      shape: const RoundedRectangleBorder(
-
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-
-                      ),
-
-                      builder: (context) => _buildProfileSheet(context),
-
+              // 2. Nút Hồ sơ gymer với viền gradient đồng bộ theo bảng màu nhấn (Accent color)
+              Tooltip(
+                message: 'Hồ sơ gymer',
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
                     );
-
                   },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    padding: const EdgeInsets.all(2.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          primaryAccent,
+                          primaryAccent.withValues(alpha: 0.55),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryAccent.withValues(alpha: 0.28),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      ),
+                      padding: const EdgeInsets.all(1.5),
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: SettingsService.instance.userAvatarNotifier,
+                        builder: (context, avatarUrl, _) {
+                          Widget fallback = CircleAvatar(
+                            radius: 14.5,
+                            backgroundColor: isDark
+                                ? primaryAccent.withValues(alpha: 0.18)
+                                : primaryAccent.withValues(alpha: 0.12),
+                            child: Icon(Icons.person, color: primaryAccent, size: 16),
+                          );
 
+                          if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+                            return ClipOval(
+                              child: Image.network(
+                                avatarUrl,
+                                width: 29,
+                                height: 29,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => fallback,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return fallback;
+                                },
+                              ),
+                            );
+                          }
+
+                          final file = File(avatarUrl);
+                          if (file.existsSync()) {
+                            return ClipOval(
+                              child: Image.file(
+                                file,
+                                width: 29,
+                                height: 29,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => fallback,
+                              ),
+                            );
+                          }
+
+                          return fallback;
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-
               ),
-
             ],
-
           ),
-
         ],
-
       ),
-
     );
-
   }
-
-
-
-  Widget _buildProfileSheet(BuildContext context) {
-
-    return Padding(
-
-      padding: const EdgeInsets.all(24.0),
-
-      child: Column(
-
-        mainAxisSize: MainAxisSize.min,
-
-        children: [
-
-          const CircleAvatar(
-
-            radius: 40,
-
-            backgroundColor: AppColors.surfaceContainerHigh,
-
-            child: Icon(Icons.person, size: 40, color: AppColors.onSurfaceVariant),
-
-          ),
-
-          const SizedBox(height: 16),
-
-          Text('Nguyễn Văn A', style: AppTypography.displayLarge().copyWith(fontSize: 24)),
-
-          const SizedBox(height: 8),
-
-          Text('0901234567', style: AppTypography.bodyMedium()),
-
-          const SizedBox(height: 32),
-
-          SizedBox(
-
-            width: double.infinity,
-
-            child: ElevatedButton(
-
-              style: ElevatedButton.styleFrom(
-
-                backgroundColor: AppColors.primary,
-
-                foregroundColor: AppColors.onPrimary,
-
-                padding: const EdgeInsets.symmetric(vertical: 16),
-
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-
-              ),
-
-              onPressed: () {
-
-                Navigator.pop(context);
-
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const UpdateBodyStatsScreen()));
-
-              },
-
-              child: const Text('CẬP NHẬT CHỈ SỐ CƠ THỂ', style: TextStyle(fontWeight: FontWeight.bold)),
-
-            ),
-
-          ),
-
-          const SizedBox(height: 12),
-
-          SizedBox(
-
-            width: double.infinity,
-
-            child: OutlinedButton.icon(
-
-              style: OutlinedButton.styleFrom(
-
-                foregroundColor: AppColors.fire,
-
-                side: const BorderSide(color: AppColors.fire, width: 1.5),
-
-                padding: const EdgeInsets.symmetric(vertical: 14),
-
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-
-              ),
-
-              icon: const Icon(Icons.logout, color: AppColors.fire),
-
-              onPressed: () async {
-
-                await ApiService.logout();
-
-                if (context.mounted) {
-
-                  Navigator.pop(context);
-
-                  Navigator.of(context).pushAndRemoveUntil(
-
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-
-                    (route) => false,
-
-                  );
-
-                }
-
-              },
-
-              label: const Text('ĐĂNG XUẤT', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.fire)),
-
-            ),
-
-          ),
-
-          const SizedBox(height: 16),
-
-        ],
-
-      ),
-
-    );
-
-  }
-
 }
-
-
 
 // Model cho nguyên liệu được AI nhận diện đang chờ người dùng xem xét & xác nhận
 

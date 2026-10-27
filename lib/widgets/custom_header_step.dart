@@ -56,7 +56,7 @@ class CustomHeaderStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'NUTRIGYM AI SETUP',
+                  'THIẾT LẬP BAN ĐẦU',
                   style: AppTypography.labelCaption(color: AppColors.outline),
                 ),
               ],
@@ -157,7 +157,7 @@ class CustomHeaderStep extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Dữ liệu tối ưu hóa thuật toán AI cho calo & macro',
+                    'Dữ liệu giúp tính toán calo & macro phù hợp với bạn',
                     style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
                   ),
                 ],

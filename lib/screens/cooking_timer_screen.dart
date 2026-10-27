@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../models/badges_and_report_model.dart';
 import '../theme/app_theme.dart';
 
@@ -163,11 +165,30 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       if (_remainingSeconds <= 0) {
         _timer?.cancel();
         setState(() => _isRunning = false);
+        _notifyStepFinished();
         _handleStepComplete();
         return;
       }
       setState(() => _remainingSeconds--);
     });
+  }
+
+  Future<void> _notifyStepFinished() async {
+    await SystemSound.play(SystemSoundType.alert);
+    await HapticFeedback.heavyImpact();
+    try {
+      await NotificationService().showLocalNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Hết giờ ${_steps[_currentStepIndex].title}',
+        body: _currentStepIndex == _steps.length - 1 ? 'Món ăn đã hoàn thành.' : 'Sẵn sàng chuyển sang bước tiếp theo.',
+      );
+    } catch (_) {}
+  }
+
+  double _value(dynamic value) => value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+  double get _portionScale {
+    final scale = _value((widget.recipe ?? {})['portionScale']);
+    return scale <= 0 ? 1 : scale.clamp(.1, 5).toDouble();
   }
 
   void _pauseTimer() {
@@ -208,8 +229,8 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
     _pauseTimer();
     final recipe = widget.recipe ?? {};
     final title = recipe['title'] ?? 'Món ăn';
-    final kcal = recipe['kcal'] ?? 0;
-    final pro = recipe['protein'] ?? 0;
+    final kcal = (_value(recipe['kcal']) * _portionScale).round();
+    final pro = (_value(recipe['protein']) * _portionScale).round();
 
     final achievementFuture = _recordCookingAchievement(title);
 
@@ -309,6 +330,14 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
         actions: [
           SizedBox(
             width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _chooseMealAndLog(ctx),
+              icon: const Icon(Icons.bookmark_add_outlined),
+              label: const Text('ĐÃ ĂN MÓN NÀY - THÊM VÀO NHẬT KÝ'),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -343,6 +372,37 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       BadgesAndReportModel.instance.fetchAchievementsData();
       return null;
     }
+  }
+
+  Future<void> _logMeal(String mealType) async {
+    final recipe = widget.recipe ?? {};
+    final now = DateTime.now();
+    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    try {
+      await ApiService.addNutritionLog({
+        'logDate': date, 'mealType': mealType, 'foodName': recipe['title'] ?? 'Món EatGym',
+        'servingSize': 1, 'servingUnit': 'phần',
+        'calories': _value(recipe['kcal']) * _portionScale,
+        'protein': _value(recipe['protein']) * _portionScale,
+        'carbs': _value(recipe['carbs']) * _portionScale,
+        'fat': _value(recipe['fat']) * _portionScale,
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã thêm món vào Nhật ký dinh dưỡng.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Chưa thể ghi nhật ký: $error')));
+    }
+  }
+
+  void _chooseMealAndLog(BuildContext dialogContext) {
+    const meals = {'breakfast': 'Bữa sáng', 'lunch': 'Bữa trưa', 'dinner': 'Bữa tối', 'snack': 'Ăn vặt'};
+    showModalBottomSheet(
+      context: dialogContext,
+      builder: (sheetContext) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const ListTile(title: Text('Thêm vào bữa nào?', style: TextStyle(fontWeight: FontWeight.bold))),
+        for (final item in meals.entries)
+          ListTile(title: Text(item.value), onTap: () { Navigator.pop(sheetContext); Navigator.pop(dialogContext); _logMeal(item.key); }),
+      ])),
+    );
   }
 
   String _formatTime(int totalSeconds) {
@@ -418,10 +478,10 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
 
   Widget _buildNutritionRow() {
     final recipe = widget.recipe ?? {};
-    final kcal = recipe['kcal'] ?? 0;
-    final pro = recipe['protein'] ?? 0;
-    final carbs = recipe['carbs'] ?? 0;
-    final fat = recipe['fat'] ?? 0;
+    final kcal = (_value(recipe['kcal']) * _portionScale).round();
+    final pro = (_value(recipe['protein']) * _portionScale).round();
+    final carbs = (_value(recipe['carbs']) * _portionScale).round();
+    final fat = (_value(recipe['fat']) * _portionScale).round();
 
     final chips = [
       '$kcal kcal',
@@ -519,7 +579,7 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
                   step.title,
                   style: AppTypography.titleMedium(color: AppColors.onSurface).copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 20,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -531,12 +591,30 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
           Text(
             step.description,
             style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(
-              fontSize: 15,
+              fontSize: 20,
               height: 1.5,
             ),
           ),
+          const SizedBox(height: 12),
+          _buildCookingTip(step),
         ],
       ),
+    );
+  }
+
+  Widget _buildCookingTip(CookingStep step) {
+    final text = step.description.toLowerCase();
+    final tip = text.contains('gà') || text.contains('áp chảo')
+        ? 'Mẹo gymer: áp chảo lửa vừa, chỉ lật 1 lần và để thịt nghỉ 3 phút để ức gà mọng nước.'
+        : text.contains('luộc') || text.contains('trứng')
+            ? 'Mẹo gymer: cho trứng vào nước sôi 7–8 phút để lòng đào, tránh luộc quá lâu.'
+            : 'Mẹo gymer: dùng lửa vừa và nấu vừa chín tới để giữ độ ngọt tự nhiên, hạn chế dầu và sốt nhiều đường.';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('💡 '), Expanded(child: Text(tip, style: const TextStyle(fontSize: 14, height: 1.35))),
+      ]),
     );
   }
 
@@ -688,3 +766,4 @@ class _TimerRingPainter extends CustomPainter {
     return oldDelegate.progress != progress;
   }
 }
+

@@ -65,11 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
         try {
           profile = await ApiService.getProfile();
         } catch (_) {
-          profile = {};
+          profile = null;
         }
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => profile == null ? const OnboardingScreen() : const MainScreen()),
+          MaterialPageRoute(builder: (context) => (profile == null || profile.isEmpty) ? const OnboardingScreen() : const MainScreen()),
         );
       }
     } catch (e) {
