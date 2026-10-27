@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import 'login_screen.dart';
+import 'meal_prep_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -988,6 +989,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       );
                     },
+                  ),
+
+                  const SizedBox(height: 12),
+                  Divider(color: borderColor, height: 1),
+                  const SizedBox(height: 10),
+
+                  // Lối tắt: Kế hoạch Meal Prep & Nhắc nhở rã đông
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MealPrepScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F3F4),
+                            ),
+                            child: Icon(Icons.kitchen_outlined, size: 17, color: primaryColor),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Kế hoạch Meal Prep & Nhắc rã đông',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                ),
+                                Text(
+                                  'Chia khẩu phần theo hộp & hẹn giờ rã đông tự động',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11,
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 13, color: subTextColor),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import 'badges_and_report_screen.dart';
 import 'login_screen.dart';
 import 'recipe_search_screen.dart';
+import 'meal_prep_screen.dart';
 import 'settings_screen.dart';
 import 'update_body_stats_screen.dart';
 
@@ -939,6 +940,58 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+
+                        // Lối tắt: Kế hoạch Meal Prep & Nhắc nhở rã đông
+                        InkWell(
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const MealPrepScreen()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.kitchen_outlined, color: isDark ? primaryAccent : const Color(0xFF0F172A), size: 22),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Kế hoạch Meal Prep & Nhắc rã đông',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13.5,
+                                          color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Lập khẩu phần, tính thịt chín/hộp & hẹn giờ rã đông...',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -1476,6 +1529,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(builder: (_) => const BadgesAndReportScreen(isSubPage: true)),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+
+                                // Nút 4: Meal Prep & Rã đông
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
+                                    border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.kitchen_outlined, size: 20, color: isDark ? primaryAccent : const Color(0xFF0F172A)),
+                                    tooltip: 'Kế hoạch Meal Prep & Rã đông',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const MealPrepScreen()),
                                       );
                                     },
                                   ),
