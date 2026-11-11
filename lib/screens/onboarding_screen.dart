@@ -183,9 +183,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(children: [
-          Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => setState(() => _showForm = true), child: const Text('Bỏ qua hướng dẫn'))),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => setState(() => _showForm = true),
+              child: Text(
+                'Bỏ qua hướng dẫn',
+                style: AppTypography.labelLarge(color: AppColors.textMuted),
+              ),
+            ),
+          ),
           Expanded(child: PageView.builder(
             controller: _guideController, itemCount: _guides.length,
             onPageChanged: (value) => setState(() => _page = value),
@@ -193,8 +202,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           )),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(_guides.length, (index) => AnimatedContainer(
             duration: const Duration(milliseconds: 200), margin: const EdgeInsets.symmetric(horizontal: 4),
-            height: 8, width: index == _page ? 24 : 8,
-            decoration: BoxDecoration(color: index == _page ? AppColors.primary : AppColors.outlineVariant, borderRadius: BorderRadius.circular(99)),
+            height: 6, width: index == _page ? 24 : 6,
+            decoration: BoxDecoration(color: index == _page ? AppColors.primary : AppColors.surfaceContainerAlt, borderRadius: BorderRadius.circular(99)),
           ))),
           const SizedBox(height: 24),
           PrimaryButton(
@@ -225,16 +234,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           CustomHeaderStep(currentStep: 1, totalSteps: 1, onBack: () => setState(() => _showForm = false)),
           const SizedBox(height: 12),
-          Text('Cá nhân hoá kế hoạch của bạn', style: AppTypography.headline(color: AppColors.onSurface)),
+          Text('Cá nhân hoá kế hoạch của bạn', style: AppTypography.headlineMedium(color: AppColors.onSurface)),
           const SizedBox(height: 6),
-          Text('Thông tin này giúp EatGym tính mục tiêu dinh dưỡng phù hợp.', style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant)),
+          Text('Dữ liệu sinh trắc giúp EatGym tính toán Calo & Macro chính xác nhất cho thể trạng của bạn.', style: AppTypography.bodyDefault(color: AppColors.onSurfaceVariant)),
           const SizedBox(height: 20), PhysicalInfoCard(model: _model), const SizedBox(height: 20),
           NutritionGoalCard(model: _model), const SizedBox(height: 20), AllergyPreferenceCard(model: _model), const SizedBox(height: 28),
-          SizedBox(width: double.infinity, child: ElevatedButton(
-            onPressed: _saving ? null : _finish,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary, padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Hoàn tất và bắt đầu'),
-          )), const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _finish,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: _saving
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Hoàn tất và bắt đầu', style: AppTypography.titleSmallBold(color: AppColors.onPrimary)),
+            ),
+          ), const SizedBox(height: 24),
         ]),
       ),
     )),
@@ -251,8 +271,8 @@ class _GuidePage extends StatelessWidget {
   const _GuidePage({required this.guide});
   @override
   Widget build(BuildContext context) => Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-    Container(width: 150, height: 150, decoration: BoxDecoration(color: guide.color.withValues(alpha: .12), shape: BoxShape.circle), child: Icon(guide.icon, size: 76, color: guide.color)),
-    const SizedBox(height: 44), Text(guide.title, textAlign: TextAlign.center, style: AppTypography.displayLarge(color: AppColors.onSurface)),
-    const SizedBox(height: 16), Text(guide.description, textAlign: TextAlign.center, style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant).copyWith(height: 1.5)),
+    Container(width: 140, height: 140, decoration: BoxDecoration(color: guide.color.withValues(alpha: .12), shape: BoxShape.circle), child: Icon(guide.icon, size: 68, color: guide.color)),
+    const SizedBox(height: 40), Text(guide.title, textAlign: TextAlign.center, style: AppTypography.headlineMedium(color: AppColors.onSurface)),
+    const SizedBox(height: 14), Text(guide.description, textAlign: TextAlign.center, style: AppTypography.bodyLarge(color: AppColors.onSurfaceVariant).copyWith(height: 1.5)),
   ]);
 }

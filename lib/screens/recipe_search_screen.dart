@@ -773,7 +773,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                   const SizedBox(height: 12),
                   Text(
                     'BÌNH LUẬN CÔNG THỨC',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                       letterSpacing: 0.8,
@@ -910,7 +910,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('CHIA SẺ CÔNG THỨC', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('CHIA SẺ CÔNG THỨC', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 6),
                 Text(recipe['title'] ?? '', style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant), maxLines: 1),
                 const SizedBox(height: 20),
@@ -1177,10 +1177,11 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.onPrimary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       icon: const Icon(Icons.timer_outlined),
-                      label: const Text('BẮT ĐẦU NẤU MÓN NÀY ⏱️', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      label: Text('BẮT ĐẦU NẤU MÓN NÀY ⏱️', style: AppTypography.titleSmallBold(color: AppColors.onPrimary)),
                       onPressed: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -1233,7 +1234,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     final primaryAccent = SettingsService.instance.currentColor;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
       appBar: null, // Đã chuyển lên AppHeader chính để tránh bị 2 tầng header
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryAccent))
@@ -1321,7 +1322,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'CÔNG THỨC ĐÃ LƯU (${savedPosts.length})',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: isDark ? Colors.white : Colors.black87,
@@ -1366,7 +1367,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   'Bạn chưa lưu công thức nào',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: GoogleFonts.inter(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     color: isDark ? Colors.white : Colors.black87,
@@ -1510,7 +1511,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'BÀI ĐĂNG CỦA TÔI (${_userPosts.length})',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: isDark ? Colors.white : Colors.black87,
@@ -1541,7 +1542,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   'Bạn chưa đăng công thức nào',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: isDark ? Colors.white : Colors.black87,
@@ -1852,7 +1853,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                     children: [
                       Text(
                         isEditing ? 'CHỈNH SỬA CÔNG THỨC CỦA TÔI' : 'ĐĂNG CÔNG THỨC GYMER CỦA BẠN',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           color: isDark ? Colors.white : const Color(0xFF0F172A),

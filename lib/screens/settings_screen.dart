@@ -2,10 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import 'login_screen.dart';
 import 'meal_prep_screen.dart';
+import 'smart_fridge_screen.dart';
+import 'body_stats_screen.dart';
+import 'badges_and_report_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -217,96 +221,302 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final primaryColor = _settings.currentColor;
         final highContrast = _settings.highContrastNotifier.value;
 
-        final bgColor = isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF9FAFB);
-        final cardColor = isDark ? const Color(0xFF151B18) : const Color(0xFFFFFFFF);
-        final textColor = isDark ? const Color(0xFFE1E3E1) : const Color(0xFF191C1D);
-        final subTextColor = isDark ? const Color(0xFF94A398) : const Color(0xFF747876);
+        final bgColor = isDark ? const Color(0xFF0B0E0D) : AppColors.background;
+        final cardColor = isDark ? const Color(0xFF151B18) : AppColors.surface;
+        final textColor = isDark ? const Color(0xFFE1E3E1) : AppColors.onSurface;
+        final subTextColor = isDark ? const Color(0xFF94A398) : AppColors.textMuted;
         final borderColor = highContrast
             ? (isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.35))
-            : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06));
+            : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline);
 
         return Scaffold(
           backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: InkWell(
-            onTap: () => Navigator.of(context).maybePop(),
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? const Color(0xFF1E2420) : Colors.white,
-                border: Border.all(color: borderColor),
-              ),
-              child: Icon(
-                Icons.arrow_back_ios_new,
-                size: 16,
-                color: textColor,
-              ),
-            ),
-          ),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cài đặt hệ thống',
-              style: GoogleFonts.spaceGrotesk(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-                letterSpacing: -0.02,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.4), width: 0.8),
-              ),
-              child: Text(
-                'CONFIG & PREFERENCES',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.08,
-                  color: primaryColor,
+          appBar: Navigator.canPop(context)
+              ? AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  leading: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).maybePop(),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDark ? const Color(0xFF1E2420) : Colors.white,
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 16,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cài đặt hệ thống',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                          letterSpacing: -0.02,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: primaryColor.withValues(alpha: 0.4), width: 0.8),
+                        ),
+                        child: Text(
+                          'CONFIG & PREFERENCES',
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.08,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? const Color(0xFF1E2420) : Colors.white,
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                )
+              : null,
+          body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---------------------------------------------------------
+                // FEATURED SPOTLIGHT BENTO: KHO NGUYÊN LIỆU (SMART FRIDGE)
+                // Chuẩn theo settings_inventory.json Figma
+                // ---------------------------------------------------------
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFF000000),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.kitchen_rounded, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'KHO NGUYÊN LIỆU THÔNG MINH',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5B5F63),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Tủ Lạnh & Thực Phẩm',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'ĐANG THEO DÕI',
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF10B981),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Quản lý thực phẩm trong ngăn mát và ngăn đông. AI tự động cảnh báo hạn dùng và gợi ý món nấu ăn Eat Clean.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5B5F63),
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const SmartFridgeScreen()),
+                                );
+                              },
+                              icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                              label: Text(
+                                'Mở Kho Nguyên Liệu',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? Colors.white : const Color(0xFF000000),
+                                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDark ? const Color(0xFF1E2420) : Colors.white,
-              border: Border.all(color: borderColor),
-            ),
-            child: Icon(
-              Icons.tune_rounded,
-              size: 18,
-              color: subTextColor,
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ---------------------------------------------------------
-            // KHỐI 1: TÀI KHOẢN & BẢO MẬT
-            // ---------------------------------------------------------
+
+                // ---------------------------------------------------------
+                // SHORTCUTS GYMER: VÓC DÁNG & BÁO CÁO THÀNH TỰU
+                // ---------------------------------------------------------
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const BodyStatsScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.monitor_weight_outlined, size: 22, color: Color(0xFF3B82F6)),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Chỉ số vóc dáng',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'InBody & Cân nặng',
+                                style: GoogleFonts.inter(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const BadgesAndReportScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.military_tech_outlined, size: 22, color: Color(0xFFF59E0B)),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Thành tựu & PDF',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Huy hiệu & Báo cáo',
+                                style: GoogleFonts.inter(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ---------------------------------------------------------
+                // KHỐI 1: TÀI KHOẢN & BẢO MẬT
+                // ---------------------------------------------------------
             _buildSectionHeader('HỒ SƠ VẬN ĐỘNG VIÊN', hasActiveSync: true, primaryColor: primaryColor),
             const SizedBox(height: 8),
             _buildCard(
@@ -389,7 +599,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Flexible(
                                   child: Text(
                                     _userName,
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       color: textColor,
@@ -408,7 +618,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   child: Text(
                                     _userRole,
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: GoogleFonts.inter(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w700,
                                       color: primaryColor,
@@ -421,7 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               _userEmail,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: subTextColor,
                               ),
@@ -456,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               children: [
                                 Text(
                                   'Đổi mật khẩu',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: textColor,
@@ -464,7 +674,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 Text(
                                   'Cập nhật bảo mật sinh trắc & mã PIN',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: subTextColor,
                                   ),
@@ -503,7 +713,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Chế độ hiển thị',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: textColor,
@@ -513,7 +723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         isDark ? 'OLED Stealth Active' : 'Luminous Light Active',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: primaryColor,
@@ -564,7 +774,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         'Màu nhấn chủ đạo (Telemetry Accent)',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: textColor,
@@ -578,7 +788,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (colorKey == 'fire_amber') label = 'FIRE AMBER';
                           return Text(
                             label,
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: primaryColor,
@@ -637,7 +847,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             'Kích thước chữ hệ thống',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: textColor,
@@ -646,7 +856,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 2),
                           Text(
                             'Tối ưu trường nhìn khi tập tạ',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
                               color: subTextColor,
                             ),
@@ -706,7 +916,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Text(
                                 'Độ tương phản cao (High Contrast)',
-                                style: GoogleFonts.spaceGrotesk(
+                                style: GoogleFonts.inter(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: textColor,
@@ -715,7 +925,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 'Tăng cường viền OLED và text readouts',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: subTextColor,
                                 ),
@@ -760,7 +970,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         'Hệ thống chuẩn (Unit System)',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: textColor,
@@ -817,7 +1027,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 children: [
                                   Text(
                                     'Cân nặng',
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: subTextColor,
@@ -860,7 +1070,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 children: [
                                   Text(
                                     'Chiều cao',
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: subTextColor,
@@ -913,7 +1123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Text(
                                 'Bật nhắc nhở thông minh',
-                                style: GoogleFonts.spaceGrotesk(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: textColor,
@@ -921,7 +1131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               Text(
                                 'Đồng bộ nhịp sinh học & trao đổi chất',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: subTextColor,
                                 ),
@@ -1024,7 +1234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               children: [
                                 Text(
                                   'Kế hoạch Meal Prep & Nhắc rã đông',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: GoogleFonts.inter(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
                                     color: textColor,
@@ -1032,7 +1242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 Text(
                                   'Chia khẩu phần theo hộp & hẹn giờ rã đông tự động',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: subTextColor,
                                   ),
@@ -1075,7 +1285,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(width: 10),
                     Text(
                       'Đăng xuất tài khoản',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFFF4B4B),
@@ -1102,7 +1312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(width: 4),
                       Text(
                         'NutriGym AI',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: textColor,
@@ -1113,7 +1323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'NutriGym AI v1.2.0 • Build 2026',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       color: subTextColor,
                     ),
@@ -1126,7 +1336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(width: 4),
                       Text(
                         'Mã hóa sinh trắc học chuẩn HIPAA & Apple HealthKit',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 10,
                           color: subTextColor,
                         ),
@@ -1153,7 +1363,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         Text(
           title,
-          style: GoogleFonts.spaceGrotesk(
+          style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.08,
@@ -1180,7 +1390,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 6),
               Text(
                 'Active Sync',
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: primaryColor,
@@ -1255,7 +1465,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Center(
             child: Text(
               title,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 12.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 color: selected
@@ -1325,7 +1535,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF94A398) : const Color(0xFF767B79)),
@@ -1371,7 +1581,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Text(
           text,
-          style: GoogleFonts.spaceGrotesk(
+          style: GoogleFonts.inter(
             fontSize: 11.5,
             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
             color: active ? activeTextColor : const Color(0xFF767B79),
@@ -1406,7 +1616,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 color: active ? activeTextColor : const Color(0xFF767B79),
@@ -1437,7 +1647,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(width: 10),
             Text(
               title,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: textColor,
@@ -1462,7 +1672,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       timeStr,
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: primaryColor,
@@ -1548,7 +1758,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Đổi mật khẩu tài khoản',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: textColor,
@@ -1557,7 +1767,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Mật khẩu mới phải có tối thiểu 6 ký tự để đảm bảo an toàn.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       color: subTextColor,
                     ),
@@ -1567,10 +1777,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: oldPasswordController,
                     obscureText: obscureOld,
-                    style: GoogleFonts.manrope(color: textColor),
+                    style: GoogleFonts.inter(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Mật khẩu hiện tại',
-                      labelStyle: GoogleFonts.manrope(color: subTextColor),
+                      labelStyle: GoogleFonts.inter(color: subTextColor),
                       prefixIcon: Icon(Icons.lock_outline, color: primaryColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(obscureOld ? Icons.visibility_off : Icons.visibility, color: subTextColor, size: 18),
@@ -1591,10 +1801,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: newPasswordController,
                     obscureText: obscureNew,
-                    style: GoogleFonts.manrope(color: textColor),
+                    style: GoogleFonts.inter(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Mật khẩu mới',
-                      labelStyle: GoogleFonts.manrope(color: subTextColor),
+                      labelStyle: GoogleFonts.inter(color: subTextColor),
                       prefixIcon: Icon(Icons.vpn_key_outlined, color: primaryColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, color: subTextColor, size: 18),
@@ -1615,10 +1825,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: confirmPasswordController,
                     obscureText: obscureConfirm,
-                    style: GoogleFonts.manrope(color: textColor),
+                    style: GoogleFonts.inter(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Xác nhận mật khẩu mới',
-                      labelStyle: GoogleFonts.manrope(color: subTextColor),
+                      labelStyle: GoogleFonts.inter(color: subTextColor),
                       prefixIcon: Icon(Icons.check_circle_outline, color: primaryColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility, color: subTextColor, size: 18),
@@ -1702,7 +1912,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                           : Text(
                               'Cập nhật mật khẩu',
-                              style: GoogleFonts.spaceGrotesk(fontSize: 15, fontWeight: FontWeight.w700),
+                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),
@@ -1724,18 +1934,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'Xác nhận đăng xuất',
-            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
           ),
           content: Text(
             'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng NutriGym AI không?',
-            style: GoogleFonts.manrope(fontSize: 14),
+            style: GoogleFonts.inter(fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
               child: Text(
                 'Hủy',
-                style: GoogleFonts.spaceGrotesk(color: Colors.grey),
+                style: GoogleFonts.inter(color: Colors.grey),
               ),
             ),
             ElevatedButton(
@@ -1756,7 +1966,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               child: Text(
                 'Đăng xuất',
-                style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
             ),
           ],

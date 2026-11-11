@@ -221,31 +221,63 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
         final primaryAccent = SettingsService.instance.currentColor;
 
         return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.surfaceContainerLow,
+          backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
           body: SafeArea(
             child: Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 8),
-                        // Header
-                        Text(
-                          'Biểu đồ vóc dáng',
-                          style: AppTypography.displayLarge(
-                            color: isDark ? Colors.white : AppColors.onSurface,
-                          ).copyWith(
-                            fontSize: 26,
-                          ),
+                        // Main Header matching Figma nutrigym_body_stats
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isDark ? primaryAccent.withValues(alpha: 0.2) : AppColors.backgroundLight,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark ? primaryAccent.withValues(alpha: 0.3) : AppColors.outline,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.fitness_center_rounded,
+                                color: isDark ? primaryAccent : AppColors.primary,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Vóc dáng & Chỉ số',
+                                    style: AppTypography.titleSmallBold(
+                                      color: isDark ? Colors.white : AppColors.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'NutriGym AI · Theo dõi tiến độ',
+                                    style: AppTypography.bodySmall(
+                                      color: isDark ? const Color(0xFF94A3B8) : AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
                         // Tab Bar
                         _buildTabBar(isDark, primaryAccent),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
                         // Tab Content - each tab builds its own full content
                         if (_selectedTabIndex == 0) ..._buildWeightTabContent(isDark, primaryAccent),
@@ -273,9 +305,11 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
   Widget _buildTabBar(bool isDark, Color primaryAccent) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(30),
-        border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.08)) : null,
+        color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline,
+        ),
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
@@ -286,21 +320,18 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
               onTap: () => setState(() => _selectedTabIndex = index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? (isDark ? primaryAccent : AppColors.primary) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   _tabs[index],
-                  style: AppTypography.headline(
+                  style: AppTypography.labelSemibold(
                     color: isSelected
                         ? (isDark ? Colors.black : AppColors.onPrimary)
-                        : (isDark ? const Color(0xFF94A3B8) : AppColors.onSurfaceVariant),
-                  ).copyWith(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        : (isDark ? const Color(0xFF94A3B8) : AppColors.textMuted),
                   ),
                 ),
               ),
@@ -1594,12 +1625,16 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0B0E0D) : AppColors.surfaceContainerLow,
-        border: isDark ? Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))) : null,
+        color: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline,
+          ),
+        ),
       ),
       child: SizedBox(
         width: double.infinity,
-        height: 54,
+        height: 50,
         child: ElevatedButton(
           onPressed: () async {
             final res = await Navigator.push(
@@ -1616,15 +1651,14 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
             backgroundColor: isDark ? primaryAccent : AppColors.primary,
             foregroundColor: isDark ? Colors.black : AppColors.onPrimary,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             elevation: 0,
           ),
-          child: const Text(
+          child: Text(
             '+ Cập nhật cân nặng / số đo',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            style: AppTypography.titleSmallBold(
+              color: isDark ? Colors.black : AppColors.onPrimary,
             ),
           ),
         ),

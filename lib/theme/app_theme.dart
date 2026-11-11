@@ -2,26 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Backgrounds
-  static const Color background = Color(0xFFF9FAFB); // Nền xám cực nhạt (gần trắng) cho Scaffold
-  static const Color surface = Color(0xFFFFFFFF); // Màu nền trắng tinh cho các khối Card
-  static const Color surfaceContainer = Color(0xFFF3F4F6); // Xám nhạt cho vùng chứa phụ
-  static const Color surfaceContainerHigh = Color(0xFFE5E7EB);
-  static const Color surfaceContainerLow = Color(0xFFF9FAFB);
-  static const Color surfaceContainerLowest = Color(0xFFFFFFFF);
+  // ── Backgrounds (from Figma) ──
+  static const Color background = Color(0xFFF6FAFF); // Nền xanh nhạt chủ đạo (#F6FAFF)
+  static const Color backgroundAlt = Color(0xFFF1F5F9); // Nền xám mát thay thế (#F1F5F9)
+  static const Color backgroundLight = Color(0xFFECF5FE); // Nền xanh nhạt cho section/card (#ECF5FE)
+  static const Color surface = Color(0xFFFFFFFF); // Nền trắng cho Card (#FFFFFF)
+  static const Color surfaceContainer = Color(0xFFE6EFF8); // Container phụ (#E6EFF8)
+  static const Color surfaceContainerAlt = Color(0xFFE0E9F2); // Container phụ đậm hơn (#E0E9F2)
+  static const Color surfaceContainerHigh = Color(0xFFDBE4ED); // Container đậm (#DBE4ED)
+  static const Color surfaceContainerLow = Color(0xFFF1F4F9); // Container nhẹ (#F1F4F9)
+  static const Color surfaceContainerLowest = Color(0xFFFCFDFE); // Container nhẹ nhất (#FCFDFE)
+  static const Color surfaceMuted = Color(0xFFF0F3F8); // Muted surface (#F0F3F8)
+  static const Color surfaceTinted = Color(0xFFF8FAFC); // Tinted surface (#F8FAFC)
 
-  // Outlines & Borders
-  static const Color outline = Color(0xFFA1A1AA); // Viền xám nhạt
-  static const Color outlineVariant = Color(0xFFE4E4E7);
-  static const Color outlineSubtle = Color(0xFFF4F4F5);
+  // ── Outlines & Borders ──
+  static const Color outline = Color(0xFFE0E9F2); // Viền chính (#E0E9F2)
+  static const Color outlineVariant = Color(0xFFDBE4ED); // Viền phụ (#DBE4ED)
+  static const Color outlineSubtle = Color(0xFFE6EFF8); // Viền nhẹ (#E6EFF8)
 
-  // Monochrome Accents
-  static const Color primary = Color(0xFF0F172A); // Đen ánh xanh (dùng cho các nút bấm đang chọn)
-  static const Color onPrimary = Color(0xFFFFFFFF); // Chữ trắng trên nền primary đen
-  static const Color onSurface = Color(0xFF09090B); // Chữ màu đen đậm nhất cho tiêu đề
-  static const Color onSurfaceVariant = Color(0xFF52525B); // Chữ xám đậm cho phần mô tả
+  // ── Primary & Text Colors ──
+  static const Color primary = Color(0xFF0F172A); // Nút bấm, active states (#0F172A)
+  static const Color onPrimary = Color(0xFFFFFFFF); // Chữ trên primary (#FFFFFF)
+  static const Color onSurface = Color(0xFF000000); // Chữ đen chủ đạo (#000000)
+  static const Color onSurfaceVariant = Color(0xFF5B5F63); // Chữ xám chủ đạo (#5B5F63)
+  static const Color textMuted = Color(0xFF64748B); // Chữ xám mờ (#64748B)
+  static const Color textSubtle = Color(0xFF475569); // Label nhẹ (#475569)
+  static const Color textDark = Color(0xFF141D23); // Chữ đậm (#141D23)
+  static const Color infoDark = Color(0xFF1E293B); // Info/secondary dark (#1E293B)
 
-  // Shadows
+  // ── Shadows ──
   static List<BoxShadow> buttonGlow = [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.05),
@@ -47,31 +56,168 @@ class AppColors {
     ),
   ];
 
-  // ── Legacy aliases (merged from app_colors.dart) ──
-  static const Color darkNavy = Color(0xFF1B2438);
+  // ── Legacy aliases (backward compatible) ──
+  static const Color darkNavy = Color(0xFF0F172A);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color cardBackground = Color(0xFFF5F6FA);
-  static const Color textPrimary = Color(0xFF1B2438);
-  static const Color textSecondary = Color(0xFF8E8E93);
-  static const Color border = Color(0xFFE5E5EA);
-  static const Color grey = Color(0xFF8E8E93);
-  static const Color accent = Color(0xFF1B2438);
+  static const Color cardBackground = Color(0xFFECF5FE);
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF5B5F63);
+  static const Color border = Color(0xFFE0E9F2);
+  static const Color grey = Color(0xFF64748B);
+  static const Color accent = Color(0xFF0F172A);
   static const Color success = Color(0xFF34C759);
   static const Color green = Color(0xFF34C759);
   static const Color warning = Color(0xFFFF9500);
   static const Color fire = Color(0xFFFF6B35);
-  static const Color chipBackground = Color(0xFFF2F2F7);
-  static const Color chipBorder = Color(0xFFD1D1D6);
-  static const Color timerRing = Color(0xFF1B2438);
-  static const Color tabSelected = Color(0xFF1B2438);
-  static const Color tabUnselected = Color(0xFFF2F2F7);
-  static const Color lightPurple = Color(0xFFEDE8F5);
+  static const Color chipBackground = Color(0xFFECF5FE);
+  static const Color chipBorder = Color(0xFFE0E9F2);
+  static const Color timerRing = Color(0xFF0F172A);
+  static const Color tabSelected = Color(0xFF0F172A);
+  static const Color tabUnselected = Color(0xFFECF5FE);
+  static const Color lightPurple = Color(0xFFECF5FE);
+  static const Color cardDark = Color(0xFF4C4546);
+  static const Color darkCard = Color(0xFF0F172A);
+  static const Color darkBorder = Color(0xFF1E293B);
+  static const Color darkTextMuted = Color(0xFF94A398);
 }
 
 class AppTypography {
-  // Đổi mặc định color = Colors.white thành color = AppColors.onSurface (Màu đen)
+  // ── Figma: Inter 10px/700 (55 occurrences — label chính) ──
+  static TextStyle labelBold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.04,
+        color: color,
+      );
+
+  // ── Figma: Inter 12px/600 (18 occurrences) ──
+  static TextStyle labelSemibold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
+
+  // ── Figma: Inter 14px/600 ──
+  static TextStyle labelLarge({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
+
+  // ── Figma: Inter 13px/400 (12 occurrences — body text) ──
+  static TextStyle bodyDefault({Color color = AppColors.onSurfaceVariant}) =>
+      GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
+
+  // ── Figma: Inter 15px/400 ──
+  static TextStyle bodyLarge({Color color = AppColors.onSurfaceVariant}) =>
+      GoogleFonts.inter(
+        fontSize: 15,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
+
+  // ── Figma: Inter 17px/600 (14 occurrences — small title) ──
+  static TextStyle titleSmall({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
+
+  // ── Figma: Inter 17px/700 ──
+  static TextStyle titleSmallBold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: color,
+      );
+
+  // ── Figma: Inter 20px/600 ──
+  static TextStyle headlineMedium({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.01,
+        color: color,
+      );
+
+  // ── Figma: Inter 24px/700 ──
+  static TextStyle headlineLarge({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.02,
+        color: color,
+      );
+
+  // ── Figma: Inter 48px/800 (metric display) ──
+  static TextStyle displayMetric({Color color = AppColors.onSurface}) =>
+      GoogleFonts.inter(
+        fontSize: 48,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.03,
+        color: color,
+      );
+
+  // ── Figma: Be Vietnam Pro 11px/700 (badge) ──
+  static TextStyle badgeBold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.beVietnamPro(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.06,
+        color: color,
+      );
+
+  // ── Figma: Be Vietnam Pro 13px/500 ──
+  static TextStyle subtitleBody({Color color = AppColors.onSurfaceVariant}) =>
+      GoogleFonts.beVietnamPro(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: color,
+      );
+
+  // ── Figma: Be Vietnam Pro 17px/800 ──
+  static TextStyle metricBold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.beVietnamPro(
+        fontSize: 17,
+        fontWeight: FontWeight.w800,
+        color: color,
+      );
+
+  // ── Figma: Plus Jakarta Sans 12px/600 ──
+  static TextStyle chipLabel({Color color = AppColors.onSurface}) =>
+      GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
+
+  // ── Figma: Plus Jakarta Sans 13px/600 ──
+  static TextStyle chipLabelMedium({Color color = AppColors.onSurface}) =>
+      GoogleFonts.plusJakartaSans(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
+
+  // ── Figma: Plus Jakarta Sans 14px/700 ──
+  static TextStyle chipLabelBold({Color color = AppColors.onSurface}) =>
+      GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: color,
+      );
+
+  // ── Legacy backward-compatible aliases ──
   static TextStyle displayLarge({Color color = AppColors.onSurface}) =>
-      GoogleFonts.spaceGrotesk(
+      GoogleFonts.inter(
         fontSize: 36,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.03,
@@ -79,7 +225,7 @@ class AppTypography {
       );
 
   static TextStyle metricValue({Color color = AppColors.onSurface}) =>
-      GoogleFonts.spaceGrotesk(
+      GoogleFonts.inter(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.02,
@@ -87,7 +233,7 @@ class AppTypography {
       );
 
   static TextStyle headline({Color color = AppColors.onSurface}) =>
-      GoogleFonts.spaceGrotesk(
+      GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.01,
@@ -95,15 +241,10 @@ class AppTypography {
       );
 
   static TextStyle badge({Color color = AppColors.onSurface}) =>
-      GoogleFonts.spaceGrotesk(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.06,
-        color: color,
-      );
+      badgeBold(color: color);
 
   static TextStyle titleMedium({Color color = AppColors.onSurface}) =>
-      GoogleFonts.manrope(
+      GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.01,
@@ -111,22 +252,22 @@ class AppTypography {
       );
 
   static TextStyle bodyMedium({Color color = AppColors.onSurfaceVariant}) =>
-      GoogleFonts.manrope(
+      GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: color,
       );
 
   static TextStyle bodySmall({Color color = AppColors.onSurfaceVariant}) =>
-      GoogleFonts.manrope(
+      GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.01,
         color: color,
       );
 
-  static TextStyle labelCaption({Color color = AppColors.outline}) =>
-      GoogleFonts.manrope(
+  static TextStyle labelCaption({Color color = AppColors.textMuted}) =>
+      GoogleFonts.inter(
         fontSize: 10,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.04,
@@ -159,12 +300,12 @@ class AppTheme {
     bool highContrast = false,
   }) {
     final isDark = brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF9FAFB);
+    final bg = isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF6FAFF);
     final surface = isDark ? const Color(0xFF151B18) : Colors.white;
-    final text = isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A);
+    final text = isDark ? const Color(0xFFE1E3E1) : const Color(0xFF000000);
     final border = highContrast
-        ? (isDark ? Colors.white.withValues(alpha: 0.35) : const Color(0xFF64748B))
-        : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0));
+        ? (isDark ? Colors.white.withValues(alpha: 0.35) : const Color(0xFF475569))
+        : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE0E9F2));
 
     return ThemeData(
       brightness: brightness,
@@ -178,7 +319,7 @@ class AppTheme {
               outline: border,
             )
           : ColorScheme.light(
-              primary: primaryColor,
+              primary: const Color(0xFF0F172A),
               onPrimary: Colors.white,
               surface: surface,
               onSurface: text,
@@ -192,8 +333,8 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
       ),
       textTheme: isDark
-          ? GoogleFonts.manropeTextTheme(ThemeData.dark().textTheme)
-          : GoogleFonts.manropeTextTheme(ThemeData.light().textTheme),
+          ? GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
+          : GoogleFonts.interTextTheme(ThemeData.light().textTheme),
     );
   }
 

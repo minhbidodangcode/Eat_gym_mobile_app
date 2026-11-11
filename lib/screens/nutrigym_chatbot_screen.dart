@@ -278,8 +278,12 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.outline, height: 1),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.onSurface),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -289,18 +293,16 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF2563EB)],
-                ),
+                color: AppColors.primary,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
+              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 10),
             Column(
@@ -308,7 +310,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
               children: [
                 Text(
                   'NutriGym AI',
-                  style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.titleSmallBold(color: AppColors.onSurface),
                 ),
                 Row(
                   children: [
@@ -322,8 +324,8 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      'Trực tuyến • Trợ lý Dinh Dưỡng',
-                      style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10),
+                      'Trực tuyến · Trợ lý Dinh Dưỡng',
+                      style: AppTypography.labelBold(color: AppColors.textMuted),
                     ),
                   ],
                 ),
@@ -333,7 +335,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.onSurfaceVariant),
             tooltip: 'Làm mới cuộc trò chuyện',
             onPressed: () {
               setState(() {
@@ -423,16 +425,12 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.outlineVariant),
+                        border: Border.all(color: AppColors.outline),
                       ),
                       child: Center(
                         child: Text(
                           prompt,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurfaceVariant,
-                          ),
+                          style: AppTypography.chipLabelMedium(color: AppColors.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -447,7 +445,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.outlineVariant)),
+                border: Border(top: BorderSide(color: AppColors.outline)),
               ),
               child: Row(
                 children: [
@@ -463,11 +461,12 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _isListening ? AppColors.fire : AppColors.surfaceContainerLow,
+                          color: _isListening ? AppColors.fire : AppColors.surface,
                           shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.outline),
                         ),
                         child: Icon(
-                          _isListening ? Icons.stop : Icons.mic,
+                          _isListening ? Icons.stop : Icons.mic_none_rounded,
                           color: _isListening ? Colors.white : AppColors.primary,
                           size: 20,
                         ),
@@ -484,13 +483,17 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                       onSubmitted: _sendMessage,
                       decoration: InputDecoration(
                         hintText: 'Hỏi dinh dưỡng hoặc nói nguyên liệu...',
-                        hintStyle: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                        hintStyle: AppTypography.bodyDefault(color: AppColors.textMuted),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         filled: true,
-                        fillColor: AppColors.surfaceContainerLow,
+                        fillColor: AppColors.backgroundLight,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: AppColors.outline),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide(color: AppColors.outline),
                         ),
                       ),
                     ),
@@ -504,7 +507,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                       foregroundColor: AppColors.onPrimary,
                       shape: const CircleBorder(),
                     ),
-                    icon: const Icon(Icons.arrow_upward, size: 20),
+                    icon: const Icon(Icons.arrow_upward_rounded, size: 20),
                     onPressed: () => _sendMessage(_textController.text),
                   ),
                 ],

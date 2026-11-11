@@ -8,8 +8,8 @@ class SettingsService {
   // ValueNotifiers for reactive UI updates
   static const String defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200';
   final ValueNotifier<String> userAvatarNotifier = ValueNotifier<String>(defaultAvatar);
-  final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
-  final ValueNotifier<String> accentColorNotifier = ValueNotifier<String>('neon_green');
+  final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+  final ValueNotifier<String> accentColorNotifier = ValueNotifier<String>('navy_blue');
   final ValueNotifier<double> fontScaleNotifier = ValueNotifier<double>(1.0);
   final ValueNotifier<bool> highContrastNotifier = ValueNotifier<bool>(false);
 
@@ -41,18 +41,18 @@ class SettingsService {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Theme Mode: theme_mode (dark/light/system)
-    final savedTheme = prefs.getString(_keyThemeMode) ?? prefs.getString('settings_theme_mode') ?? 'dark';
-    if (savedTheme == 'light') {
-      themeModeNotifier.value = ThemeMode.light;
+    // Theme Mode: theme_mode (dark/light/system) - Mặc định Light theo thiết kế Figma
+    final savedTheme = prefs.getString(_keyThemeMode) ?? prefs.getString('settings_theme_mode') ?? 'light';
+    if (savedTheme == 'dark') {
+      themeModeNotifier.value = ThemeMode.dark;
     } else if (savedTheme == 'system') {
       themeModeNotifier.value = ThemeMode.system;
     } else {
-      themeModeNotifier.value = ThemeMode.dark;
+      themeModeNotifier.value = ThemeMode.light;
     }
 
-    // Accent Color
-    accentColorNotifier.value = prefs.getString(_keyAccentColor) ?? 'neon_green';
+    // Accent Color - Mặc định Navy theo thiết kế Figma
+    accentColorNotifier.value = prefs.getString(_keyAccentColor) ?? 'navy_blue';
 
     // Font Scale
     fontScaleNotifier.value = prefs.getDouble(_keyFontScale) ?? 1.0;
@@ -184,8 +184,10 @@ class SettingsService {
       case 'fire_amber':
         return const Color(0xFFFFB300);
       case 'neon_green':
-      default:
         return const Color(0xFF00E676);
+      case 'navy_blue':
+      default:
+        return const Color(0xFF0F172A);
     }
   }
 }

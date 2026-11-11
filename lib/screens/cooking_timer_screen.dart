@@ -419,23 +419,23 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
     final nextStep = (_currentStepIndex < _steps.length - 1) ? _steps[_currentStepIndex + 1] : null;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceContainerLowest,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceContainerLowest,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.onSurface),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
           'Bước ${_currentStepIndex + 1} / ${_steps.length}',
-          style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant).copyWith(fontSize: 14),
+          style: AppTypography.labelBold(color: AppColors.onSurfaceVariant),
         ),
         centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -444,27 +444,25 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
               // Title
               Text(
                 title,
-                style: AppTypography.displayLarge(color: AppColors.onSurface).copyWith(
-                  fontSize: 22,
-                ),
+                style: AppTypography.headlineMedium(color: AppColors.onSurface),
               ),
               const SizedBox(height: 12),
 
               // Nutrition Chips
               _buildNutritionRow(),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Circular Countdown Timer
               Center(child: _buildCircularTimer()),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Current Step Card
               if (currentStep != null) _buildCurrentStepCard(currentStep),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Next Step Card
               _buildNextStepCard(nextStep),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Bottom Buttons
               _buildBottomButtons(),
@@ -497,16 +495,13 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.outlineVariant),
+            border: Border.all(color: AppColors.outline),
           ),
           child: Text(
             label,
-            style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant).copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTypography.labelSemibold(color: AppColors.textSubtle),
           ),
         );
       }).toList(),
@@ -551,8 +546,9 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,20 +563,14 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
                 ),
                 child: Text(
                   'ĐANG LÀM',
-                  style: AppTypography.badge(color: AppColors.onPrimary).copyWith(
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
+                  style: AppTypography.labelBold(color: AppColors.onPrimary),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   step.title,
-                  style: AppTypography.titleMedium(color: AppColors.onSurface).copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+                  style: AppTypography.titleSmallBold(color: AppColors.onSurface),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -590,8 +580,7 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
           const SizedBox(height: 10),
           Text(
             step.description,
-            style: AppTypography.bodyMedium(color: AppColors.onSurface).copyWith(
-              fontSize: 20,
+            style: AppTypography.bodyLarge(color: AppColors.onSurface).copyWith(
               height: 1.5,
             ),
           ),
@@ -611,9 +600,19 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
             : 'Mẹo gymer: dùng lửa vừa và nấu vừa chín tới để giữ độ ngọt tự nhiên, hạn chế dầu và sốt nhiều đường.';
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF6E8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('💡 '), Expanded(child: Text(tip, style: const TextStyle(fontSize: 14, height: 1.35))),
+        const Text('💡 '),
+        Expanded(
+          child: Text(
+            tip,
+            style: AppTypography.bodyDefault(color: const Color(0xFF78350F)).copyWith(height: 1.35),
+          ),
+        ),
       ]),
     );
   }
@@ -624,26 +623,21 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             hasNext ? 'TIẾP THEO • ${nextStep.title} (${_formatTime(nextStep.seconds)})' : 'BƯỚC CUỐI CÙNG',
-            style: AppTypography.labelCaption(color: AppColors.outline).copyWith(
-              fontSize: 11,
-              letterSpacing: 0.5,
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTypography.labelBold(color: AppColors.textMuted),
           ),
           const SizedBox(height: 8),
           Text(
             hasNext ? nextStep.description : 'Chuẩn bị hoàn thành và thưởng thức món ăn!',
-            style: AppTypography.bodyMedium(color: AppColors.onSurfaceVariant).copyWith(
-              fontSize: 15,
+            style: AppTypography.bodyDefault(color: AppColors.onSurfaceVariant).copyWith(
               height: 1.5,
             ),
           ),
@@ -659,23 +653,23 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       children: [
         // Play / Pause
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _toggleTimer,
-            icon: Icon(
-              _isRunning ? Icons.pause : Icons.play_arrow,
-              size: 20,
-            ),
-            label: Text(_isRunning ? 'Tạm dừng' : 'Tiếp tục'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.onSurface,
-              side: const BorderSide(color: AppColors.outline),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+          child: SizedBox(
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: _toggleTimer,
+              icon: Icon(
+                _isRunning ? Icons.pause : Icons.play_arrow,
+                size: 20,
               ),
-              textStyle: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+              label: Text(_isRunning ? 'Tạm dừng' : 'Tiếp tục'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.onSurface,
+                backgroundColor: AppColors.surface,
+                side: const BorderSide(color: AppColors.outline),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: AppTypography.titleSmallBold(color: AppColors.onSurface),
               ),
             ),
           ),
@@ -684,28 +678,20 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
 
         // Next Step / Finish
         Expanded(
-          child: ElevatedButton(
-            onPressed: _nextStep,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _nextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: AppTypography.titleSmallBold(color: AppColors.onPrimary),
               ),
-              textStyle: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(isLastStep ? 'Hoàn thành' : 'Bước tiếp'),
-                const SizedBox(width: 4),
-                Text(isLastStep ? '✓' : '→', style: const TextStyle(fontSize: 18)),
-              ],
+              child: Text(isLastStep ? 'Hoàn thành' : 'Bước tiếp'),
             ),
           ),
         ),

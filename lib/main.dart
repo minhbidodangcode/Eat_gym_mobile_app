@@ -6,23 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'theme/app_theme.dart';
 
-import 'screens/body_stats_screen.dart';
-
 import 'screens/cooking_timer_screen.dart';
-
 import 'screens/login_screen.dart';
-
 import 'screens/onboarding_screen.dart';
-
-import 'screens/badges_and_report_screen.dart';
-
-import 'models/badges_and_report_model.dart';
-
 import 'screens/recipe_search_screen.dart';
-
-import 'screens/smart_fridge_screen.dart';
-import 'screens/nutrition_diary_screen.dart';
-
+import 'screens/search_explore_screen.dart';
+import 'screens/meal_prep_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/profile_screen.dart';
 
 import 'services/api_service.dart';
@@ -218,7 +208,7 @@ Widget buildFoodIconWidget(String? icon, {double size = 22, String? name}) {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => Text('🥗', style: TextStyle(fontSize: size)),
+      errorBuilder: (context, error, stackTrace) => Text('🥗', style: TextStyle(fontSize: size)),
     );
   }
   return Text(str, style: TextStyle(fontSize: size));
@@ -245,13 +235,13 @@ class NutriGymApp extends StatelessWidget {
           builder: (context, fontScale, _) {
             return ValueListenableBuilder<String>(
               valueListenable: SettingsService.instance.accentColorNotifier,
-              builder: (context, _, __) {
+              builder: (context, _, child1) {
                 return ValueListenableBuilder<bool>(
                   valueListenable: SettingsService.instance.highContrastNotifier,
-                  builder: (context, highContrast, ___) {
+                  builder: (context, highContrast, child2) {
                     final primaryAccent = SettingsService.instance.currentColor;
                     return MaterialApp(
-                      title: 'NutriGym AI',
+                      title: 'EatGym',
                       debugShowCheckedModeBanner: false,
                       theme: AppTheme.getDynamicTheme(
                         brightness: Brightness.light,
@@ -370,247 +360,144 @@ class MainScreen extends StatefulWidget {
 
 
 class _MainScreenState extends State<MainScreen> {
-
-  int _currentTab = 0; // Mặc định là tab Home
-
-
+  int _currentTab = 0; // Mặc định là Tab 0: FoodBlog theo chuẩn Figma EatGym
 
   final List<Widget> _screens = [
-
-    const BadgesAndReportScreen(isSubPage: false),
-
-    const SmartFridgeScreen(),
-
     RecipeSearchScreen(key: RecipeSearchScreen.recipeScreenKey),
-
-    const BodyStatsScreen(),
-
-    const NutritionDiaryScreen(),
-
+    const SearchExploreScreen(),
+    const ProfileScreen(),
+    const MealPrepScreen(),
+    const SettingsScreen(),
   ];
-
-
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
       body: SafeArea(
-
         child: Column(
-
           children: [
-
-            // 1. TOP HEADER BAR (Giữ cố định)
-
-            AppHeader(currentTab: _currentTab),
-
-
+            // 1. TOP HEADER BAR (Chuẩn EatGym Figma)
+            AppHeader(
+              currentTab: _currentTab,
+              onAvatarTap: () {
+                setState(() {
+                  _currentTab = 2; // Chuyển sang Tab Hồ Sơ
+                });
+              },
+            ),
 
             // 2. DYNAMIC BODY (Giữ trạng thái qua IndexedStack)
-
             Expanded(
-
               child: IndexedStack(
-
                 index: _currentTab,
-
                 children: _screens,
-
               ),
-
             ),
 
-
-
-            // 3. BOTTOM NAVIGATION BAR (Giữ cố định)
-
+            // 3. BOTTOM NAVIGATION BAR (Chuẩn 5 Tabs EatGym Figma)
             AppBottomNavBar(
-
               selectedIndex: _currentTab,
-
               onItemSelected: (index) {
-
                 setState(() {
-
                   _currentTab = index;
-
                 });
-
-                if (index == 0) {
-
-                  BadgesAndReportModel.instance.fetchAchievementsData();
-
-                }
-
               },
-
             ),
-
           ],
-
         ),
-
       ),
-
     );
-
   }
-
-
-
-
-
-
-
 }
 
 
 
-// Widget Header tách biệt - Thống nhất layout & hình ảnh cho tất cả các tab
+
+
+
+
+// Widget Header EatGym chuẩn theo thiết kế Figma (EATGYM + Tab Name + Actions)
 class AppHeader extends StatelessWidget {
   final int currentTab;
+  final VoidCallback? onAvatarTap;
 
-  const AppHeader({super.key, this.currentTab = 0});
+  const AppHeader({super.key, this.currentTab = 0, this.onAvatarTap});
 
   @override
   Widget build(BuildContext context) {
-    // 1. Dữ liệu đồng nhất cho từng tab: Icon, Tiêu đề, Màu nhận diện
-    final IconData tabIcon;
     final String tabTitle;
-    final List<Color> iconGradient;
-
     switch (currentTab) {
       case 0:
-        tabTitle = 'Trang Chủ Gymer';
-        tabIcon = Icons.fitness_center_rounded;
-        iconGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
+        tabTitle = 'Foodblog';
         break;
       case 1:
-        tabTitle = 'Tủ Lạnh Thông Minh';
-        tabIcon = Icons.kitchen_rounded;
-        iconGradient = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
+        tabTitle = 'Tìm Kiếm';
         break;
       case 2:
-        tabTitle = 'FoodBlog Cộng Đồng';
-        tabIcon = Icons.restaurant_menu_rounded;
-        iconGradient = const [Color(0xFFEA580C), Color(0xFFF97316)];
+        tabTitle = 'Hồ Sơ';
         break;
       case 3:
-        tabTitle = 'Vóc Dáng & Chỉ Số';
-        tabIcon = Icons.monitor_weight_outlined;
-        iconGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
+        tabTitle = 'Kế Hoạch';
         break;
       case 4:
-        tabTitle = 'Nhật Ký Dinh Dưỡng';
-        tabIcon = Icons.menu_book_rounded;
-        iconGradient = const [Color(0xFF16A34A), Color(0xFF22C55E)];
+        tabTitle = 'Cài Đặt';
         break;
       default:
-        tabTitle = 'NutriGym';
-        tabIcon = Icons.fitness_center_rounded;
-        iconGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
+        tabTitle = 'EatGym';
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryAccent = SettingsService.instance.currentColor;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E9F2),
             width: 1.0,
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left: Icon đại diện + NUTRIGYM AI tag + Tên Tab đồng nhất font
-          Row(
+          // Left: Nhãn nhỏ EATGYM phía trên và Tiêu đề Tab lớn phía dưới theo đúng Figma
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: iconGradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: iconGradient.first.withValues(alpha: 0.25),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+              Text(
+                'EATGYM',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5B5F63),
                 ),
-                child: Icon(tabIcon, color: Colors.white, size: 20),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'NUTRIGYM AI',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                          color: primaryAccent,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: primaryAccent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'PRO',
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w800,
-                            color: primaryAccent,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    tabTitle,
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 2),
+              Text(
+                tabTitle,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF000000),
+                ),
               ),
             ],
           ),
 
-          // Right: Bộ nút hành động đồng nhất trên cả 5 tabs: [AI Chatbot Robot] + [Avatar Instagram Profile]
+          // Right: [Nút Chatbot AI Trợ lý] + [Avatar Profile người dùng]
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Nút AI Chatbot Robot
+              // 1. Nút Chatbot AI Trợ lý
               Tooltip(
-                message: 'Trợ lý AI NutriGym',
+                message: 'Trợ lý AI EatGym',
                 child: GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -622,105 +509,89 @@ class AppHeader extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [primaryAccent, const Color(0xFF2563EB)],
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                        width: 1,
                       ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryAccent.withValues(alpha: 0.25),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 19),
+                    child: Icon(
+                      Icons.smart_toy_outlined,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
 
-              // 2. Nút Hồ sơ gymer với viền gradient đồng bộ theo bảng màu nhấn (Accent color)
+              // 2. Avatar Profile người dùng (click vào mở trang Hồ Sơ)
               Tooltip(
-                message: 'Hồ sơ gymer',
+                message: 'Hồ sơ người dùng',
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
+                  onTap: onAvatarTap ??
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        );
+                      },
                   child: Container(
                     width: 36,
                     height: 36,
-                    padding: const EdgeInsets.all(2.0),
+                    padding: const EdgeInsets.all(1.5),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          primaryAccent,
-                          primaryAccent.withValues(alpha: 0.55),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                        width: 1.5,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryAccent.withValues(alpha: 0.28),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      ),
-                      padding: const EdgeInsets.all(1.5),
-                      child: ValueListenableBuilder<String>(
-                        valueListenable: SettingsService.instance.userAvatarNotifier,
-                        builder: (context, avatarUrl, _) {
-                          Widget fallback = CircleAvatar(
-                            radius: 14.5,
-                            backgroundColor: isDark
-                                ? primaryAccent.withValues(alpha: 0.18)
-                                : primaryAccent.withValues(alpha: 0.12),
-                            child: Icon(Icons.person, color: primaryAccent, size: 16),
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: SettingsService.instance.userAvatarNotifier,
+                      builder: (context, avatarUrl, _) {
+                        Widget fallback = CircleAvatar(
+                          radius: 15,
+                          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
+                          child: Icon(
+                            Icons.person_outline_rounded,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            size: 18,
+                          ),
+                        );
+
+                        if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+                          return ClipOval(
+                            child: Image.network(
+                              avatarUrl,
+                              width: 30,
+                              height: 30,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => fallback,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return fallback;
+                              },
+                            ),
                           );
+                        }
 
-                          if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
-                            return ClipOval(
-                              child: Image.network(
-                                avatarUrl,
-                                width: 29,
-                                height: 29,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => fallback,
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return fallback;
-                                },
-                              ),
-                            );
-                          }
+                        final file = File(avatarUrl);
+                        if (file.existsSync()) {
+                          return ClipOval(
+                            child: Image.file(
+                              file,
+                              width: 30,
+                              height: 30,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => fallback,
+                            ),
+                          );
+                        }
 
-                          final file = File(avatarUrl);
-                          if (file.existsSync()) {
-                            return ClipOval(
-                              child: Image.file(
-                                file,
-                                width: 29,
-                                height: 29,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => fallback,
-                              ),
-                            );
-                          }
-
-                          return fallback;
-                        },
-                      ),
+                        return fallback;
+                      },
                     ),
                   ),
                 ),

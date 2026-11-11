@@ -32,16 +32,16 @@ class CustomHeaderStep extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.surfaceContainer,
+                  color: AppColors.surface,
                   border: Border.all(
-                    color: AppColors.outlineVariant,
+                    color: AppColors.outline,
                   ),
                 ),
                 child: const Center(
                   child: Icon(
                     Icons.arrow_back,
                     color: AppColors.onSurface,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
               ),
@@ -52,12 +52,12 @@ class CustomHeaderStep extends StatelessWidget {
               children: [
                 Text(
                   'Hồ sơ cá nhân',
-                  style: AppTypography.headline(color: AppColors.onSurface),
+                  style: AppTypography.titleSmallBold(color: AppColors.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'THIẾT LẬP BAN ĐẦU',
-                  style: AppTypography.labelCaption(color: AppColors.outline),
+                  style: AppTypography.labelBold(color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -67,9 +67,9 @@ class CustomHeaderStep extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                color: AppColors.surfaceContainer,
+                color: AppColors.backgroundLight,
                 border: Border.all(
-                  color: AppColors.outlineVariant,
+                  color: AppColors.surfaceContainerAlt,
                 ),
               ),
               child: Row(
@@ -87,7 +87,7 @@ class CustomHeaderStep extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     'Bước $currentStep/$totalSteps',
-                    style: AppTypography.badge(color: AppColors.onSurface),
+                    style: AppTypography.labelBold(color: AppColors.primary),
                   ),
                 ],
               ),
@@ -103,7 +103,7 @@ class CustomHeaderStep extends StatelessWidget {
           child: Container(
             height: 4,
             width: double.infinity,
-            color: AppColors.outlineVariant,
+            color: AppColors.surfaceContainerAlt,
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
               widthFactor: progress.clamp(0.0, 1.0),
@@ -134,10 +134,10 @@ class CustomHeaderStep extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
+                color: AppColors.backgroundLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.outlineVariant,
+                  color: AppColors.surfaceContainerAlt,
                 ),
               ),
               child: const Icon(
@@ -153,12 +153,12 @@ class CustomHeaderStep extends StatelessWidget {
                 children: [
                   Text(
                     'Hiệu chỉnh sinh trắc học',
-                    style: AppTypography.titleMedium(color: AppColors.onSurface),
+                    style: AppTypography.titleSmallBold(color: AppColors.onSurface),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Dữ liệu giúp tính toán calo & macro phù hợp với bạn',
-                    style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+                    style: AppTypography.bodyDefault(color: AppColors.onSurfaceVariant),
                   ),
                 ],
               ),

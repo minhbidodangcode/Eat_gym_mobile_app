@@ -41,7 +41,7 @@ class BadgesHeader extends StatelessWidget {
                   children: [
                     Text(
                       'NUTRIGYM AI',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.1,
@@ -50,7 +50,7 @@ class BadgesHeader extends StatelessWidget {
                     ),
                     Text(
                       'Vóc Dáng',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.02,
@@ -118,7 +118,7 @@ class BadgesHeader extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'CLINICAL NUTRI-AUDIT & TROPHIES',
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.12,
@@ -133,7 +133,7 @@ class BadgesHeader extends StatelessWidget {
         // Main Title
         Text(
           'Thành tựu & Báo cáo',
-          style: GoogleFonts.spaceGrotesk(
+          style: GoogleFonts.inter(
             fontSize: 32,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.03,
@@ -146,7 +146,7 @@ class BadgesHeader extends StatelessWidget {
         // Subtitle
         Text(
           'Hệ thống vinh danh Gymer Chef & Xuất hồ sơ dinh dưỡng lâm sàng',
-          style: GoogleFonts.spaceGrotesk(
+          style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w400,
             color: const Color(0xFF434846),

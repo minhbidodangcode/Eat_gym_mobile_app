@@ -242,30 +242,32 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = SettingsService.instance.currentColor;
-    final cardColor = isDark ? const Color(0xFF151B18) : Colors.white;
-    final borderColor = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardColor = isDark ? const Color(0xFF151B18) : AppColors.surface;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline;
+    final textColor = isDark ? Colors.white : AppColors.onSurface;
+    final subTextColor = isDark ? const Color(0xFF94A3B8) : AppColors.textMuted;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Kế hoạch Meal Prep & Rã Đông',
-          style: GoogleFonts.spaceGrotesk(
-            fontWeight: FontWeight.w700,
-            fontSize: 17,
-            color: textColor,
-          ),
-        ),
-        backgroundColor: isDark ? const Color(0xFF0B0E0D) : Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: Text(
+                'Kế hoạch Meal Prep & Rã Đông',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: textColor,
+                ),
+              ),
+              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textColor),
+                onPressed: () => Navigator.pop(context),
+              ),
+            )
+          : null,
       body: _loading
           ? Center(child: CircularProgressIndicator(color: primaryColor))
           : SingleChildScrollView(
@@ -298,7 +300,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             children: [
                               Text(
                                 'Lập kế hoạch theo nhu cầu cá nhân',
-                                style: GoogleFonts.spaceGrotesk(
+                                style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                   color: textColor,
@@ -309,7 +311,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                 _tdee != null
                                     ? 'Mục tiêu: ${_tdee!.round()} kcal/ngày. Hãy chia mẻ nguyên liệu thành các hộp nhỏ sẵn sàng cho các ngày tới.'
                                     : 'Nấu mẻ lớn, tự động tính khối lượng chín từng hộp và hẹn giờ rã đông tự động.',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 12.5,
                                   color: subTextColor,
                                   height: 1.35,
@@ -326,7 +328,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                   // Khối Form Lập kế hoạch
                   Text(
                     'TẠO KẾ HOẠCH NẤU MỚI',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -350,7 +352,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                           // Tên kế hoạch
                           TextFormField(
                             controller: _name,
-                            style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
                             decoration: InputDecoration(
                               labelText: 'Tên kế hoạch',
                               labelStyle: TextStyle(color: subTextColor, fontSize: 13),
@@ -375,7 +377,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                   controller: _servings,
                                   keyboardType: TextInputType.number,
                                   onChanged: (_) => setState(() {}),
-                                  style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
                                   decoration: InputDecoration(
                                     labelText: 'Số hộp (bữa)',
                                     labelStyle: TextStyle(color: subTextColor, fontSize: 13),
@@ -394,7 +396,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                 child: DropdownButtonFormField<String>(
                                   initialValue: _mealType,
                                   dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
-                                  style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+                                  style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
                                   decoration: InputDecoration(
                                     labelText: 'Bữa dùng',
                                     labelStyle: TextStyle(color: subTextColor, fontSize: 13),
@@ -422,7 +424,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             initialValue: _factorId,
                             isExpanded: true,
                             dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
-                            style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.w600, fontSize: 13.5),
+                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 13.5),
                             decoration: InputDecoration(
                               labelText: 'Nguyên liệu & cách nấu',
                               labelStyle: TextStyle(color: subTextColor, fontSize: 13),
@@ -452,7 +454,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             controller: _weight,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             onChanged: (_) => setState(() {}),
-                            style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
                             decoration: InputDecoration(
                               labelText: 'Khối lượng sống cần chuẩn bị (g)',
                               labelStyle: TextStyle(color: subTextColor, fontSize: 13),
@@ -482,7 +484,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                 Expanded(
                                   child: Text(
                                     'Dự tính: ~${(_inputWeightVal * _factor).round()}g chín tổng mẻ • Cân ~${_cookedPerServing.round()}g thịt chín/hộp',
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: primaryColor,
@@ -511,7 +513,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                   const SizedBox(width: 10),
                                   Text('Ngày nấu:', style: TextStyle(color: subTextColor, fontSize: 13)),
                                   const Spacer(),
-                                  Text(_date(_prepDate), style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(_date(_prepDate), style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                   const SizedBox(width: 4),
                                   Icon(Icons.edit_calendar_outlined, size: 16, color: subTextColor),
                                 ],
@@ -527,7 +529,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             activeTrackColor: primaryColor,
                             activeThumbColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
                             onChanged: (v) => setState(() => _freeze = v),
-                            title: Text('Bảo quản ngăn đông', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w600, fontSize: 13.5, color: textColor)),
+                            title: Text('Bảo quản ngăn đông', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: textColor)),
                             subtitle: Text('Tự động lên lịch nhắc bạn chuyển xuống ngăn mát trước khi ăn', style: TextStyle(color: subTextColor, fontSize: 11.5)),
                           ),
 
@@ -550,7 +552,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                     const SizedBox(width: 10),
                                     Text('Nhắc rã đông lúc:', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
                                     const Spacer(),
-                                    Text(_date(_thawAt), style: GoogleFonts.spaceGrotesk(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    Text(_date(_thawAt), style: GoogleFonts.inter(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                     const SizedBox(width: 4),
                                     Icon(Icons.edit_calendar_rounded, size: 16, color: primaryColor),
                                   ],
@@ -578,7 +580,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                   : const Icon(Icons.add_task_rounded, size: 20),
                               label: Text(
                                 'LƯU KẾ HOẠCH & ĐẶT LỊCH RÃ ĐÔNG',
-                                style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.3),
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.3),
                               ),
                             ),
                           ),
@@ -595,7 +597,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                     children: [
                       Text(
                         'KẾ HOẠCH SẮP TỚI',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8,
@@ -625,7 +627,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Chưa có kế hoạch Meal Prep nào',
-                            style: GoogleFonts.spaceGrotesk(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -672,7 +674,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                       Expanded(
                                         child: Text(
                                           plan.name,
-                                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -685,7 +687,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                         ),
                                         child: Text(
                                           _mealLabel(plan.mealType),
-                                          style: GoogleFonts.spaceGrotesk(fontSize: 10, fontWeight: FontWeight.bold, color: mealColor),
+                                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: mealColor),
                                         ),
                                       ),
                                     ],
@@ -703,7 +705,7 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                         const SizedBox(width: 4),
                                         Text(
                                           'Nhắc rã đông: ${_date(plan.thawAt!)}',
-                                          style: GoogleFonts.spaceGrotesk(
+                                          style: GoogleFonts.inter(
                                             color: const Color(0xFF00E5FF),
                                             fontSize: 11.5,
                                             fontWeight: FontWeight.w600,

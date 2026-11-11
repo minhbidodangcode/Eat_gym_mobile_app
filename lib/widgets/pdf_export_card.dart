@@ -57,7 +57,7 @@ class PdfExportCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'DÀNH CHO BÁC SĨ & HLV CÁ NHÂN',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
@@ -91,7 +91,7 @@ class PdfExportCard extends StatelessWidget {
           // Main Title
           Text(
             'Báo cáo Toàn diện Dinh dưỡng & Thể chất PDF',
-            style: GoogleFonts.spaceGrotesk(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.01,
@@ -104,7 +104,7 @@ class PdfExportCard extends StatelessWidget {
           // Description
           Text(
             'Trích xuất đầy đủ biểu đồ biến thiên cân nặng (74.5kg → 72.4kg), chỉ số thâm hụt calo trung bình, tỷ lệ % mỡ, cùng toàn bộ nhật ký macro & thực đơn đã quét bằng AI.',
-            style: GoogleFonts.spaceGrotesk(
+            style: GoogleFonts.inter(
               fontSize: 12.5,
               fontWeight: FontWeight.w400,
               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -132,7 +132,7 @@ class PdfExportCard extends StatelessWidget {
                   children: [
                     Text(
                       'XU HƯỚNG KHỐI LƯỢNG NẠC & MỠ',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.08,
@@ -141,7 +141,7 @@ class PdfExportCard extends StatelessWidget {
                     ),
                     Text(
                       '-2.1 kg (4 Tuần)',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF16A34A),
@@ -169,7 +169,7 @@ class PdfExportCard extends StatelessWidget {
                         children: [
                           Text(
                             'Thâm hụt TB',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w500,
                               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -178,7 +178,7 @@ class PdfExportCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             '-385 kcal / ngày',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -193,7 +193,7 @@ class PdfExportCard extends StatelessWidget {
                         children: [
                           Text(
                             'Mỡ cơ thể ước tính',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w500,
                               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -202,7 +202,7 @@ class PdfExportCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             '14.8% (-1.2%)',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -222,7 +222,7 @@ class PdfExportCard extends StatelessWidget {
           // Date Range Selector
           Text(
             'PHẠM VI THỜI GIAN XUẤT:',
-            style: GoogleFonts.spaceGrotesk(
+            style: GoogleFonts.inter(
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
@@ -256,7 +256,7 @@ class PdfExportCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           range.label,
-                          style: GoogleFonts.spaceGrotesk(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                             color: isSelected
@@ -289,7 +289,7 @@ class PdfExportCard extends StatelessWidget {
               children: [
                 Text(
                   'MỤC DỮ LIỆU ĐÍNH KÈM:',
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
@@ -379,7 +379,7 @@ class PdfExportCard extends StatelessWidget {
                 child: Text(
                   'Tệp PDF chuẩn in ấn A4, mã hóa sinh trắc học chuẩn HIPAA & Apple HealthKit.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF94A3B8),
@@ -410,7 +410,7 @@ class PdfExportCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: isDark ? Colors.white : const Color(0xFF1E293B),
@@ -459,7 +459,7 @@ class PdfExportCard extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               'ĐANG TẠO HỒ SƠ Y KHOA...',
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.05,
@@ -480,7 +480,7 @@ class PdfExportCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'ĐÃ TẠO FILE THÀNH CÔNG!',
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.05,
@@ -501,7 +501,7 @@ class PdfExportCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'XUẤT FILE PDF & CHIA SẺ NGAY',
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.05,
@@ -563,7 +563,7 @@ class PdfExportCard extends StatelessWidget {
                             children: [
                               Text(
                                 'Hồ Sơ Dinh Dưỡng Lâm Sàng',
-                                style: GoogleFonts.spaceGrotesk(
+                                style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF0F172A),
@@ -571,7 +571,7 @@ class PdfExportCard extends StatelessWidget {
                               ),
                               Text(
                                 'Đã trích xuất & sẵn sàng gửi Bác sĩ / HLV',
-                                style: GoogleFonts.spaceGrotesk(
+                                style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: const Color(0xFF64748B),
                                 ),
@@ -625,7 +625,7 @@ class PdfExportCard extends StatelessWidget {
                             icon: const Icon(Icons.print, color: Colors.white, size: 18),
                             label: Text(
                               'In / Lưu PDF',
-                              style: GoogleFonts.spaceGrotesk(
+                              style: GoogleFonts.inter(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -659,7 +659,7 @@ class PdfExportCard extends StatelessWidget {
                             icon: const Icon(Icons.copy, size: 18, color: Color(0xFF0F172A)),
                             label: Text(
                               'Sao Chép Text',
-                              style: GoogleFonts.spaceGrotesk(
+                              style: GoogleFonts.inter(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF0F172A),

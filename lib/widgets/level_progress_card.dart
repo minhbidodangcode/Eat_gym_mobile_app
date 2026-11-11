@@ -42,7 +42,7 @@ class LevelProgressCard extends StatelessWidget {
                 children: [
                   Text(
                     'CẤP BẬC VẬN ĐỘNG VIÊN',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -60,7 +60,7 @@ class LevelProgressCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         model.athleteRank,
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.02,
@@ -84,7 +84,7 @@ class LevelProgressCard extends StatelessWidget {
                 ),
                 child: Text(
                   model.rankLevel,
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
@@ -103,7 +103,7 @@ class LevelProgressCard extends StatelessWidget {
             children: [
               Text(
                 '${model.unlockedBadgesCount} / ${model.totalBadgesCount} Huy hiệu đạt được',
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -111,7 +111,7 @@ class LevelProgressCard extends StatelessWidget {
               ),
               Text(
                 '${(model.rankProgress * 100).toInt()}% Hoàn thành',
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -210,7 +210,7 @@ class LevelProgressCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.spaceGrotesk(
+            style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -220,7 +220,7 @@ class LevelProgressCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.spaceGrotesk(
+            style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),

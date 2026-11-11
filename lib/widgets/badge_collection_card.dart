@@ -47,7 +47,7 @@ class BadgeCollectionCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'BỘ SƯU TẬP HUY HIỆU',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.01,
@@ -67,7 +67,7 @@ class BadgeCollectionCard extends StatelessWidget {
                 ),
                 child: Text(
                   '${model.unlockedBadgesCount} ĐÃ ĐẠT',
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
@@ -108,7 +108,7 @@ class BadgeCollectionCard extends StatelessWidget {
                       ),
                       child: Text(
                         cat.label,
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                           color: isSelected
@@ -195,7 +195,7 @@ class BadgeCollectionCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         'ĐẠT',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: GoogleFonts.inter(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: isDark ? Colors.black : Colors.white,
@@ -214,7 +214,7 @@ class BadgeCollectionCard extends StatelessWidget {
               badge.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -227,7 +227,7 @@ class BadgeCollectionCard extends StatelessWidget {
               badge.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -272,7 +272,7 @@ class BadgeCollectionCard extends StatelessWidget {
                 ),
                 Text(
                   '${badge.currentProgress}/${badge.maxProgress}',
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -288,7 +288,7 @@ class BadgeCollectionCard extends StatelessWidget {
               badge.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.spaceGrotesk(
+              style: GoogleFonts.inter(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
@@ -383,7 +383,7 @@ class BadgeCollectionCard extends StatelessWidget {
               Text(
                 badge.title,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -411,7 +411,7 @@ class BadgeCollectionCard extends StatelessWidget {
                     ),
                     child: Text(
                       badge.isUnlocked ? '✓ ĐÃ MỞ KHÓA' : '🔒 ĐANG KHÓA',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: badge.isUnlocked
@@ -431,7 +431,7 @@ class BadgeCollectionCard extends StatelessWidget {
                     ),
                     child: Text(
                       '+${badge.points} Điểm Uy Tín',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFF59E0B),
@@ -466,7 +466,7 @@ class BadgeCollectionCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           'YÊU CẦU NHIỆM VỤ',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -478,7 +478,7 @@ class BadgeCollectionCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       badge.description,
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -493,7 +493,7 @@ class BadgeCollectionCard extends StatelessWidget {
                       children: [
                         Text(
                           'Tiến độ:',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -501,7 +501,7 @@ class BadgeCollectionCard extends StatelessWidget {
                         ),
                         Text(
                           '${badge.currentProgress} / ${badge.maxProgress}',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: badge.isUnlocked
@@ -545,7 +545,7 @@ class BadgeCollectionCard extends StatelessWidget {
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     'ĐÃ HIỂU',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,

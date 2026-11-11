@@ -35,15 +35,15 @@ class _PrimaryButtonState extends State<PrimaryButton> {
             scale: _isPressed ? 0.97 : 1.0,
             duration: const Duration(milliseconds: 120),
             child: Container(
-              height: 56,
+              height: 52,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: AppColors.primary,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                    blurRadius: 24,
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -53,16 +53,14 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                 children: [
                   Text(
                     widget.text,
-                    style: AppTypography.headline(color: AppColors.onPrimary).copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.titleSmallBold(color: AppColors.onPrimary),
                   ),
                   if (widget.icon != null) ...[
                     const SizedBox(width: 8),
                     Icon(
                       widget.icon,
                       color: AppColors.onPrimary,
-                      size: 20,
+                      size: 18,
                     ),
                   ],
                 ],

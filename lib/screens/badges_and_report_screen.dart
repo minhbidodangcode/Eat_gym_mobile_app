@@ -45,17 +45,17 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
         // Nếu là Trang Chủ (không có route trước), không pop để tránh màn hình đen
       },
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF8FAFC),
+        backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
         appBar: canPop
             ? AppBar(
-                backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                backgroundColor: isDark ? const Color(0xFF0F172A) : AppColors.background,
                 elevation: 0,
                 surfaceTintColor: Colors.transparent,
                 leading: IconButton(
                   icon: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    size: 20,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    size: 18,
+                    color: isDark ? Colors.white : AppColors.onSurface,
                   ),
                   onPressed: () {
                     if (Navigator.canPop(context)) {
@@ -65,17 +65,17 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
                 ),
                 title: Text(
                   'Thành Tựu & Báo Cáo',
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: 18,
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    color: isDark ? Colors.white : AppColors.onSurface,
                   ),
                 ),
                 centerTitle: true,
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(1),
                   child: Container(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF1E293B) : AppColors.outline,
                     height: 1,
                   ),
                 ),
@@ -107,7 +107,7 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'CLINICAL NUTRI-AUDIT & TROPHIES',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -119,19 +119,19 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Hồ Sơ Danh Hiệu & Lâm Sàng',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        color: isDark ? Colors.white : AppColors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Hệ thống vinh danh Gymer Chef & Trích xuất hồ sơ dinh dưỡng y khoa',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.textMuted,
                       ),
                     ),
 

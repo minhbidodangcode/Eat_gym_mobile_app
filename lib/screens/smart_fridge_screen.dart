@@ -824,7 +824,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
 
                   'THÊM NGUYÊN LIỆU VÀO TỦ LẠNH',
 
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
 
                     fontWeight: FontWeight.bold,
 
@@ -1186,7 +1186,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
 
                   'Gemini 3.8 Flash đang quét nguyên liệu...',
 
-                  style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
 
                 ),
 
@@ -1368,7 +1368,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
 
                   'CÔNG THỨC TỪ TỦ LẠNH',
 
-                  style: GoogleFonts.spaceGrotesk(
+                  style: GoogleFonts.inter(
 
                     fontWeight: FontWeight.bold,
 
@@ -1452,7 +1452,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                         Text(
                           'Chưa có công thức phù hợp với ${itemsToUse.length} nguyên liệu đã chọn.',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -1778,7 +1778,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF1F5F9), // Nền động theo chế độ Sáng / Tối
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background, // Nền động theo Figma
       body: SafeArea(
         child: Column(
           children: [
@@ -1788,12 +1788,12 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'TỦ LẠNH GYMER (${_fridgeItems.length} món)',
-                    style: GoogleFonts.spaceGrotesk(
+                    'TỦ LẠNH GYMER (${_fridgeItems.length} MÓN)',
+                    style: GoogleFonts.inter(
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                      color: isDark ? const Color(0xFF94A3B8) : AppColors.textMuted,
                     ),
                   ),
                   if (_fridgeItems.isNotEmpty)
@@ -1809,9 +1809,9 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                             const SizedBox(width: 4),
                             Text(
                               'Dọn sạch tủ',
-                              style: GoogleFonts.spaceGrotesk(
+                              style: GoogleFonts.inter(
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.fire,
                               ),
                             ),
@@ -2096,7 +2096,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                                         const SizedBox(height: 6),
                                         Text(
                                           'Ngăn đông trống',
-                                          style: GoogleFonts.spaceGrotesk(
+                                          style: GoogleFonts.inter(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: const Color(0xFF0369A1),
@@ -2172,7 +2172,7 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                                     const SizedBox(height: 8),
                                     Text(
                                       'Tủ lạnh đang trống',
-                                      style: GoogleFonts.spaceGrotesk(
+                                      style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: const Color(0xFF78350F),
@@ -2392,13 +2392,19 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
 
   /// Thanh điều khiển dưới đáy (Nút Tạo công thức & Nút tròn cam thêm nguyên liệu như ảnh)
   Widget _buildBottomActionBar(int selectedCount) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkCard : AppColors.surface,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.outline,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -2412,9 +2418,9 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
               height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E293B),
-                  foregroundColor: Colors.white,
-                  elevation: 1,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.onPrimary,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -2425,7 +2431,11 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
                   selectedCount > 0
                       ? 'Tạo công thức ($selectedCount món)'
                       : 'Tạo công thức (Tất cả)',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppColors.onPrimary,
+                  ),
                 ),
               ),
             ),

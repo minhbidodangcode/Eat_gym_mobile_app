@@ -107,28 +107,21 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Text(
-            '<',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkNavy,
-            ),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: AppColors.primary,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'Cập nhật vóc dáng',
-          style: TextStyle(
-            color: AppColors.darkNavy,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTypography.titleSmallBold(color: AppColors.onSurface),
         ),
       ),
       body: SafeArea(
@@ -139,7 +132,7 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: _buildTabContent(),
               ),
             ),
@@ -153,45 +146,43 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
 
   Widget _buildTabBar() {
     return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-      child: Row(
-        children: List.generate(_tabLabels.length, (index) {
-          final bool isSelected = selectedTabIndex == index;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedTabIndex = index;
-                });
-              },
-              child: Container(
-                margin: EdgeInsets.only(
-                  left: index == 0 ? 0 : 4,
-                  right: index == _tabLabels.length - 1 ? 0 : 4,
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.darkNavy : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: isSelected ? AppColors.darkNavy : AppColors.grey.withValues(alpha: 0.4),
-                    width: 1,
+      color: AppColors.background,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.outline),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: List.generate(_tabLabels.length, (index) {
+            final bool isSelected = selectedTabIndex == index;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedTabIndex = index;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  _tabLabels[index],
-                  style: TextStyle(
-                    color: isSelected ? AppColors.white : AppColors.darkNavy,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                  alignment: Alignment.center,
+                  child: Text(
+                    _tabLabels[index],
+                    style: AppTypography.labelSemibold(
+                      color: isSelected ? AppColors.onPrimary : AppColors.textMuted,
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -681,7 +672,7 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: measurementSource,
+            initialValue: measurementSource,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               border: OutlineInputBorder(

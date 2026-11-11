@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Tên miền cố định vĩnh viễn (Ngrok Static Domain) - Đổi PC sang Mac không cần sửa IP
-  static const String baseUrl = 'https://kindly-absolve-concur.ngrok-free.dev/api';
+  // Kết nối trực tiếp máy chủ local (EatGymAIServer)
+  static const String baseUrl = 'http://192.168.1.54:3000/api';
 
   static bool isTokenExpired(String? token) {
     if (token == null || token.isEmpty || token == 'dummy_token') return true;

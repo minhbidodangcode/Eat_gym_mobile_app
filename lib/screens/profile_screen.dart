@@ -570,7 +570,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     ),
                     Text(
                       'Chỉnh sửa trang cá nhân',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
@@ -1102,7 +1102,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       children: [
         Text(
           count,
-          style: GoogleFonts.spaceGrotesk(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
@@ -1183,15 +1183,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final String heightDisplay = isFtIn ? '${(height / 30.48).floor()} ft ${((height % 30.48) / 2.54).round()} in' : '${height.toStringAsFixed(0)} cm';
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : Colors.white,
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0B0E0D) : Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                onPressed: () => Navigator.pop(context),
+              ),
         titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1206,7 +1207,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 displayUsername,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.spaceGrotesk(
+                style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
@@ -1268,7 +1269,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             const SizedBox(width: 8),
           ],
         ],
-      ),
+      )
+          : null,
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryAccent))
           : NestedScrollView(
@@ -1728,7 +1730,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               const SizedBox(height: 16),
               Text(
                 _isMe ? 'Chia sẻ công thức đầu tiên' : 'Chưa có công thức đã đăng',
-                style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1841,7 +1843,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               const SizedBox(height: 16),
               Text(
                 'Chưa có công thức đã lưu',
-                style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1936,7 +1938,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               const SizedBox(height: 16),
               Text(
                 'Chưa có món ăn đã tim',
-                style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
