@@ -302,8 +302,23 @@ class ApiService {
     required double weightKg,
     required String activityLevel,
     required String fitnessGoal,
+    double? targetWeightKg,
     List<String>? allergies,
     List<String>? dietaryPreferences,
+    List<String>? medicalHistory,
+    List<String>? favoriteFoods,
+    bool? isVegan,
+    List<String>? dietLifestyle,
+    String? cookingFrequency,
+    String? groceryFrequency,
+    bool? mealPrepEnabled,
+    String? creatorName,
+    String? creatorHandle,
+    String? creatorBio,
+    List<String>? cookingSpecialties,
+    bool? kitchenSyncEnabled,
+    String? avatarUrl,
+    bool? onboardingCompleted,
     Map<String, dynamic>? targetMacros,
   }) async {
     final token = await _getToken();
@@ -314,8 +329,23 @@ class ApiService {
       'weightKg': weightKg,
       'activityLevel': activityLevel,
       'fitnessGoal': fitnessGoal,
+      if (targetWeightKg != null) 'targetWeightKg': targetWeightKg,
       if (allergies != null) 'allergies': allergies,
       if (dietaryPreferences != null) 'dietaryPreferences': dietaryPreferences,
+      if (medicalHistory != null) 'medicalHistory': medicalHistory,
+      if (favoriteFoods != null) 'favoriteFoods': favoriteFoods,
+      if (isVegan != null) 'isVegan': isVegan,
+      if (dietLifestyle != null) 'dietLifestyle': dietLifestyle,
+      if (cookingFrequency != null) 'cookingFrequency': cookingFrequency,
+      if (groceryFrequency != null) 'groceryFrequency': groceryFrequency,
+      if (mealPrepEnabled != null) 'mealPrepEnabled': mealPrepEnabled,
+      if (creatorName != null) 'creatorName': creatorName,
+      if (creatorHandle != null) 'creatorHandle': creatorHandle,
+      if (creatorBio != null) 'creatorBio': creatorBio,
+      if (cookingSpecialties != null) 'cookingSpecialties': cookingSpecialties,
+      if (kitchenSyncEnabled != null) 'kitchenSyncEnabled': kitchenSyncEnabled,
+      if (avatarUrl != null) 'avatarUrl': avatarUrl,
+      if (onboardingCompleted != null) 'onboardingCompleted': onboardingCompleted,
       if (targetMacros != null) 'targetMacros': targetMacros,
     };
     final response = await http.put(
@@ -324,7 +354,11 @@ class ApiService {
       body: json.encode(payload),
     );
     if (response.statusCode == 200) {
-      return Map<String, dynamic>.from(json.decode(response.body));
+      final res = Map<String, dynamic>.from(json.decode(response.body));
+      if (res['profile'] != null) {
+        await saveLocalProfile(Map<String, dynamic>.from(res['profile']));
+      }
+      return res;
     }
     throw Exception(parseApiError(response.body));
   }

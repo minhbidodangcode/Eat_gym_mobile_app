@@ -97,11 +97,13 @@ class MacroBreakdown {
 
 class UserOnboardingModel extends ChangeNotifier {
   static const String noAllergy = 'Không có';
+  static const String noMedical = 'Không có tiền sử bệnh';
 
   Gender _gender = Gender.male;
   DateTime _dateOfBirth = DateTime(DateTime.now().year - 24, 1, 1);
   double _heightCm = 175.0;
   double _weightKg = 72.0;
+  double _targetWeightKg = 70.0;
   ActivityLevel _activityLevel = ActivityLevel.medium;
 
   NutritionGoal _goal = NutritionGoal.fatLoss;
@@ -110,6 +112,36 @@ class UserOnboardingModel extends ChangeNotifier {
   final Set<String> _selectedAllergies = {noAllergy};
   final List<String> _customAllergies = [];
   final Set<String> _selectedPreferences = {};
+
+  // Bước 2: Bệnh lý, Thực phẩm yêu thích & Lối sống
+  final Set<String> _selectedMedicalHistory = {noMedical};
+  final Set<String> _selectedFavoriteFoods = {
+    'Ức gà phi lê',
+    'Thịt bò nạc',
+    'Trứng gà',
+    'Cá hồi'
+  };
+  bool _isVegan = false;
+  final Set<String> _selectedDietLifestyle = {'Eat Clean', 'High Protein'};
+
+  // Bước 3: Thói quen đi chợ & Nấu ăn
+  String _groceryFrequency = '2-3 lần / tuần';
+  String _groceryPlace = 'Siêu thị lớn (WinMart, Co.op)';
+  bool _onlineDeliveryEnabled = true;
+  int _homeCookedMealsCount = 7;
+  bool _mealPrepAutomation = true;
+
+  // Bước 4: Thiết lập FoodBlog
+  String _creatorName = '';
+  String _creatorHandle = '';
+  String _creatorBio = '';
+  final Set<String> _selectedSpecialties = {
+    'EatClean',
+    'HighProtein',
+    'MealPrep nhanh'
+  };
+  bool _kitchenSyncEnabled = true;
+  String _avatarUrl = 'gymer_1';
 
   UserOnboardingModel() {
     _calories = recommendedCalories;
@@ -130,6 +162,8 @@ class UserOnboardingModel extends ChangeNotifier {
 
   double get heightCm => _heightCm;
   double get weightKg => _weightKg;
+  double get targetWeightKg => _targetWeightKg;
+  double get bmi => _weightKg / math.pow(_heightCm / 100.0, 2);
   ActivityLevel get activityLevel => _activityLevel;
   NutritionGoal get goal => _goal;
   int get calories => _calories;
@@ -143,6 +177,28 @@ class UserOnboardingModel extends ChangeNotifier {
   /// Danh sách dị ứng thực phẩm thực tế (không gồm mục 'Không có')
   Set<String> get effectiveAllergies =>
       _selectedAllergies.where((a) => a != noAllergy).toSet();
+
+  Set<String> get selectedMedicalHistory => Set.unmodifiable(_selectedMedicalHistory);
+  Set<String> get effectiveMedicalHistory =>
+      _selectedMedicalHistory.where((m) => m != noMedical).toSet();
+  bool get hasNoMedical => _selectedMedicalHistory.contains(noMedical);
+
+  Set<String> get selectedFavoriteFoods => Set.unmodifiable(_selectedFavoriteFoods);
+  bool get isVegan => _isVegan;
+  Set<String> get selectedDietLifestyle => Set.unmodifiable(_selectedDietLifestyle);
+
+  String get groceryFrequency => _groceryFrequency;
+  String get groceryPlace => _groceryPlace;
+  bool get onlineDeliveryEnabled => _onlineDeliveryEnabled;
+  int get homeCookedMealsCount => _homeCookedMealsCount;
+  bool get mealPrepAutomation => _mealPrepAutomation;
+
+  String get creatorName => _creatorName;
+  String get creatorHandle => _creatorHandle;
+  String get creatorBio => _creatorBio;
+  Set<String> get selectedSpecialties => Set.unmodifiable(_selectedSpecialties);
+  bool get kitchenSyncEnabled => _kitchenSyncEnabled;
+  String get avatarUrl => _avatarUrl;
 
   /// Tính BMR (Tỷ lệ trao đổi chất cơ bản) theo công thức Mifflin-St Jeor
   double get bmr {
@@ -267,6 +323,115 @@ class UserOnboardingModel extends ChangeNotifier {
     } else {
       _selectedPreferences.add(pref);
     }
+    notifyListeners();
+  }
+
+  void setTargetWeight(double val) {
+    _targetWeightKg = val.clamp(30.0, 250.0);
+    notifyListeners();
+  }
+
+  void toggleMedicalHistory(String item) {
+    if (item == noMedical) {
+      if (_selectedMedicalHistory.contains(noMedical)) {
+        _selectedMedicalHistory.remove(noMedical);
+      } else {
+        _selectedMedicalHistory.clear();
+        _selectedMedicalHistory.add(noMedical);
+      }
+    } else {
+      _selectedMedicalHistory.remove(noMedical);
+      if (_selectedMedicalHistory.contains(item)) {
+        _selectedMedicalHistory.remove(item);
+      } else {
+        _selectedMedicalHistory.add(item);
+      }
+      if (_selectedMedicalHistory.isEmpty) {
+        _selectedMedicalHistory.add(noMedical);
+      }
+    }
+    notifyListeners();
+  }
+
+  void toggleFavoriteFood(String item) {
+    if (_selectedFavoriteFoods.contains(item)) {
+      _selectedFavoriteFoods.remove(item);
+    } else {
+      _selectedFavoriteFoods.add(item);
+    }
+    notifyListeners();
+  }
+
+  void setVegan(bool val) {
+    _isVegan = val;
+    notifyListeners();
+  }
+
+  void toggleDietLifestyle(String item) {
+    if (_selectedDietLifestyle.contains(item)) {
+      _selectedDietLifestyle.remove(item);
+    } else {
+      _selectedDietLifestyle.add(item);
+    }
+    notifyListeners();
+  }
+
+  void setGroceryFrequency(String val) {
+    _groceryFrequency = val;
+    notifyListeners();
+  }
+
+  void setGroceryPlace(String val) {
+    _groceryPlace = val;
+    notifyListeners();
+  }
+
+  void setOnlineDeliveryEnabled(bool val) {
+    _onlineDeliveryEnabled = val;
+    notifyListeners();
+  }
+
+  void setHomeCookedMealsCount(int val) {
+    _homeCookedMealsCount = val.clamp(1, 21);
+    notifyListeners();
+  }
+
+  void setMealPrepAutomation(bool val) {
+    _mealPrepAutomation = val;
+    notifyListeners();
+  }
+
+  void setCreatorName(String val) {
+    _creatorName = val;
+    notifyListeners();
+  }
+
+  void setCreatorHandle(String val) {
+    _creatorHandle = val;
+    notifyListeners();
+  }
+
+  void setCreatorBio(String val) {
+    _creatorBio = val;
+    notifyListeners();
+  }
+
+  void toggleSpecialty(String item) {
+    if (_selectedSpecialties.contains(item)) {
+      _selectedSpecialties.remove(item);
+    } else {
+      _selectedSpecialties.add(item);
+    }
+    notifyListeners();
+  }
+
+  void setKitchenSyncEnabled(bool val) {
+    _kitchenSyncEnabled = val;
+    notifyListeners();
+  }
+
+  void setAvatarUrl(String val) {
+    _avatarUrl = val;
     notifyListeners();
   }
 }
