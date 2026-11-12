@@ -492,7 +492,7 @@ class AppHeader extends StatelessWidget {
             ],
           ),
 
-          // Right: [Nút Chatbot AI Trợ lý] + [Avatar Profile người dùng]
+          // Right: [Nút Chatbot AI Trợ lý] + [Nút [+] Đăng bài mới]
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -527,72 +527,38 @@ class AppHeader extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // 2. Avatar Profile người dùng (click vào mở trang Hồ Sơ)
+              // 2. Nút [+] Đăng bài mới / Thêm công thức
               Tooltip(
-                message: 'Hồ sơ người dùng',
+                message: 'Đăng bài mới / Thêm công thức',
                 child: GestureDetector(
-                  onTap: onAvatarTap ??
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                        );
-                      },
+                  onTap: () {
+                    final recipeState = RecipeSearchScreen.recipeScreenKey.currentState;
+                    if (recipeState != null) {
+                      recipeState.showCreateRecipeSheet(customContext: context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng mở tab FoodBlog để tải dữ liệu đăng bài!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
                   child: Container(
                     width: 36,
                     height: 36,
-                    padding: const EdgeInsets.all(1.5),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
-                        width: 1.5,
+                        width: 1,
                       ),
                     ),
-                    child: ValueListenableBuilder<String>(
-                      valueListenable: SettingsService.instance.userAvatarNotifier,
-                      builder: (context, avatarUrl, _) {
-                        Widget fallback = CircleAvatar(
-                          radius: 15,
-                          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
-                          child: Icon(
-                            Icons.person_outline_rounded,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            size: 18,
-                          ),
-                        );
-
-                        if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
-                          return ClipOval(
-                            child: Image.network(
-                              avatarUrl,
-                              width: 30,
-                              height: 30,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => fallback,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return fallback;
-                              },
-                            ),
-                          );
-                        }
-
-                        final file = File(avatarUrl);
-                        if (file.existsSync()) {
-                          return ClipOval(
-                            child: Image.file(
-                              file,
-                              width: 30,
-                              height: 30,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => fallback,
-                            ),
-                          );
-                        }
-
-                        return fallback;
-                      },
+                    child: Icon(
+                      Icons.add_rounded,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      size: 24,
                     ),
                   ),
                 ),

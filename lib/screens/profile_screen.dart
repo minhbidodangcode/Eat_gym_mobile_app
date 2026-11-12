@@ -8,7 +8,6 @@ import '../models/badges_and_report_model.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
-import 'badges_and_report_screen.dart';
 import 'login_screen.dart';
 import 'recipe_search_screen.dart';
 import 'meal_prep_screen.dart';
@@ -1121,6 +1120,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  String _formatFitnessGoal(String? raw) {
+    if (raw == null || raw.isEmpty) return 'Giảm mỡ';
+    final lower = raw.toLowerCase().trim();
+    if (lower == 'cutting' || lower == 'fat_loss' || lower.contains('giảm mỡ') || lower.contains('giam mo') || lower.contains('giảm cân')) {
+      return 'Giảm mỡ';
+    }
+    if (lower == 'bulking' || lower == 'muscle_gain' || lower.contains('tăng cơ') || lower.contains('tang co')) {
+      return 'Tăng cơ';
+    }
+    if (lower == 'maintenance' || lower.contains('duy trì') || lower.contains('duy tri')) {
+      return 'Duy trì vóc dáng';
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMe = _isMe;
@@ -1152,10 +1166,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       // Tự do viết bio link: Không ép cứng eatgym.ai nếu người dùng chưa nhập
       displayLink = _customLink.isNotEmpty ? _customLink : (profile?['website']?.toString() ?? '');
 
+      int totalLikes = 0;
+      for (final p in _userPosts) {
+        final l = p['baseLikes'] ?? p['likes'] ?? p['likesCount'] ?? 0;
+        if (l is num) totalLikes += l.toInt();
+      }
       final badgeModel = BadgesAndReportModel.instance;
       final streak = badgeModel.streakDays > 0 ? badgeModel.streakDays : 7;
       statPosts = '${_userPosts.length}';
-      statFollowers = '${_likedRecipeIds.length} đã tim';
+      statFollowers = '$totalLikes';
       statFollowing = '$streak ngày';
     } else {
       final authorData = widget.authorData ?? {};
@@ -1175,7 +1194,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     final weight = (profile?['weightKg'] as num?)?.toDouble() ?? 72.0;
     final height = (profile?['heightCm'] as num?)?.toDouble() ?? 175.0;
-    final goal = _customGoal.isNotEmpty ? _customGoal : (profile?['fitnessGoal']?.toString() ?? 'Tăng cơ giảm mỡ');
+    final rawGoal = _customGoal.isNotEmpty ? _customGoal : (profile?['fitnessGoal']?.toString() ?? 'cutting');
+    final goalDisplay = _formatFitnessGoal(rawGoal);
 
     final bool isLbs = SettingsService.instance.unitWeightNotifier.value == 'lbs';
     final bool isFtIn = SettingsService.instance.unitHeightNotifier.value == 'ft_in';
@@ -1308,13 +1328,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
                               const SizedBox(width: 24),
 
-                              // 3 Cột Stats: Bài viết, Người theo dõi / Đã tim, Đang theo dõi / Kỷ luật
+                              // 3 Cột Stats: Bài viết, Người theo dõi / Lượt thích, Đang theo dõi / Kỷ luật
                               Expanded(
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                                   children: [
                                     _buildStatColumn(statPosts, 'Bài viết', isDark: isDark),
-                                    _buildStatColumn(statFollowers, isMe ? 'Đã tim' : 'Người theo dõi', isDark: isDark),
+                                    _buildStatColumn(statFollowers, isMe ? 'Lượt thích' : 'Người theo dõi', isDark: isDark),
                                     _buildStatColumn(statFollowing, isMe ? 'Kỷ luật' : 'Đang theo dõi', isDark: isDark),
                                   ],
                                 ),
@@ -1355,7 +1375,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           if (isMe) ...[
                             const SizedBox(height: 6),
                             Text(
-                              '🎯 Mục tiêu: $goal • $weightDisplay • $heightDisplay',
+                              '🎯 Mục tiêu: $goalDisplay • $weightDisplay • $heightDisplay',
                               style: TextStyle(fontSize: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF334155), fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -1477,83 +1497,80 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
                           const SizedBox(height: 14),
 
-                          // 3. DÃY NÚT HÀNH ĐỘNG (INSTAGRAM PROFILE BUTTONS)
+                          // 3. DÃY NÚT HÀNH ĐỘNG (CHỈNH SỬA HỒ SƠ & CHIA SẺ)
                           if (isMe)
                             Row(
                               children: [
-                                // Nút 1: CHỈNH SỬA TRANG CÁ NHÂN
+                                // Nút 1: CHỈNH SỬA HỒ SƠ
                                 Expanded(
-                                  flex: 5,
                                   child: OutlinedButton(
                                     style: OutlinedButton.styleFrom(
-                                      backgroundColor: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
+                                      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                                       foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
-                                      side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
-                                      padding: const EdgeInsets.symmetric(vertical: 8.5),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      side: BorderSide(
+                                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                                        width: 1,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 9.5),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
                                     ),
                                     onPressed: _showEditProfileModal,
-                                    child: Text('Chỉnh sửa trang cá nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Nút 2: [+] Thêm công thức
-                                Expanded(
-                                  flex: 4,
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: isDark ? primaryAccent : const Color(0xFF0F172A),
-                                      foregroundColor: isDark ? Colors.black : Colors.white,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(vertical: 8.5),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    child: Text(
+                                      'Chỉnh sửa hồ sơ',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.5,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
                                     ),
-                                    onPressed: _onCreateRecipe,
-                                    icon: const Icon(Icons.add, size: 16),
-                                    label: const Text('Thêm công thức', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 10),
 
-                                // Nút 3: Báo cáo y khoa / PDF icon
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
-                                    border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(Icons.assignment_outlined, size: 20, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                                    tooltip: 'Huy hiệu & Báo cáo PDF',
-                                    visualDensity: VisualDensity.compact,
+                                // Nút 2: CHIA SẺ
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                      foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      side: BorderSide(
+                                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                                        width: 1,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 9.5),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
+                                    ),
                                     onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (_) => const BadgesAndReportScreen(isSubPage: true)),
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                              const SizedBox(width: 8),
+                                              Expanded(child: Text('Đã sao chép liên kết trang bếp cá nhân @$displayUsername!')),
+                                            ],
+                                          ),
+                                          backgroundColor: const Color(0xFF16A34A),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
                                       );
                                     },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Nút 4: Meal Prep & Rã đông
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
-                                    border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(Icons.kitchen_outlined, size: 20, color: isDark ? primaryAccent : const Color(0xFF0F172A)),
-                                    tooltip: 'Kế hoạch Meal Prep & Rã đông',
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (_) => const MealPrepScreen()),
-                                      );
-                                    },
+                                    icon: Icon(
+                                      Icons.share_outlined,
+                                      size: 16,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                    label: Text(
+                                      'Chia sẻ',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.5,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
