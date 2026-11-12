@@ -58,8 +58,21 @@ class ApiService {
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
-    if (token == null || isTokenExpired(token)) {
-      return null;
+    if (token == null) return null;
+
+    if (isTokenExpired(token)) {
+      final rememberMe = prefs.getBool('remember_me') ?? true;
+      if (rememberMe) {
+        final savedEmail = prefs.getString('saved_login_email') ?? prefs.getString('user_email');
+        final savedPassword = prefs.getString('saved_login_password');
+        if (savedEmail != null && savedEmail.isNotEmpty && savedPassword != null && savedPassword.isNotEmpty) {
+          try {
+            final res = await login(savedEmail, savedPassword, rememberMe: true);
+            return res['accessToken'];
+          } catch (_) {}
+        }
+      }
+      return token; // Trả về fallback cho offline cache nếu không kết nối được server
     }
     return token;
   }
@@ -118,10 +131,10 @@ class ApiService {
   }
 
   // ---------------------------------------------------------
-  // AUTH
+  // AUTH & GHI NHỚ TÀI KHOẢN (REMEMBER ME)
   // ---------------------------------------------------------
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = true}) async {
     final url = Uri.parse('$baseUrl/auth/login');
     final response = await http.post(
       url,
@@ -136,6 +149,16 @@ class ApiService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', data['accessToken']);
       await prefs.setString('user_email', email);
+      await prefs.setBool('remember_me', rememberMe);
+
+      if (rememberMe) {
+        await prefs.setString('saved_login_email', email);
+        await prefs.setString('saved_login_password', password);
+      } else {
+        await prefs.remove('saved_login_email');
+        await prefs.remove('saved_login_password');
+      }
+
       if (data['user'] != null) {
         final user = data['user'];
         if (user['email'] != null) await prefs.setString('user_email', user['email'].toString());
@@ -149,15 +172,57 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool rememberMe = prefs.getBool('remember_me') ?? true;
+    final String email = prefs.getString('saved_login_email') ?? prefs.getString('user_email') ?? '';
+    final String password = rememberMe ? (prefs.getString('saved_login_password') ?? '') : '';
+    return {
+      'rememberMe': rememberMe,
+      'email': email,
+      'password': password,
+    };
+  }
+
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    if (token == null || token.isEmpty || token == 'dummy_token') return false;
-    if (isTokenExpired(token)) {
-      await logout();
-      return false;
+    final bool rememberMe = prefs.getBool('remember_me') ?? true;
+
+    // 1. Nếu token còn hạn hợp lệ, tiếp tục phiên
+    if (token != null && token.isNotEmpty && token != 'dummy_token') {
+      if (!isTokenExpired(token)) {
+        return true;
+      }
     }
-    return true;
+
+    // 2. Nếu token hết hạn hoặc chưa có, nhưng người dùng bật "Nhớ tài khoản"
+    if (rememberMe) {
+      final savedEmail = prefs.getString('saved_login_email') ?? prefs.getString('user_email');
+      final savedPassword = prefs.getString('saved_login_password');
+      if (savedEmail != null && savedEmail.isNotEmpty && savedPassword != null && savedPassword.isNotEmpty) {
+        try {
+          final res = await login(savedEmail, savedPassword, rememberMe: true);
+          if (res['accessToken'] != null) {
+            return true;
+          }
+        } catch (_) {
+          // Khi ngoại tuyến hoặc server chưa khởi động, vẫn giữ phiên làm việc
+          if (token != null && token.isNotEmpty && token != 'dummy_token') {
+            return true;
+          }
+          if (prefs.getString('user_profile') != null || prefs.getString('user_data') != null) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // 3. Nếu không chọn nhớ tài khoản và token hết hạn thì đăng xuất
+    if (!rememberMe) {
+      await logout();
+    }
+    return false;
   }
 
   static Future<Map<String, dynamic>?> getUserInfo() async {
@@ -239,10 +304,20 @@ class ApiService {
     await prefs.remove('eatgym_smart_fridge_items_v4');
     await prefs.remove('auth_token');
     await prefs.remove('user_profile');
-    await prefs.remove('user_email');
     await prefs.remove('user_full_name');
     await prefs.remove('user_role');
     await prefs.remove('user_data');
+
+    final rememberMe = prefs.getBool('remember_me') ?? true;
+    if (!rememberMe) {
+      await prefs.remove('saved_login_email');
+      await prefs.remove('saved_login_password');
+      await prefs.remove('user_email');
+      await prefs.remove('remember_me');
+    } else {
+      // Khi chủ động đăng xuất, xóa mật khẩu tự động đăng nhập nhưng giữ lại email để người dùng không phải gõ lại
+      await prefs.remove('saved_login_password');
+    }
   }
 
   // ---------------------------------------------------------

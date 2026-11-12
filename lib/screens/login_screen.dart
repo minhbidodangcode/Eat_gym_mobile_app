@@ -19,11 +19,30 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberMe = true;
 
   @override
   void initState() {
     super.initState();
+    _loadSavedCredentials();
     _checkAutoLogin();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final creds = await ApiService.getSavedCredentials();
+      if (mounted) {
+        setState(() {
+          _rememberMe = (creds['rememberMe'] as bool?) ?? true;
+          if (creds['email'] != null && creds['email'].toString().isNotEmpty) {
+            _emailController.text = creds['email'].toString();
+          }
+          if (_rememberMe && creds['password'] != null && creds['password'].toString().isNotEmpty) {
+            _passwordController.text = creds['password'].toString();
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _checkAutoLogin() async {
@@ -59,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await ApiService.login(email, password);
+      await ApiService.login(email, password, rememberMe: _rememberMe);
       if (mounted) {
         Map<String, dynamic>? profile;
         try {
@@ -253,20 +272,61 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               
-              // Forgot Password
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
-                  },
-                  child: Text(
-                    'Quên mật khẩu?',
-                    style: AppTypography.bodyMedium(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+              // Ghi nhớ tài khoản & Quên mật khẩu
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _rememberMe = !_rememberMe;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              activeColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              onChanged: (val) {
+                                setState(() {
+                                  _rememberMe = val ?? true;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Ghi nhớ tài khoản',
+                            style: AppTypography.bodySmall(color: AppColors.onSurface),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Quên mật khẩu?',
+                      style: AppTypography.bodySmall(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               
