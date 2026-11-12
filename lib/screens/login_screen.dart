@@ -87,6 +87,78 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showServerSettingsDialog() {
+    final urlController = TextEditingController(text: ApiService.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.dns_outlined, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text('Máy chủ Backend', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Nhập IP mạng LAN hoặc tên miền Cloudflare / Ngrok để kết nối từ xa:',
+              style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlController,
+              decoration: InputDecoration(
+                labelText: 'Server URL',
+                hintText: 'http://192.168.1.xx:3000 hoặc https://xxx.ngrok.app',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ApiService.setBaseUrl('http://192.168.1.54:3000/api');
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã khôi phục địa chỉ mặc định: 192.168.1.54:3000')),
+                );
+              }
+            },
+            child: const Text('Mặc định'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final newUrl = urlController.text.trim();
+              if (newUrl.isNotEmpty) {
+                await ApiService.setBaseUrl(newUrl);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Đã lưu máy chủ: ${ApiService.baseUrl}')),
+                  );
+                }
+              }
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,7 +172,18 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.bolt, size: 64, color: AppColors.primary),
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  icon: const Icon(Icons.dns_outlined, color: AppColors.textMuted),
+                  tooltip: 'Cài đặt kết nối máy chủ',
+                  onPressed: _showServerSettingsDialog,
+                ),
+              ),
+              GestureDetector(
+                onLongPress: _showServerSettingsDialog,
+                child: const Icon(Icons.bolt, size: 64, color: AppColors.primary),
+              ),
               const SizedBox(height: 24),
               Text(
                 'Chào mừng trở lại',

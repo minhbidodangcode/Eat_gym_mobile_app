@@ -3,8 +3,37 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Kết nối trực tiếp máy chủ local (EatGymAIServer)
-  static const String baseUrl = 'http://192.168.1.54:3000/api';
+  // Base URL mặc định
+  static String _baseUrl = 'http://192.168.1.54:3000/api';
+
+  static String get baseUrl => _baseUrl;
+
+  static Future<void> initBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('custom_base_url');
+    if (saved != null && saved.trim().isNotEmpty) {
+      _baseUrl = _normalizeUrl(saved);
+    }
+  }
+
+  static Future<void> setBaseUrl(String newUrl) async {
+    final normalized = _normalizeUrl(newUrl);
+    _baseUrl = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_base_url', normalized);
+  }
+
+  static String _normalizeUrl(String input) {
+    var url = input.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    url = url.replaceAll(RegExp(r'/+$'), '');
+    if (!url.endsWith('/api')) {
+      url = '$url/api';
+    }
+    return url;
+  }
 
   static bool isTokenExpired(String? token) {
     if (token == null || token.isEmpty || token == 'dummy_token') return true;

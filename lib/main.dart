@@ -217,6 +217,7 @@ Widget buildFoodIconWidget(String? icon, {double size = 22, String? name}) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SettingsService.instance.init();
+  await ApiService.initBaseUrl();
   final bool loggedIn = await ApiService.isLoggedIn();
   runApp(NutriGymApp(isLoggedIn: loggedIn));
 }
