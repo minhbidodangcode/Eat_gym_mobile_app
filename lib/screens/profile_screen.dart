@@ -775,22 +775,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         const SizedBox(height: 14),
 
                         // Trường 3: Tiểu sử / Mô tả trang cá nhân (Bio)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Mô tả trang cá nhân (Tiểu sử / Bio):',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            Text(
-                              'Hỗ trợ xuống dòng • Tối đa 500 ký tự',
-                              style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontWeight: FontWeight.w500),
-                            ),
-                          ],
+                        Text(
+                          'Mô tả trang cá nhân (Tiểu sử / Bio):',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
+                          ),
                         ),
                         const SizedBox(height: 6),
                         TextField(

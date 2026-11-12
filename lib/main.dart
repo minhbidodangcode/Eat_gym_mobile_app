@@ -492,11 +492,51 @@ class AppHeader extends StatelessWidget {
             ],
           ),
 
-          // Right: [Nút Chatbot AI Trợ lý] + [Nút [+] Đăng bài mới]
+          // Right: [Nút [+] (Chỉ hiện khi ở tab Hồ sơ cá nhân, bên trái nút AI)] + [Nút Chatbot AI Trợ lý]
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Nút Chatbot AI Trợ lý
+              // 1. Nút [+] Đăng bài mới / Thêm công thức (Chỉ hiện khi ở tab Hồ sơ cá nhân, nằm bên trái nút AI)
+              if (currentTab == 2) ...[
+                Tooltip(
+                  message: 'Đăng bài mới / Thêm công thức',
+                  child: GestureDetector(
+                    onTap: () {
+                      final recipeState = RecipeSearchScreen.recipeScreenKey.currentState;
+                      if (recipeState != null) {
+                        recipeState.showCreateRecipeSheet(customContext: context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vui lòng mở tab FoodBlog để tải dữ liệu đăng bài!'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+
+              // 2. Nút Chatbot AI Trợ lý
               Tooltip(
                 message: 'Trợ lý AI EatGym',
                 child: GestureDetector(
@@ -521,44 +561,6 @@ class AppHeader extends StatelessWidget {
                       Icons.smart_toy_outlined,
                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                       size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              // 2. Nút [+] Đăng bài mới / Thêm công thức
-              Tooltip(
-                message: 'Đăng bài mới / Thêm công thức',
-                child: GestureDetector(
-                  onTap: () {
-                    final recipeState = RecipeSearchScreen.recipeScreenKey.currentState;
-                    if (recipeState != null) {
-                      recipeState.showCreateRecipeSheet(customContext: context);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Vui lòng mở tab FoodBlog để tải dữ liệu đăng bài!'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECF5FE),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E9F2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.add_rounded,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      size: 24,
                     ),
                   ),
                 ),

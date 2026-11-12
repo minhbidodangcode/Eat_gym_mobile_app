@@ -960,20 +960,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.search_rounded, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Tìm kiếm thêm dị ứng trong kho dữ liệu',
-                        style: AppTypography.titleSmallBold(color: AppColors.primary),
+                      const Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Tìm kiếm...',
+                          style: AppTypography.bodyMedium(color: const Color(0xFF94A3B8)),
+                        ),
                       ),
                     ],
                   ),
@@ -1058,20 +1059,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.search_rounded, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Tìm kiếm thêm món yêu thích trong kho dữ liệu',
-                        style: AppTypography.titleSmallBold(color: AppColors.primary),
+                      const Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Tìm kiếm...',
+                          style: AppTypography.bodyMedium(color: const Color(0xFF94A3B8)),
+                        ),
                       ),
                     ],
                   ),
@@ -1266,26 +1268,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 title: Text('Đặt giao online khi cần', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
                 subtitle: Text('Có thể chọn song song với lịch đi chợ truyền thống để bổ sung nguyên liệu kịp thời.', style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant)),
               ),
-              const Divider(height: 20, color: AppColors.outline),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text('Liên kết ứng dụng mua sắm thực phẩm:', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
-                  ),
-                  _countBadge('${_model.selectedShoppingApps.length} đã kết nối'),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Bấm "Kết nối" để EatGym tự động thêm nguyên liệu thiếu từ thực đơn vào giỏ hàng và mở tìm kiếm ứng dụng khi chuẩn bị Meal Prep.',
-                style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
-              ),
-              const SizedBox(height: 12),
-              ...shoppingApps.map((app) {
-                final isConnected = _model.isShoppingAppConnected(app['name'] as String);
-                return _buildShoppingAppTile(app, isConnected);
-              }),
+              if (_model.onlineShoppingWhenNeeded) ...[
+                const Divider(height: 20, color: AppColors.outline),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text('Liên kết ứng dụng mua sắm thực phẩm:', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
+                    ),
+                    _countBadge('${_model.selectedShoppingApps.length} đã kết nối'),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Bấm "Kết nối" để EatGym tự động thêm nguyên liệu thiếu từ thực đơn vào giỏ hàng và mở tìm kiếm ứng dụng khi chuẩn bị Meal Prep.',
+                  style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 12),
+                ...shoppingApps.map((app) {
+                  final isConnected = _model.isShoppingAppConnected(app['name'] as String);
+                  return _buildShoppingAppTile(app, isConnected);
+                }),
+              ],
             ],
           ),
         ),
@@ -2388,9 +2392,7 @@ class _IngredientSearchSheetState extends State<_IngredientSearchSheet> {
                   controller: _searchCtrl,
                   onChanged: (val) => setState(() => _query = val),
                   decoration: InputDecoration(
-                    hintText: widget.forAllergy
-                        ? 'Nhập tên dị ứng (VD: tôm, trứng, gluten...)'
-                        : 'Nhập tên món ăn (VD: cá hồi, yến mạch, thịt bò...)',
+                    hintText: 'Tìm kiếm...',
                     hintStyle: AppTypography.bodySmall(color: AppColors.textMuted),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     suffixIcon: _query.isNotEmpty
