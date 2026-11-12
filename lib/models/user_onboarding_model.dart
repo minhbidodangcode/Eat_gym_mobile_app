@@ -126,10 +126,40 @@ class UserOnboardingModel extends ChangeNotifier {
 
   // Bước 3: Thói quen đi chợ & Nấu ăn
   String _groceryFrequency = '2-3 lần / tuần';
-  String _groceryPlace = 'Siêu thị lớn (WinMart, Co.op)';
-  bool _onlineDeliveryEnabled = true;
+  bool _onlineShoppingWhenNeeded = true;
+  final Set<String> _selectedShoppingApps = {
+    'WinMart / WinMart+',
+    'ShopeeFood / Shopee Mart',
+  };
   int _homeCookedMealsCount = 7;
   bool _mealPrepAutomation = true;
+
+  static const List<String> _animalFoodKeywords = [
+    'ức gà',
+    'thịt bò',
+    'cá hồi',
+    'trứng',
+    'tôm',
+    'cá ngừ',
+    'cá thu',
+    'cá basa',
+    'thịt nạc',
+    'thịt heo',
+    'sữa chua hy lạp',
+    'phô mai',
+  ];
+
+  static bool isAnimalFood(String item) {
+    final lower = item.toLowerCase();
+    if (lower.contains('nấm đùi gà') ||
+        lower.contains('sữa hạt') ||
+        lower.contains('đậu hũ') ||
+        lower.contains('tempeh') ||
+        lower.contains('seitan')) {
+      return false;
+    }
+    return _animalFoodKeywords.any((kw) => lower.contains(kw));
+  }
 
   // Bước 4: Thiết lập FoodBlog
   String _creatorName = '';
@@ -188,8 +218,8 @@ class UserOnboardingModel extends ChangeNotifier {
   Set<String> get selectedDietLifestyle => Set.unmodifiable(_selectedDietLifestyle);
 
   String get groceryFrequency => _groceryFrequency;
-  String get groceryPlace => _groceryPlace;
-  bool get onlineDeliveryEnabled => _onlineDeliveryEnabled;
+  bool get onlineShoppingWhenNeeded => _onlineShoppingWhenNeeded;
+  Set<String> get selectedShoppingApps => Set.unmodifiable(_selectedShoppingApps);
   int get homeCookedMealsCount => _homeCookedMealsCount;
   bool get mealPrepAutomation => _mealPrepAutomation;
 
@@ -354,6 +384,7 @@ class UserOnboardingModel extends ChangeNotifier {
   }
 
   void toggleFavoriteFood(String item) {
+    if (_isVegan && isAnimalFood(item)) return;
     if (_selectedFavoriteFoods.contains(item)) {
       _selectedFavoriteFoods.remove(item);
     } else {
@@ -364,6 +395,16 @@ class UserOnboardingModel extends ChangeNotifier {
 
   void setVegan(bool val) {
     _isVegan = val;
+    if (_isVegan) {
+      _selectedFavoriteFoods.removeWhere(isAnimalFood);
+      if (_selectedFavoriteFoods.isEmpty) {
+        _selectedFavoriteFoods.addAll([
+          'Đậu hũ / Tofu',
+          'Nấm đùi gà / Nấm hương',
+          'Yến mạch',
+        ]);
+      }
+    }
     notifyListeners();
   }
 
@@ -381,13 +422,17 @@ class UserOnboardingModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setGroceryPlace(String val) {
-    _groceryPlace = val;
+  void setOnlineShoppingWhenNeeded(bool val) {
+    _onlineShoppingWhenNeeded = val;
     notifyListeners();
   }
 
-  void setOnlineDeliveryEnabled(bool val) {
-    _onlineDeliveryEnabled = val;
+  void toggleShoppingApp(String app) {
+    if (_selectedShoppingApps.contains(app)) {
+      _selectedShoppingApps.remove(app);
+    } else {
+      _selectedShoppingApps.add(app);
+    }
     notifyListeners();
   }
 

@@ -201,6 +201,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'dietLifestyle': _model.selectedDietLifestyle.toList(),
         'cookingFrequency': '${_model.homeCookedMealsCount} bữa/tuần',
         'groceryFrequency': _model.groceryFrequency,
+        'onlineShoppingWhenNeeded': _model.onlineShoppingWhenNeeded,
+        'linkedShoppingApps': _model.selectedShoppingApps.toList(),
         'mealPrepEnabled': _model.mealPrepAutomation,
         'creatorName': creatorName,
         'creatorHandle': creatorHandle,
@@ -243,6 +245,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           dietLifestyle: _model.selectedDietLifestyle.toList(),
           cookingFrequency: '${_model.homeCookedMealsCount} bữa/tuần',
           groceryFrequency: _model.groceryFrequency,
+          onlineShoppingWhenNeeded: _model.onlineShoppingWhenNeeded,
+          linkedShoppingApps: _model.selectedShoppingApps.toList(),
           mealPrepEnabled: _model.mealPrepAutomation,
           creatorName: creatorName,
           creatorHandle: creatorHandle,
@@ -789,6 +793,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'Mỡ máu cao',
       'Đau dạ dày / Tiêu hóa',
       'Thận mạn tính',
+      'Gan nhiễm mỡ / Viêm gan',
+      'Cường giáp / Suy giáp',
+      'Hội chứng ruột kích thích (IBS)',
+      'Sỏi thận / Sỏi mật',
+      'Loãng xương',
+      'Thiếu máu',
+      'Viêm khớp / Thoái hóa khớp',
+      'Rối loạn tiền đình',
     ];
 
     const allergyOptions = [
@@ -799,19 +811,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'Trứng gà',
       'Gluten / Bột mì',
       'Đậu nành',
+      'Các loại hạt cây (Óc chó, Hạnh nhân)',
+      'Cá & Dầu cá',
+      'Động vật có vỏ (Nghêu, Sò, Ốc)',
+      'Mè / Vừng',
+      'Nấm các loại',
+      'Thịt đỏ (Bò, Heo)',
+      'Chất bảo quản / Bột ngọt',
     ];
 
     const favoriteOptions = [
       '🍗 Ức gà phi lê',
       '🥩 Thịt bò nạc',
       '🐟 Cá hồi',
+      '🐟 Cá ngừ / Cá thu',
+      '🥩 Thịt nạc thăn heo',
       '🥚 Trứng gà',
       '🍤 Tôm tươi',
+      '🥛 Sữa chua Hy Lạp / Phô mai',
       '🧈 Đậu hũ / Tofu',
+      '🍄 Nấm đùi gà / Nấm hương',
+      '🫘 Đậu gà / Đậu lăng',
+      '🌱 Tempeh / Seitan',
+      '🥦 Bông cải xanh / Cải bó xôi',
+      '🥛 Sữa hạt (Hạnh nhân, Đậu nành)',
       '🥣 Yến mạch',
       '🥑 Bơ & Các loại hạt',
       '🍚 Gạo lứt & Khoai',
+      '🍌 Chuối / Táo / Việt quất',
     ];
+
+    final visibleFavoriteOptions = _model.isVegan
+        ? favoriteOptions.where((opt) {
+            final cleanLabel = opt.replaceFirst(RegExp(r'^[^\w\s]+\s*'), '');
+            return !UserOnboardingModel.isAnimalFood(cleanLabel);
+          }).toList()
+        : favoriteOptions;
 
     const lifestyleOptions = [
       'Eat Clean',
@@ -931,10 +966,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
               ),
               const SizedBox(height: 12),
+              if (_model.isVegan) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.eco_outlined, size: 18, color: Color(0xFF059669)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Đang bật chế độ Ăn thuần chay: các thực phẩm nguồn gốc động vật đã được tự động ẩn.',
+                          style: AppTypography.bodySmall(color: const Color(0xFF065F46)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: favoriteOptions.map((opt) {
+                children: visibleFavoriteOptions.map((opt) {
                   final cleanLabel = opt.replaceFirst(RegExp(r'^[^\w\s]+\s*'), '');
                   final isSelected = _model.selectedFavoriteFoods.any((f) => f.contains(cleanLabel));
                   return _choiceChip(
@@ -1028,13 +1086,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'Hàng ngày',
       '2-3 lần / tuần',
       '1 lần / tuần (Cuối tuần)',
-      'Đặt giao online khi cần',
     ];
 
-    const groceryPlaces = [
-      'Siêu thị lớn (WinMart, Co.op)',
-      'Chợ truyền thống',
-      'Cửa hàng thực phẩm sạch',
+    const shoppingAppOptions = [
+      'WinMart / WinMart+',
+      'ShopeeFood / Shopee Mart',
+      'GrabMart',
+      'Bách Hóa Xanh',
+      'Co.op Online',
+      'Lotte Mart',
+      'Go! / Big C',
+      'TikiNGON',
     ];
 
     return Column(
@@ -1051,7 +1113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 18),
 
-        // 1. Thói quen đi chợ & Mua sắm
+        // 1. Thói quen đi chợ & Liên kết mua sắm online
         _cardWrapper(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1072,29 +1134,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-              Text('Hình thức / Địa điểm mua sắm:', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _model.onlineShoppingWhenNeeded,
+                onChanged: _model.setOnlineShoppingWhenNeeded,
+                activeTrackColor: AppColors.primary,
+                title: Text('Đặt giao online khi cần', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
+                subtitle: Text('Có thể chọn song song với lịch đi chợ truyền thống để bổ sung nguyên liệu kịp thời.', style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant)),
+              ),
+              const Divider(height: 20, color: AppColors.outline),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text('Liên kết ứng dụng mua sắm thực phẩm:', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
+                  ),
+                  _countBadge('${_model.selectedShoppingApps.length} đã chọn'),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Khi thiếu nguyên liệu trong thực đơn, EatGym sẽ gợi ý mua online và điền sẵn tên nguyên liệu vào thanh tìm kiếm của app bạn chọn.',
+                style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: groceryPlaces.map((p) {
-                  final isSelected = _model.groceryPlace == p;
+                children: shoppingAppOptions.map((app) {
+                  final isSelected = _model.selectedShoppingApps.contains(app);
                   return _choiceChip(
-                    label: p,
+                    label: app,
                     isSelected: isSelected,
-                    onTap: () => _model.setGroceryPlace(p),
+                    onTap: () => _model.toggleShoppingApp(app),
                   );
                 }).toList(),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _model.onlineDeliveryEnabled,
-                onChanged: _model.setOnlineDeliveryEnabled,
-                activeTrackColor: AppColors.primary,
-                title: Text('Giao hàng tận nơi (Delivery Integration)', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
-                subtitle: Text('Gợi ý giỏ hàng từ siêu thị liên kết khi phát hiện thiếu nguyên liệu.', style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant)),
               ),
             ],
           ),
