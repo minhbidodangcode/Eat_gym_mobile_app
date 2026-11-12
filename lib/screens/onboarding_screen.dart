@@ -209,6 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'creatorBio': creatorBio,
         'cookingSpecialties': _model.selectedSpecialties.toList(),
         'kitchenSyncEnabled': _model.kitchenSyncEnabled,
+        'isFoodBlogPrivate': _model.isFoodBlogPrivate,
         'avatarUrl': _model.avatarUrl,
         'onboardingCompleted': true,
         'targetMacros': {
@@ -253,6 +254,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           creatorBio: creatorBio,
           cookingSpecialties: _model.selectedSpecialties.toList(),
           kitchenSyncEnabled: _model.kitchenSyncEnabled,
+          isFoodBlogPrivate: _model.isFoodBlogPrivate,
           avatarUrl: _model.avatarUrl,
           onboardingCompleted: true,
           targetMacros: {
@@ -934,14 +936,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: allergyOptions.map((opt) {
-                  final isSelected = _model.selectedAllergies.contains(opt);
-                  return _choiceChip(
-                    label: opt,
-                    isSelected: isSelected,
-                    onTap: () => _model.toggleAllergy(opt),
-                  );
-                }).toList(),
+                children: [
+                  ...allergyOptions.map((opt) {
+                    final isSelected = _model.selectedAllergies.contains(opt);
+                    return _choiceChip(
+                      label: opt,
+                      isSelected: isSelected,
+                      onTap: () => _model.toggleAllergy(opt),
+                    );
+                  }),
+                  ..._model.effectiveAllergies.where((a) => !allergyOptions.contains(a)).map((customAllergy) {
+                    return _choiceChip(
+                      label: '🚫 $customAllergy',
+                      isSelected: true,
+                      onTap: () => _model.toggleAllergy(customAllergy),
+                    );
+                  }),
+                ],
+              ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () => _openIngredientSearchSheet(context, forAllergy: true),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tìm kiếm thêm dị ứng trong kho dữ liệu',
+                        style: AppTypography.titleSmallBold(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -992,17 +1028,56 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: visibleFavoriteOptions.map((opt) {
-                  final cleanLabel = opt.replaceFirst(RegExp(r'^[^\w\s]+\s*'), '');
-                  final isSelected = _model.selectedFavoriteFoods.any((f) => f.contains(cleanLabel));
-                  return _choiceChip(
-                    label: opt,
-                    isSelected: isSelected,
-                    onTap: () => _model.toggleFavoriteFood(cleanLabel),
-                  );
-                }).toList(),
+                children: [
+                  ...visibleFavoriteOptions.map((opt) {
+                    final cleanLabel = opt.replaceFirst(RegExp(r'^[^\w\s]+\s*'), '');
+                    final isSelected = _model.selectedFavoriteFoods.any((f) => f.contains(cleanLabel));
+                    return _choiceChip(
+                      label: opt,
+                      isSelected: isSelected,
+                      onTap: () => _model.toggleFavoriteFood(cleanLabel),
+                    );
+                  }),
+                  ..._model.selectedFavoriteFoods.where((f) {
+                    return !visibleFavoriteOptions.any((opt) {
+                      final cleanLabel = opt.replaceFirst(RegExp(r'^[^\w\s]+\s*'), '');
+                      return f.contains(cleanLabel);
+                    });
+                  }).map((customFood) {
+                    return _choiceChip(
+                      label: '⭐ $customFood',
+                      isSelected: true,
+                      onTap: () => _model.toggleFavoriteFood(customFood),
+                    );
+                  }),
+                ],
               ),
               const SizedBox(height: 12),
+              InkWell(
+                onTap: () => _openIngredientSearchSheet(context, forAllergy: false),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tìm kiếm thêm món yêu thích trong kho dữ liệu',
+                        style: AppTypography.titleSmallBold(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
                 'EatGym sẽ ưu tiên phân bổ các nguyên liệu này vào các bữa chính hàng tuần.',
                 style: AppTypography.bodySmall(color: AppColors.textMuted),
@@ -1088,15 +1163,63 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       '1 lần / tuần (Cuối tuần)',
     ];
 
-    const shoppingAppOptions = [
-      'WinMart / WinMart+',
-      'ShopeeFood / Shopee Mart',
-      'GrabMart',
-      'Bách Hóa Xanh',
-      'Co.op Online',
-      'Lotte Mart',
-      'Go! / Big C',
-      'TikiNGON',
+    final shoppingApps = [
+      {
+        'id': 'winmart',
+        'name': 'WinMart / WinMart+',
+        'desc': 'Chuỗi siêu thị & cửa hàng tiện lợi toàn quốc',
+        'icon': Icons.shopping_bag_outlined,
+        'color': const Color(0xFFE11B22),
+      },
+      {
+        'id': 'shopeefood',
+        'name': 'ShopeeFood / Shopee Mart',
+        'desc': 'Giao thực phẩm tươi sống siêu tốc trong ngày',
+        'icon': Icons.delivery_dining_rounded,
+        'color': const Color(0xFFEE4D2D),
+      },
+      {
+        'id': 'grabmart',
+        'name': 'GrabMart',
+        'desc': 'Giao siêu tốc 30 phút từ các siêu thị đối tác',
+        'icon': Icons.motorcycle_rounded,
+        'color': const Color(0xFF00B14F),
+      },
+      {
+        'id': 'bachhoaxanh',
+        'name': 'Bách Hóa Xanh',
+        'desc': 'Thực phẩm tươi sạch, rau củ thịt cá giá tốt',
+        'icon': Icons.shopping_basket_rounded,
+        'color': const Color(0xFF007E3A),
+      },
+      {
+        'id': 'coop',
+        'name': 'Co.op Online',
+        'desc': 'Hệ thống siêu thị Co.opmart & Co.op Food',
+        'icon': Icons.local_grocery_store_rounded,
+        'color': const Color(0xFF0054A6),
+      },
+      {
+        'id': 'lotte',
+        'name': 'Lotte Mart',
+        'desc': 'Siêu thị Hàn Quốc & nông sản nhập khẩu chất lượng',
+        'icon': Icons.store_rounded,
+        'color': const Color(0xFFED1C24),
+      },
+      {
+        'id': 'goc',
+        'name': 'Go! / Big C',
+        'desc': 'Đại siêu thị giá rẻ, ưu đãi thực phẩm hàng tuần',
+        'icon': Icons.shopping_cart_rounded,
+        'color': const Color(0xFFDA251C),
+      },
+      {
+        'id': 'tikingon',
+        'name': 'TikiNGON',
+        'desc': 'Giao nhanh 2h nguyên liệu tươi sạch đóng gói',
+        'icon': Icons.rocket_launch_rounded,
+        'color': const Color(0xFF189EFF),
+      },
     ];
 
     return Column(
@@ -1150,27 +1273,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Expanded(
                     child: Text('Liên kết ứng dụng mua sắm thực phẩm:', style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
                   ),
-                  _countBadge('${_model.selectedShoppingApps.length} đã chọn'),
+                  _countBadge('${_model.selectedShoppingApps.length} đã kết nối'),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                'Khi thiếu nguyên liệu trong thực đơn, EatGym sẽ gợi ý mua online và điền sẵn tên nguyên liệu vào thanh tìm kiếm của app bạn chọn.',
+                'Bấm "Kết nối" để EatGym tự động thêm nguyên liệu thiếu từ thực đơn vào giỏ hàng và mở tìm kiếm ứng dụng khi chuẩn bị Meal Prep.',
                 style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
               ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: shoppingAppOptions.map((app) {
-                  final isSelected = _model.selectedShoppingApps.contains(app);
-                  return _choiceChip(
-                    label: app,
-                    isSelected: isSelected,
-                    onTap: () => _model.toggleShoppingApp(app),
-                  );
-                }).toList(),
-              ),
+              const SizedBox(height: 12),
+              ...shoppingApps.map((app) {
+                final isConnected = _model.isShoppingAppConnected(app['name'] as String);
+                return _buildShoppingAppTile(app, isConnected);
+              }),
             ],
           ),
         ),
@@ -1477,7 +1592,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 4. Kitchen & Pantry Sync Card
+        // 4. Quyền riêng tư trang Bếp (Account Privacy)
+        _cardWrapper(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('QUYỀN RIÊNG TƯ TRANG BẾP', style: AppTypography.labelBold(color: AppColors.textMuted)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _model.isFoodBlogPrivate
+                          ? const Color(0xFFFEF3C7)
+                          : const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _model.isFoodBlogPrivate ? 'Riêng tư' : 'Công khai',
+                      style: AppTypography.labelBold(
+                        color: _model.isFoodBlogPrivate
+                            ? const Color(0xFFB45309)
+                            : const Color(0xFF059669),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildPrivacyOption(
+                isPrivate: false,
+                title: 'Tài khoản công khai (Khuyên dùng)',
+                subtitle: 'Mọi gymer trong cộng đồng có thể theo dõi bếp, xem mâm cơm và học hỏi công thức meal prep của bạn.',
+                icon: Icons.public_rounded,
+                iconColor: const Color(0xFF2563EB),
+                isSelected: !_model.isFoodBlogPrivate,
+                onTap: () => _model.setFoodBlogPrivate(false),
+              ),
+              const SizedBox(height: 10),
+              _buildPrivacyOption(
+                isPrivate: true,
+                title: 'Tài khoản riêng tư',
+                subtitle: 'Chỉ những người theo dõi được bạn phê duyệt mới có thể xem mâm cơm, công thức và nhật ký bếp của bạn.',
+                icon: Icons.lock_outline_rounded,
+                iconColor: const Color(0xFFDC2626),
+                isSelected: _model.isFoodBlogPrivate,
+                onTap: () => _model.setFoodBlogPrivate(true),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 5. Kitchen & Pantry Sync Card
         _cardWrapper(
           child: SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
@@ -1625,6 +1793,337 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
+
+  Widget _buildShoppingAppTile(Map<String, dynamic> app, bool isConnected) {
+    final appName = app['name'] as String;
+    final appDesc = app['desc'] as String;
+    final appColor = app['color'] as Color;
+    final appIcon = app['icon'] as IconData;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isConnected
+            ? const Color(0xFFF0FDF4)
+            : AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isConnected ? const Color(0xFF86EFAC) : AppColors.outline,
+          width: isConnected ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: appColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(appIcon, color: appColor, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appName,
+                  style: AppTypography.titleSmallBold(color: AppColors.onSurface),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isConnected
+                      ? '✓ Đã kết nối • Tự động tìm nguyên liệu thiếu'
+                      : appDesc,
+                  style: AppTypography.bodySmall(
+                    color: isConnected
+                        ? const Color(0xFF16A34A)
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (isConnected)
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFF16A34A)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                _model.disconnectShoppingApp(appName);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã hủy liên kết với $appName.'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A)),
+                  SizedBox(width: 4),
+                  Text('Đã kết nối', style: TextStyle(color: Color(0xFF16A34A), fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            )
+          else
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              onPressed: () => _showConnectShoppingAppSheet(context, app),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.link_rounded, size: 16),
+                  SizedBox(width: 4),
+                  Text('Kết nối', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showConnectShoppingAppSheet(BuildContext context, Map<String, dynamic> app) {
+    final appName = app['name'] as String;
+    final appColor = app['color'] as Color;
+    final appIcon = app['icon'] as IconData;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: appColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(appIcon, color: appColor, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kết nối với $appName',
+                            style: AppTypography.titleMedium(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Đồng bộ thực đơn & giỏ hàng đi chợ',
+                            style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildConnectFeatureRow(
+                        Icons.receipt_long_rounded,
+                        'Trích xuất tự động nguyên liệu thiếu từ kế hoạch Meal Prep tuần.',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildConnectFeatureRow(
+                        Icons.search_rounded,
+                        'Tự động điền tên thực phẩm vào ô tìm kiếm của ứng dụng khi cần mua sắm.',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildConnectFeatureRow(
+                        Icons.shield_outlined,
+                        'EatGym cam kết bảo mật thông tin và chỉ kích hoạt khi bạn bấm mua hàng.',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      _model.connectShoppingApp(appName);
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text('Đã liên kết thành công với $appName!')),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF16A34A),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: const Text('Xác nhận kết nối', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('Để sau', style: AppTypography.bodyDefault(color: AppColors.textMuted)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConnectFeatureRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTypography.bodySmall(color: const Color(0xFF334155)).copyWith(height: 1.35),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrivacyOption({
+    required bool isPrivate,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.outline,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTypography.titleSmallBold(color: AppColors.onSurface)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant).copyWith(height: 1.35)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? AppColors.primary : AppColors.textMuted,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openIngredientSearchSheet(BuildContext context, {required bool forAllergy}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return _IngredientSearchSheet(
+          model: _model,
+          forAllergy: forAllergy,
+        );
+      },
+    );
+  }
 }
 
 class _Guide {
@@ -1668,6 +2167,407 @@ class _GuidePage extends StatelessWidget {
           style: AppTypography.bodyLarge(color: AppColors.onSurfaceVariant).copyWith(height: 1.5),
         ),
       ],
+    );
+  }
+}
+
+String _removeDiacritics(String str) {
+  const withDia = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
+  const withoutDia = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyydAAAAAAAAAAAAAAAAAEEEEEEEEEEEIIIIIOOOOOOOOOOOOOOOOOUUUUUUUUUUUYYYYYD';
+  var result = str;
+  for (int i = 0; i < withDia.length; i++) {
+    result = result.replaceAll(withDia[i], withoutDia[i]);
+  }
+  return result.toLowerCase();
+}
+
+const _defaultIngredientDatabase = [
+  {'name': 'Ức gà phi lê', 'category': 'Thịt & Gia cầm', 'icon': '🍗', 'kcal': 165, 'p': 31, 'c': 0, 'f': 3.6},
+  {'name': 'Đùi gà bỏ da', 'category': 'Thịt & Gia cầm', 'icon': '🍗', 'kcal': 175, 'p': 25, 'c': 0, 'f': 8.0},
+  {'name': 'Thịt bò thăn nạc', 'category': 'Thịt & Gia súc', 'icon': '🥩', 'kcal': 250, 'p': 26, 'c': 0, 'f': 15.0},
+  {'name': 'Thịt nạc thăn heo', 'category': 'Thịt & Gia súc', 'icon': '🥩', 'kcal': 143, 'p': 26, 'c': 0, 'f': 3.5},
+  {'name': 'Thịt băm nạc heo', 'category': 'Thịt & Gia súc', 'icon': '🥩', 'kcal': 160, 'p': 24, 'c': 0, 'f': 7.0},
+  {'name': 'Cá hồi Na Uy', 'category': 'Cá & Thủy hải sản', 'icon': '🐟', 'kcal': 208, 'p': 20, 'c': 0, 'f': 13.0},
+  {'name': 'Cá ngừ đại dương', 'category': 'Cá & Thủy hải sản', 'icon': '🐟', 'kcal': 130, 'p': 28, 'c': 0, 'f': 1.0},
+  {'name': 'Cá thu tươi', 'category': 'Cá & Thủy hải sản', 'icon': '🐟', 'kcal': 205, 'p': 19, 'c': 0, 'f': 14.0},
+  {'name': 'Cá basa / Cá tra', 'category': 'Cá & Thủy hải sản', 'icon': '🐟', 'kcal': 120, 'p': 18, 'c': 0, 'f': 5.0},
+  {'name': 'Cá rô phi', 'category': 'Cá & Thủy hải sản', 'icon': '🐟', 'kcal': 128, 'p': 26, 'c': 0, 'f': 2.7},
+  {'name': 'Tôm sú / Tôm thẻ', 'category': 'Cá & Thủy hải sản', 'icon': '🍤', 'kcal': 99, 'p': 24, 'c': 0.2, 'f': 0.3},
+  {'name': 'Mực ống tươi', 'category': 'Cá & Thủy hải sản', 'icon': '🦑', 'kcal': 92, 'p': 16, 'c': 3.1, 'f': 1.4},
+  {'name': 'Bạch tuộc', 'category': 'Cá & Thủy hải sản', 'icon': '🐙', 'kcal': 82, 'p': 15, 'c': 2.2, 'f': 1.0},
+  {'name': 'Nghêu / Sò huyết', 'category': 'Cá & Thủy hải sản', 'icon': '🦪', 'kcal': 74, 'p': 13, 'c': 2.6, 'f': 1.0},
+  {'name': 'Trứng gà ta', 'category': 'Trứng & Sữa', 'icon': '🥚', 'kcal': 143, 'p': 13, 'c': 0.7, 'f': 9.5},
+  {'name': 'Lòng trắng trứng gà', 'category': 'Trứng & Sữa', 'icon': '🥚', 'kcal': 52, 'p': 11, 'c': 0.7, 'f': 0.2},
+  {'name': 'Sữa chua Hy Lạp', 'category': 'Trứng & Sữa', 'icon': '🥛', 'kcal': 97, 'p': 10, 'c': 3.6, 'f': 5.0},
+  {'name': 'Sữa chua không đường', 'category': 'Trứng & Sữa', 'icon': '🥛', 'kcal': 61, 'p': 3.5, 'c': 4.7, 'f': 3.3},
+  {'name': 'Phô mai Cottage', 'category': 'Trứng & Sữa', 'icon': '🧀', 'kcal': 98, 'p': 11, 'c': 3.4, 'f': 4.3},
+  {'name': 'Sữa tươi tách béo', 'category': 'Trứng & Sữa', 'icon': '🥛', 'kcal': 42, 'p': 3.4, 'c': 5.0, 'f': 1.0},
+  {'name': 'Đậu hũ / Tofu', 'category': 'Đạm thực vật', 'icon': '🧈', 'kcal': 76, 'p': 8.0, 'c': 1.9, 'f': 4.8},
+  {'name': 'Tempeh đậu nành', 'category': 'Đạm thực vật', 'icon': '🌱', 'kcal': 193, 'p': 20, 'c': 7.6, 'f': 11.0},
+  {'name': 'Seitan (Mì căn)', 'category': 'Đạm thực vật', 'icon': '🌱', 'kcal': 370, 'p': 75, 'c': 14, 'f': 1.9},
+  {'name': 'Đậu gà (Chickpeas)', 'category': 'Đậu & Hạt', 'icon': '🫘', 'kcal': 164, 'p': 8.9, 'c': 27, 'f': 2.6},
+  {'name': 'Đậu lăng đỏ', 'category': 'Đậu & Hạt', 'icon': '🫘', 'kcal': 116, 'p': 9.0, 'c': 20, 'f': 0.4},
+  {'name': 'Đậu đen', 'category': 'Đậu & Hạt', 'icon': '🫘', 'kcal': 132, 'p': 8.9, 'c': 24, 'f': 0.5},
+  {'name': 'Đậu phộng / Lạc', 'category': 'Đậu & Hạt', 'icon': '🥜', 'kcal': 567, 'p': 26, 'c': 16, 'f': 49},
+  {'name': 'Hạnh nhân', 'category': 'Đậu & Hạt', 'icon': '🌰', 'kcal': 579, 'p': 21, 'c': 22, 'f': 50},
+  {'name': 'Hạt óc chó', 'category': 'Đậu & Hạt', 'icon': '🌰', 'kcal': 654, 'p': 15, 'c': 14, 'f': 65},
+  {'name': 'Hạt chia', 'category': 'Đậu & Hạt', 'icon': '🌱', 'kcal': 486, 'p': 17, 'c': 42, 'f': 31},
+  {'name': 'Mè / Vừng đen', 'category': 'Đậu & Hạt', 'icon': '🌱', 'kcal': 573, 'p': 18, 'c': 23, 'f': 50},
+  {'name': 'Sữa hạt hạnh nhân', 'category': 'Sữa thực vật', 'icon': '🥛', 'kcal': 30, 'p': 1.0, 'c': 1.5, 'f': 2.5},
+  {'name': 'Sữa đậu nành không đường', 'category': 'Sữa thực vật', 'icon': '🥛', 'kcal': 33, 'p': 3.3, 'c': 1.8, 'f': 1.6},
+  {'name': 'Nấm đùi gà', 'category': 'Nấm', 'icon': '🍄', 'kcal': 35, 'p': 3.3, 'c': 6.0, 'f': 0.5},
+  {'name': 'Nấm hương / Đông cô', 'category': 'Nấm', 'icon': '🍄', 'kcal': 34, 'p': 2.2, 'c': 6.8, 'f': 0.5},
+  {'name': 'Nấm kim châm', 'category': 'Nấm', 'icon': '🍄', 'kcal': 37, 'p': 2.7, 'c': 7.8, 'f': 0.3},
+  {'name': 'Yến mạch cán dẹt', 'category': 'Tinh bột & Ngũ cốc', 'icon': '🥣', 'kcal': 389, 'p': 16.9, 'c': 66, 'f': 6.9},
+  {'name': 'Gạo lứt đỏ', 'category': 'Tinh bột & Ngũ cốc', 'icon': '🍚', 'kcal': 111, 'p': 2.6, 'c': 23, 'f': 0.9},
+  {'name': 'Khoai lang mật', 'category': 'Tinh bột & Củ', 'icon': '🍠', 'kcal': 86, 'p': 1.6, 'c': 20, 'f': 0.1},
+  {'name': 'Khoai tây', 'category': 'Tinh bột & Củ', 'icon': '🥔', 'kcal': 77, 'p': 2.0, 'c': 17, 'f': 0.1},
+  {'name': 'Bắp ngô ngọt', 'category': 'Tinh bột & Ngũ cốc', 'icon': '🌽', 'kcal': 86, 'p': 3.2, 'c': 19, 'f': 1.2},
+  {'name': 'Bánh mì đen nguyên cám', 'category': 'Tinh bột & Ngũ cốc', 'icon': '🍞', 'kcal': 247, 'p': 13, 'c': 41, 'f': 3.4},
+  {'name': 'Bún gạo lứt', 'category': 'Tinh bột & Ngũ cốc', 'icon': '🍜', 'kcal': 130, 'p': 3.0, 'c': 28, 'f': 0.5},
+  {'name': 'Bông cải xanh / Súp lơ', 'category': 'Rau xanh', 'icon': '🥦', 'kcal': 34, 'p': 2.8, 'c': 7.0, 'f': 0.4},
+  {'name': 'Cải bó xôi (Rau bina)', 'category': 'Rau xanh', 'icon': '🥬', 'kcal': 23, 'p': 2.9, 'c': 3.6, 'f': 0.4},
+  {'name': 'Măng tây', 'category': 'Rau xanh', 'icon': '🌱', 'kcal': 20, 'p': 2.2, 'c': 3.9, 'f': 0.1},
+  {'name': 'Ớt chuông đỏ', 'category': 'Rau củ', 'icon': '🫑', 'kcal': 31, 'p': 1.0, 'c': 6.0, 'f': 0.3},
+  {'name': 'Cà rốt', 'category': 'Rau củ', 'icon': '🥕', 'kcal': 41, 'p': 0.9, 'c': 10, 'f': 0.2},
+  {'name': 'Cà chua', 'category': 'Rau củ', 'icon': '🍅', 'kcal': 18, 'p': 0.9, 'c': 3.9, 'f': 0.2},
+  {'name': 'Bơ sáp 034', 'category': 'Trái cây', 'icon': '🥑', 'kcal': 160, 'p': 2.0, 'c': 8.5, 'f': 14.7},
+  {'name': 'Chuối tiêu', 'category': 'Trái cây', 'icon': '🍌', 'kcal': 89, 'p': 1.1, 'c': 23, 'f': 0.3},
+  {'name': 'Táo Envy', 'category': 'Trái cây', 'icon': '🍎', 'kcal': 52, 'p': 0.3, 'c': 14, 'f': 0.2},
+  {'name': 'Việt quất tươi', 'category': 'Trái cây', 'icon': '🫐', 'kcal': 57, 'p': 0.7, 'c': 14, 'f': 0.3},
+  {'name': 'Dâu tây', 'category': 'Trái cây', 'icon': '🍓', 'kcal': 32, 'p': 0.7, 'c': 7.7, 'f': 0.3},
+  {'name': 'Gluten / Bột mì', 'category': 'Chất dị ứng', 'icon': '🌾', 'kcal': 360, 'p': 12, 'c': 72, 'f': 1.5},
+  {'name': 'Chất bảo quản / Bột ngọt', 'category': 'Gia vị & Phụ gia', 'icon': '🧂', 'kcal': 0, 'p': 0, 'c': 0, 'f': 0},
+];
+
+class _IngredientSearchSheet extends StatefulWidget {
+  final UserOnboardingModel model;
+  final bool forAllergy;
+
+  const _IngredientSearchSheet({
+    required this.model,
+    required this.forAllergy,
+  });
+
+  @override
+  State<_IngredientSearchSheet> createState() => _IngredientSearchSheetState();
+}
+
+class _IngredientSearchSheetState extends State<_IngredientSearchSheet> {
+  late final TextEditingController _searchCtrl;
+  String _query = '';
+  late final List<Map<String, dynamic>> _ingredients;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+    _ingredients = List.from(_defaultIngredientDatabase);
+    _fetchDbIngredients();
+  }
+
+  Future<void> _fetchDbIngredients() async {
+    try {
+      final remote = await ApiService.getIngredients();
+      if (remote.isNotEmpty && mounted) {
+        final existingNames = _ingredients.map((i) => (i['name'] as String).toLowerCase()).toSet();
+        final newItems = <Map<String, dynamic>>[];
+        for (final item in remote) {
+          final name = (item['name'] ?? '').toString().trim();
+          if (name.isNotEmpty && !existingNames.contains(name.toLowerCase())) {
+            newItems.add({
+              'name': name,
+              'category': item['category'] ?? 'Thực phẩm',
+              'icon': item['icon'] ?? '🥗',
+              'kcal': (item['kcalPer100g'] as num?)?.toInt() ?? 0,
+              'p': (item['protein'] as num?)?.toInt() ?? 0,
+              'c': (item['carbs'] as num?)?.toInt() ?? 0,
+              'f': (item['fat'] as num?)?.toInt() ?? 0,
+            });
+            existingNames.add(name.toLowerCase());
+          }
+        }
+        if (newItems.isNotEmpty && mounted) {
+          setState(() {
+            _ingredients.addAll(newItems);
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanQuery = _removeDiacritics(_query.trim());
+    final filtered = _ingredients.where((item) {
+      if (cleanQuery.isEmpty) return true;
+      final nameClean = _removeDiacritics(item['name'] as String);
+      final catClean = _removeDiacritics(item['category'] as String);
+      return nameClean.contains(cleanQuery) || catClean.contains(cleanQuery);
+    }).toList();
+
+    final hasExactMatch = _ingredients.any(
+      (item) => _removeDiacritics(item['name'] as String) == cleanQuery,
+    );
+
+    return AnimatedBuilder(
+      animation: widget.model,
+      builder: (context, _) {
+        final selectedCount = widget.forAllergy
+            ? widget.model.effectiveAllergies.length
+            : widget.model.selectedFavoriteFoods.length;
+
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        widget.forAllergy
+                            ? Icons.no_food_outlined
+                            : Icons.favorite_border_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.forAllergy
+                                ? 'Tìm kiếm thực phẩm dị ứng'
+                                : 'Tìm kiếm món ăn yêu thích',
+                            style: AppTypography.titleSmallBold(color: AppColors.onSurface),
+                          ),
+                          Text(
+                            widget.forAllergy
+                                ? 'Chọn thực phẩm cần loại trừ tuyệt đối khỏi thực đơn'
+                                : 'Chọn món khoái khẩu để ưu tiên phân bổ vào bữa ăn',
+                            style: AppTypography.bodySmall(color: AppColors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (val) => setState(() => _query = val),
+                  decoration: InputDecoration(
+                    hintText: widget.forAllergy
+                        ? 'Nhập tên dị ứng (VD: tôm, trứng, gluten...)'
+                        : 'Nhập tên món ăn (VD: cá hồi, yến mạch, thịt bò...)',
+                    hintStyle: AppTypography.bodySmall(color: AppColors.textMuted),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.outline),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.outline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              if (_query.trim().isNotEmpty && !hasExactMatch) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: InkWell(
+                    onTap: () {
+                      final customName = _query.trim();
+                      if (widget.forAllergy) {
+                        widget.model.toggleAllergy(customName);
+                      } else {
+                        widget.model.toggleFavoriteFood(customName);
+                      }
+                      _searchCtrl.clear();
+                      setState(() => _query = '');
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Thêm "$_query" vào danh sách ${widget.forAllergy ? 'dị ứng' : 'yêu thích'}',
+                              style: AppTypography.labelBold(color: AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const Divider(height: 16, color: AppColors.outline),
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.search_off_rounded, size: 48, color: AppColors.textMuted),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Không tìm thấy trong kho dữ liệu mẫu.',
+                              style: AppTypography.bodySmall(color: AppColors.textMuted),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final item = filtered[index];
+                          final name = item['name'] as String;
+                          final category = item['category'] as String;
+                          final icon = item['icon'] as String;
+                          final isAnimal = UserOnboardingModel.isAnimalFood(name);
+                          final isVeganRestricted = !widget.forAllergy && widget.model.isVegan && isAnimal;
+
+                          final isSelected = widget.forAllergy
+                              ? widget.model.selectedAllergies.contains(name)
+                              : widget.model.selectedFavoriteFoods.any((f) => f.contains(name));
+
+                          return ListTile(
+                            leading: Container(
+                              width: 38,
+                              height: 38,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.backgroundLight,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(icon, style: const TextStyle(fontSize: 20)),
+                            ),
+                            title: Text(
+                              name,
+                              style: AppTypography.titleSmallBold(
+                                color: isVeganRestricted
+                                    ? AppColors.textMuted
+                                    : AppColors.onSurface,
+                              ),
+                            ),
+                            subtitle: Text(
+                              isVeganRestricted
+                                  ? '🚫 Không khả dụng (Đang bật chế độ thuần chay)'
+                                  : '$category • ${item['kcal']} kcal (P: ${item['p']}g, C: ${item['c']}g, F: ${item['f']}g)',
+                              style: AppTypography.bodySmall(
+                                color: isVeganRestricted
+                                    ? const Color(0xFFDC2626)
+                                    : AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: isVeganRestricted
+                                ? null
+                                : Icon(
+                                    isSelected
+                                        ? Icons.check_circle_rounded
+                                        : Icons.add_circle_outline_rounded,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textMuted,
+                                    size: 24,
+                                  ),
+                            onTap: isVeganRestricted
+                                ? null
+                                : () {
+                                    if (widget.forAllergy) {
+                                      widget.model.toggleAllergy(name);
+                                    } else {
+                                      widget.model.toggleFavoriteFood(name);
+                                    }
+                                  },
+                          );
+                        },
+                      ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: AppColors.outline)),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Hoàn tất ($selectedCount món đã chọn)',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

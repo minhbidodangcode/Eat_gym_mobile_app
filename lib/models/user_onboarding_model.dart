@@ -171,6 +171,7 @@ class UserOnboardingModel extends ChangeNotifier {
     'MealPrep nhanh'
   };
   bool _kitchenSyncEnabled = true;
+  bool _isFoodBlogPrivate = false;
   String _avatarUrl = 'gymer_1';
 
   UserOnboardingModel() {
@@ -228,6 +229,7 @@ class UserOnboardingModel extends ChangeNotifier {
   String get creatorBio => _creatorBio;
   Set<String> get selectedSpecialties => Set.unmodifiable(_selectedSpecialties);
   bool get kitchenSyncEnabled => _kitchenSyncEnabled;
+  bool get isFoodBlogPrivate => _isFoodBlogPrivate;
   String get avatarUrl => _avatarUrl;
 
   /// Tính BMR (Tỷ lệ trao đổi chất cơ bản) theo công thức Mifflin-St Jeor
@@ -427,6 +429,20 @@ class UserOnboardingModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool isShoppingAppConnected(String app) => _selectedShoppingApps.contains(app);
+
+  void connectShoppingApp(String app) {
+    if (_selectedShoppingApps.add(app)) {
+      notifyListeners();
+    }
+  }
+
+  void disconnectShoppingApp(String app) {
+    if (_selectedShoppingApps.remove(app)) {
+      notifyListeners();
+    }
+  }
+
   void toggleShoppingApp(String app) {
     if (_selectedShoppingApps.contains(app)) {
       _selectedShoppingApps.remove(app);
@@ -472,6 +488,11 @@ class UserOnboardingModel extends ChangeNotifier {
 
   void setKitchenSyncEnabled(bool val) {
     _kitchenSyncEnabled = val;
+    notifyListeners();
+  }
+
+  void setFoodBlogPrivate(bool val) {
+    _isFoodBlogPrivate = val;
     notifyListeners();
   }
 
