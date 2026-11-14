@@ -12,6 +12,20 @@ class MockFoodRecognitionService implements FoodRecognitionService {
   Future<List<FoodRecognitionResult>> recognizeIngredients(File image, {double confidence = 0.25}) async {
     return results;
   }
+
+  @override
+  Future<Map<String, dynamic>> recognizeCookedDish(File image) async {
+    return {
+      'dishName': 'Test Dish',
+      'estimatedGrams': 400,
+      'calories': 500,
+      'protein': 40.0,
+      'carbs': 50.0,
+      'fat': 10.0,
+      'ingredients': ['Test Ingredient'],
+      'suggestion': 'Test Suggestion',
+    };
+  }
 }
 
 class MockRecipeService implements RecipeService {

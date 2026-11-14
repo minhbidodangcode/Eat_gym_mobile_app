@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../models/recipe.dart';
 import '../services/ai/ai_service_factory.dart';
+import '../services/ai/food_recognition_service.dart';
 import '../services/ai/ingredient_normalizer.dart';
 import '../services/ai/meal_recommendation_service.dart';
 import '../services/ai/providers/gemini_food_recognition_service.dart';
@@ -650,7 +651,7 @@ class _ScanScreenState extends State<ScanScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Quét Nguyên Liệu AI',
+          _isDishMode ? 'Quét Đĩa Món Ăn AI' : 'Quét Nguyên Liệu AI',
           style: GoogleFonts.inter(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -669,68 +670,183 @@ class _ScanScreenState extends State<ScanScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            // Mode Switcher (Segmented Tab: 🥦 Quét nguyên liệu vs 🍽️ Quét đĩa món ăn)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_isDishMode) {
+                            setState(() {
+                              _isDishMode = false;
+                              _detectedDishName = null;
+                              _detectedGrams = null;
+                              _dishSuggestion = null;
+                            });
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: !_isDishMode
+                                ? (isDark ? const Color(0xFF0F172A) : Colors.white)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: !_isDishMode
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🥦', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Quét nguyên liệu',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: !_isDishMode ? FontWeight.bold : FontWeight.w600,
+                                  color: !_isDishMode
+                                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (!_isDishMode) {
+                            setState(() {
+                              _isDishMode = true;
+                              _recommendedRecipes = [];
+                            });
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _isDishMode
+                                ? (isDark ? const Color(0xFF0F172A) : Colors.white)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _isDishMode
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🍽️', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Quét đĩa món ăn',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: _isDishMode ? FontWeight.bold : FontWeight.w600,
+                                  color: _isDishMode
+                                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // AI Status Pill Bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () => setState(() => _isFlashOn = !_isFlashOn),
-                  child: Icon(
-                    _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                    color: _isFlashOn ? const Color(0xFFF59E0B) : const Color(0xFF6B7280),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  onTap: _showUpdateApiKeyDialog,
-                  onLongPress: _showUpdateApiKeyDialog,
-                  behavior: HitTestBehavior.opaque,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => setState(() => _isFlashOn = !_isFlashOn),
+                      child: Icon(
+                        _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                        color: _isFlashOn ? const Color(0xFFF59E0B) : const Color(0xFF6B7280),
+                        size: 20,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'AI VISION 4.2 • ${_isLoading ? "PROCESSING" : "READY"}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF111827), letterSpacing: 0.5),
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: _showUpdateApiKeyDialog,
+                      onLongPress: _showUpdateApiKeyDialog,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI VISION 4.2 • ${_isLoading ? "PROCESSING" : "READY"}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF111827), letterSpacing: 0.5),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.videocam_outlined, color: Color(0xFF6B7280), size: 18),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.close, color: Color(0xFF6B7280), size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                 ),
-                const Spacer(),
-                const Icon(Icons.videocam_outlined, color: Color(0xFF6B7280), size: 18),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.close, color: Color(0xFF6B7280), size: 18),
-                ),
-                const SizedBox(width: 12),
-              ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 10),
+            const SizedBox(height: 6),
 
         // Khối Camera
         Expanded(
@@ -844,9 +960,9 @@ class _ScanScreenState extends State<ScanScreen> {
 
         const SizedBox(height: 12),
 
-        // Khối kết quả
+        // Khối kết quả phân tích & cảnh báo
         Expanded(
-          flex: 9,
+          flex: 10,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
@@ -861,33 +977,102 @@ class _ScanScreenState extends State<ScanScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Text('Đã nhận diện', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
-                        const Spacer(),
-                        if (_recommendedRecipes.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-                            child: const Text('CHỈNH SỬA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    // Header kết quả
+                    if (_isDishMode) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _detectedDishName ?? 'Đĩa món ăn đã nấu',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                                if (_detectedGrams != null)
+                                  Text(
+                                    'Khẩu phần ước tính: ~$_detectedGrams g • Mục tiêu: $_userGoal',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.restaurant, size: 12, color: Color(0xFF2563EB)),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Đĩa đã nấu',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          const Text('Đã nhận diện', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
+                          const Spacer(),
+                          if (_recommendedRecipes.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
+                              child: const Text('CHỈNH SỬA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+
+                    // Danh sách thành phần / nguyên liệu
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: _detectedIngredients.isEmpty
-                          ? [const Text("Vui lòng quét để nhận diện", style: TextStyle(color: Colors.grey, fontSize: 13))]
+                          ? [
+                              Text(
+                                _isDishMode ? "Vui lòng chụp hoặc chọn ảnh đĩa thức ăn để phân tích" : "Vui lòng quét để nhận diện nguyên liệu",
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              )
+                            ]
                           : _detectedIngredients.map((ing) => Padding(
-                              padding: const EdgeInsets.only(right: 12.0),
-                              child: Text("• $ing", style: const TextStyle(fontWeight: FontWeight.w600)),
+                              padding: const EdgeInsets.only(right: 10.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                                ),
+                                child: Text(
+                                  ing,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF374151)),
+                                ),
+                              ),
                             )).toList(),
                       ),
                     ),
 
-
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    // 4 chỉ số Macro tròn
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -917,10 +1102,113 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+
+                    // THẺ KIỂM TRA & CẢNH BÁO VƯỢT NGƯỠNG BỮA ĂN (Dành riêng cho Chế độ Đĩa Món Ăn)
+                    if (_isDishMode && _totalKcal > 0) ...[
+                      const SizedBox(height: 14),
+                      if (_totalKcal > _userMealLimitKcal) ...[
+                        // 🔴 VƯỢT NGƯỠNG BỮA ĂN
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFDBA74)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C), size: 18),
+                                  const SizedBox(width: 6),
+                                  const Expanded(
+                                    child: Text(
+                                      'CẢNH BÁO VƯỢT NGƯỠNG BỮA ĂN',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFC2410C),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEA580C),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '+${_totalKcal - _userMealLimitKcal} kcal',
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Món ăn này chứa $_totalKcal kcal (vượt ${_totalKcal - _userMealLimitKcal} kcal so với hạn mức bữa ăn của bạn: $_userMealLimitKcal kcal). Lượng Chất béo: ${_totalFat.round()}g Fat.',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF7C2D12), height: 1.35),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '💡 Gợi ý: ${_dishSuggestion ?? "Hãy giảm 1/2 lượng sốt hoặc chia bớt khẩu phần tinh bột để không phá vỡ Macro ngày."}',
+                                style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: Color(0xFF9A3412)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // 🟢 ĐẠT CHUẨN MACROS BỮA ĂN
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'ĐẠT CHUẨN MACROS BỮA ĂN',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF15803D),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Bữa ăn đạt $_totalKcal kcal / ${_totalProtein.round()}g Protein — rất phù hợp cho mục tiêu $_userGoal của bạn (Hạn mức: $_userMealLimitKcal kcal)!',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF166534), height: 1.35),
+                              ),
+                              if (_dishSuggestion != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '💡 $_dishSuggestion',
+                                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF15803D), fontStyle: FontStyle.italic),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+
+                    const SizedBox(height: 18),
+                    // Nút hành động thích ứng theo chế độ quét
                     SizedBox(
                       width: double.infinity,
-                      height: 52,
+                      height: 50,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isDark ? primaryColor : const Color(0xFF0F172A),
@@ -928,9 +1216,12 @@ class _ScanScreenState extends State<ScanScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
-                        icon: const Icon(Icons.kitchen_rounded),
-                        onPressed: _addDetectedIngredientsToFridge,
-                        label: const Text('Thêm nguyên liệu vào tủ lạnh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        icon: Icon(_isDishMode ? Icons.bookmark_add_rounded : Icons.kitchen_rounded),
+                        onPressed: _isDishMode ? _logDishToNutritionDiary : _addDetectedIngredientsToFridge,
+                        label: Text(
+                          _isDishMode ? 'Ghi nhận vào Nhật ký ăn uống hôm nay' : 'Thêm nguyên liệu vào tủ lạnh',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                        ),
                       ),
                     ),
                   ],
