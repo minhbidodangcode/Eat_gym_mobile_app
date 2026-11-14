@@ -168,10 +168,11 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = SettingsService.instance.currentColor;
+    final onPrimaryColor = primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white;
     final cardColor = isDark ? const Color(0xFF151B18) : AppColors.surface;
     final borderColor = isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline;
     final textColor = isDark ? Colors.white : AppColors.onSurface;
-    final subTextColor = isDark ? const Color(0xFF94A3B8) : AppColors.textMuted;
+    final subTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
 
     final groupedPlans = _groupPlansByDay();
 
@@ -272,7 +273,11 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                       _tdee != null
                                           ? 'Mục tiêu: ${_tdee!.round()} kcal/ngày • Tự động tính Macros'
                                           : 'Tự động tính calo, rã đông & đi chợ',
-                                      style: TextStyle(color: subTextColor, fontSize: 12),
+                                      style: TextStyle(
+                                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -284,8 +289,9 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             'Lịch ăn của bạn được lên kế hoạch và tối ưu trực tiếp cùng Trợ lý Chatbot AI. Bạn không cần phải tính toán thủ công từng món!',
                             style: GoogleFonts.inter(
                               fontSize: 12.5,
-                              color: textColor.withValues(alpha: 0.85),
-                              height: 1.4,
+                              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -295,15 +301,20 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
-                                foregroundColor: Colors.black,
+                                foregroundColor: onPrimaryColor,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
                               onPressed: _openChatbot,
-                              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                              icon: Icon(Icons.chat_bubble_outline_rounded, size: 18, color: onPrimaryColor),
                               label: Text(
                                 'TRÒ CHUYỆN VỚI AI ĐỂ ĐỔI LỊCH ĂN',
-                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5, letterSpacing: 0.2),
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  letterSpacing: 0.2,
+                                  color: onPrimaryColor,
+                                ),
                               ),
                             ),
                           ),
@@ -376,13 +387,20 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
-                                foregroundColor: Colors.black,
+                                foregroundColor: onPrimaryColor,
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               onPressed: _openChatbot,
-                              icon: const Icon(Icons.auto_awesome, size: 18),
-                              label: const Text('Tạo Thực Đơn Cùng AI Ngay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              icon: Icon(Icons.auto_awesome, size: 18, color: onPrimaryColor),
+                              label: Text(
+                                'Tạo Thực Đơn Cùng AI Ngay',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: onPrimaryColor,
+                                ),
+                              ),
                             ),
                           ],
                         ),

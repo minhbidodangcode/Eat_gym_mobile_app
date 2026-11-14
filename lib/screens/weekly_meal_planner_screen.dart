@@ -307,6 +307,7 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = SettingsService.instance.currentColor;
+    final onPrimaryColor = primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF);
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     final borderColor = isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline;
@@ -398,18 +399,19 @@ class _WeeklyMealPlannerScreenState extends State<WeeklyMealPlannerScreen> {
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                foregroundColor: Colors.black,
+                foregroundColor: onPrimaryColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
               onPressed: _loading ? null : _applyWeeklyPlan,
-              icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
+              icon: Icon(Icons.check_circle_outline_rounded, size: 20, color: onPrimaryColor),
               label: Text(
                 'ÁP DỤNG THỰC ĐƠN TUẦN VÀO LỊCH ĂN',
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold,
                   fontSize: 13.5,
                   letterSpacing: 0.3,
+                  color: onPrimaryColor,
                 ),
               ),
             ),

@@ -9,7 +9,6 @@ import '../models/badges_and_report_model.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
 import 'recipe_search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -134,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       _customLink = prefs.getString('user_profile_link') ?? '';
       _customName = prefs.getString('user_full_name') ?? '';
       _customUsername = prefs.getString('user_custom_username') ?? '';
-      _customGoal = prefs.getString('user_custom_goal') ?? '';
+      _customGoal = prefs.getString('user_custom_goal') ?? prefs.getString('fitness_goal') ?? '';
 
       // 1. Lấy thông tin user profile
       final profile = await ApiService.getLocalProfile();
@@ -490,22 +489,23 @@ await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
     final currentLink = _customLink.isNotEmpty
         ? _customLink
         : (profile?['website']?.toString() ?? '');
-    final currentGoal = _customGoal.isNotEmpty
+    final currentGoalRaw = _customGoal.isNotEmpty
         ? _customGoal
-        : (profile?['fitnessGoal']?.toString() ?? 'Tăng cơ giảm mỡ');
+        : (profile?['fitnessGoal']?.toString() ?? 'cutting');
+    final currentGoal = _formatFitnessGoal(currentGoalRaw);
 
     final nameController = TextEditingController(text: currentFullName);
     final usernameController = TextEditingController(text: currentUsername);
     final bioController = TextEditingController(text: currentBio);
     final linkController = TextEditingController(text: currentLink);
-    String selectedGoal = currentGoal;
 
     final goals = [
+      'Giảm mỡ',
+      'Tăng cơ',
       'Tăng cơ giảm mỡ',
-      'Giảm cân giữ cơ',
-      'Tăng cân tăng cơ',
-      'Duy trì vóc dáng & Sức khỏe',
+      'Duy trì vóc dáng',
     ];
+    String selectedGoal = goals.contains(currentGoal) ? currentGoal : 'Giảm mỡ';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryAccent = SettingsService.instance.currentColor;
@@ -883,32 +883,7 @@ await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
     );
   }
 
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (dCtx) => AlertDialog(
-        title: const Text('Đăng xuất tài khoản?'),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi EatGym không?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Hủy')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () async {
-              await ApiService.logout();
-              if (context.mounted) {
-                Navigator.pop(dCtx);
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            child: const Text('Đăng xuất'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildPostImage(String? imagePath) {
     if (imagePath == null || imagePath.isEmpty) {
@@ -1002,13 +977,26 @@ await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
   String _formatFitnessGoal(String? raw) {
     if (raw == null || raw.isEmpty) return 'Giảm mỡ';
     final lower = raw.toLowerCase().trim();
-    if (lower == 'cutting' || lower == 'fat_loss' || lower.contains('giảm mỡ') || lower.contains('giam mo') || lower.contains('giảm cân')) {
+    if (lower == 'cutting' ||
+        lower == 'fat_loss' ||
+        lower == 'lose_weight' ||
+        lower == 'weight_loss' ||
+        lower.contains('giảm mỡ') ||
+        lower.contains('giam mo') ||
+        lower.contains('giảm cân') ||
+        lower.contains('giam can')) {
       return 'Giảm mỡ';
     }
-    if (lower == 'bulking' || lower == 'muscle_gain' || lower.contains('tăng cơ') || lower.contains('tang co')) {
+    if (lower == 'bulking' ||
+        lower == 'muscle_gain' ||
+        lower.contains('tăng cơ') ||
+        lower.contains('tang co') ||
+        lower.contains('tăng cân')) {
       return 'Tăng cơ';
     }
-    if (lower == 'maintenance' || lower.contains('duy trì') || lower.contains('duy tri')) {
+    if (lower == 'maintenance' ||
+        lower.contains('duy trì') ||
+        lower.contains('duy tri')) {
       return 'Duy trì vóc dáng';
     }
     return raw;

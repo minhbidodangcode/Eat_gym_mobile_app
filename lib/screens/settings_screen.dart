@@ -2074,6 +2074,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    final onPrimaryColor = primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white;
     bool obscureOld = true;
     bool obscureNew = true;
     bool obscureConfirm = true;
@@ -2206,7 +2207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.black,
+                        foregroundColor: onPrimaryColor,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                       ),
                       onPressed: isSubmitting
@@ -2260,14 +2261,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               }
                             },
                       child: isSubmitting
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 22,
                               height: 22,
-                              child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5),
+                              child: CircularProgressIndicator(color: onPrimaryColor, strokeWidth: 2.5),
                             )
                           : Text(
                               'Cập nhật mật khẩu',
-                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: onPrimaryColor,
+                              ),
                             ),
                     ),
                   ),
