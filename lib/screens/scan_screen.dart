@@ -12,6 +12,10 @@ import '../services/ai/ingredient_normalizer.dart';
 import '../services/ai/meal_recommendation_service.dart';
 import '../services/ai/providers/gemini_food_recognition_service.dart';
 import '../services/api_service.dart';
+import '../services/meal_plan_service.dart';
+import '../theme/app_theme.dart';
+import 'cooking_timer_screen.dart';
+import 'meal_prep_screen.dart';
 
 // Nội dung chính của màn hình Quét
 class ScanScreen extends StatefulWidget {
@@ -304,9 +308,14 @@ class _ScanScreenState extends State<ScanScreen> {
             itemCount: _recommendedRecipes.length,
             itemBuilder: (context, index) {
               final recipe = _recommendedRecipes[index];
+              final duration = recipe.durationMinutes ?? 10;
+              final infoText = recipe.ingredients.isNotEmpty
+                  ? "$duration phút • ${recipe.ingredients.length} nguyên liệu"
+                  : "$duration phút";
+
               return _buildRecipeItem(
                 title: recipe.name,
-                info: "${recipe.durationMinutes ?? '--'} phút • ${recipe.ingredients.length} nguyên liệu",
+                info: infoText,
                 tag: index == 0 ? "Phù hợp nhất" : "Gợi ý",
                 onTap: () => _showRecipeDetailDialog(recipe),
               );
@@ -324,6 +333,16 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   void _showRecipeDetailDialog(Recipe recipe) {
+    // Thu thập danh sách nguyên liệu đầy đủ
+    final List<String> displayIngredients = List<String>.from(recipe.ingredients);
+    if (displayIngredients.isEmpty) {
+      for (final det in _detectedIngredients) {
+        if (!displayIngredients.contains(det)) {
+          displayIngredients.add('$det (khẩu phần gymer)');
+        }
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -338,14 +357,14 @@ class _ScanScreenState extends State<ScanScreen> {
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF111827),
-                fontSize: 16,
-                letterSpacing: 1.2,
+                fontSize: 15,
+                letterSpacing: 1.1,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              "${recipe.durationMinutes ?? '--'} PHÚT",
+              "${recipe.durationMinutes ?? 10} PHÚT",
               style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -373,7 +392,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF111827)),
                 ),
                 const SizedBox(height: 8),
-                ...recipe.ingredients.map((ing) => Padding(
+                ...displayIngredients.map((ing) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text("• $ing", style: const TextStyle(fontSize: 13, color: Color(0xFF374151))),
                     )),
@@ -392,9 +411,49 @@ class _ScanScreenState extends State<ScanScreen> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ĐÓNG', style: TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('ĐÓNG', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF111827),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Navigator.pop(context); // Đóng popup chi tiết
+                  Navigator.pop(context); // Đóng popup danh sách công thức
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CookingTimerScreen(
+                        recipe: {
+                          'title': recipe.name,
+                          'name': recipe.name,
+                          'time': recipe.durationMinutes ?? 10,
+                          'cooking_time_min': recipe.durationMinutes ?? 10,
+                          'instructions': recipe.steps.join('\n'),
+                          'steps': recipe.steps,
+                          'ingredients': displayIngredients,
+                          'kcal': _totalKcal > 0 ? _totalKcal : 380,
+                          'protein': _totalProtein > 0 ? _totalProtein.round() : 35,
+                          'carbs': _totalCarbs > 0 ? _totalCarbs.round() : 35,
+                          'fat': _totalFat > 0 ? _totalFat.round() : 10,
+                        },
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.restaurant_menu_rounded, size: 16),
+                label: const Text('CHỌN CÔNG THỨC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ],
           ),
         ],
       ),
@@ -556,6 +615,28 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  static String _getWeekdayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Thứ 2';
+      case 2: return 'Thứ 3';
+      case 3: return 'Thứ 4';
+      case 4: return 'Thứ 5';
+      case 5: return 'Thứ 6';
+      case 6: return 'Thứ 7';
+      case 7: return 'Chủ nhật';
+      default: return 'Thứ $weekday';
+    }
+  }
+
+  String _mealLabel(String value) {
+    final v = value.toLowerCase();
+    if (v.contains('sáng') || v == 'breakfast') return 'Bữa sáng';
+    if (v.contains('trưa') || v == 'lunch') return 'Bữa trưa';
+    if (v.contains('tối') || v == 'dinner') return 'Bữa tối';
+    if (v.contains('phụ') || v == 'snack') return 'Bữa phụ';
+    return value;
+  }
+
   Future<void> _logDishToNutritionDiary() async {
     if (_detectedDishName == null && _totalKcal == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -567,68 +648,702 @@ class _ScanScreenState extends State<ScanScreen> {
       return;
     }
 
-    final hour = DateTime.now().hour;
-    String mealType = 'lunch';
-    String mealName = 'Bữa trưa';
-    if (hour >= 5 && hour < 11) {
-      mealType = 'breakfast';
-      mealName = 'Bữa sáng';
-    } else if (hour >= 11 && hour < 15) {
-      mealType = 'lunch';
-      mealName = 'Bữa trưa';
-    } else if (hour >= 15 && hour < 18) {
-      mealType = 'snack';
-      mealName = 'Bữa phụ';
-    } else {
-      mealType = 'dinner';
-      mealName = 'Bữa tối';
+    final allPlans = await MealPlanService.loadPlans();
+    final now = DateTime.now();
+    final weekdayStr = _getWeekdayName(now.weekday);
+    final dateFormatted = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}';
+    final todayLabel = '$weekdayStr ($dateFormatted)';
+
+    // Tìm các món ăn của ngày hôm nay trong lịch đã lên
+    List<MealPlan> todayMeals = allPlans.where((p) =>
+      (p.prepDate.year == now.year && p.prepDate.month == now.month && p.prepDate.day == now.day) ||
+      p.dateStr == dateFormatted
+    ).toList();
+
+    // Nếu không tìm thấy theo ngày cụ thể nhưng có lịch, tìm theo thứ hoặc lấy ngày đầu tiên
+    if (todayMeals.isEmpty && allPlans.isNotEmpty) {
+      final byDay = allPlans.where((p) => p.dayName?.toLowerCase() == weekdayStr.toLowerCase()).toList();
+      if (byDay.isNotEmpty) {
+        todayMeals = byDay;
+      } else {
+        final firstDate = allPlans.first.prepDate;
+        todayMeals = allPlans.where((p) =>
+          p.prepDate.year == firstDate.year &&
+          p.prepDate.month == firstDate.month &&
+          p.prepDate.day == firstDate.day
+        ).toList();
+      }
     }
 
+    MealPlan? getExistingMeal(String mealKey) {
+      for (final p in todayMeals) {
+        final t = p.mealType.toLowerCase();
+        if (mealKey == 'breakfast' && (t.contains('sáng') || t == 'breakfast')) return p;
+        if (mealKey == 'lunch' && (t.contains('trưa') || t == 'lunch')) return p;
+        if (mealKey == 'dinner' && (t.contains('tối') || t == 'dinner')) return p;
+        if (mealKey == 'snack' && (t.contains('phụ') || t == 'snack')) return p;
+      }
+      return null;
+    }
+
+    if (!mounted) return;
+
+    // Hiển thị BottomSheet chọn bữa ăn để thay thế
+    final selectedMealType = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return _buildMealSelectionSheet(
+          context: ctx,
+          todayLabel: todayLabel,
+          dishName: _detectedDishName ?? 'Đĩa thức ăn quét AI',
+          dishKcal: _totalKcal,
+          dishProtein: _totalProtein.round(),
+          dishCarbs: _totalCarbs.round(),
+          dishFat: _totalFat.round(),
+          breakfastMeal: getExistingMeal('breakfast'),
+          lunchMeal: getExistingMeal('lunch'),
+          dinnerMeal: getExistingMeal('dinner'),
+          snackMeal: getExistingMeal('snack'),
+        );
+      },
+    );
+
+    if (selectedMealType == null) return; // Người dùng đóng bảng chọn
+
+    // Tiến hành thay thế món ăn và tự động cân đối lại calo các bữa sau
+    await _applyMealReplacement(
+      selectedMealType: selectedMealType,
+      allPlans: allPlans,
+      todayMeals: todayMeals,
+      now: now,
+      weekdayStr: weekdayStr,
+      dateFormatted: dateFormatted,
+    );
+  }
+
+  Widget _buildMealSelectionSheet({
+    required BuildContext context,
+    required String todayLabel,
+    required String dishName,
+    required int dishKcal,
+    required int dishProtein,
+    required int dishCarbs,
+    required int dishFat,
+    required MealPlan? breakfastMeal,
+    required MealPlan? lunchMeal,
+    required MealPlan? dinnerMeal,
+    required MealPlan? snackMeal,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    final mealOptions = [
+      {
+        'type': 'breakfast',
+        'name': 'Bữa sáng',
+        'icon': Icons.wb_sunny_rounded,
+        'color': const Color(0xFFFFB300),
+        'existing': breakfastMeal,
+      },
+      {
+        'type': 'lunch',
+        'name': 'Bữa trưa',
+        'icon': Icons.restaurant_rounded,
+        'color': const Color(0xFF2563EB),
+        'existing': lunchMeal,
+      },
+      {
+        'type': 'snack',
+        'name': 'Bữa phụ',
+        'icon': Icons.local_cafe_rounded,
+        'color': const Color(0xFF8B5CF6),
+        'existing': snackMeal,
+      },
+      {
+        'type': 'dinner',
+        'name': 'Bữa tối',
+        'icon': Icons.nightlight_round,
+        'color': const Color(0xFF10B981),
+        'existing': dinnerMeal,
+      },
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ghi Nhận Vào Lịch Ăn',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.green),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Hôm nay: $todayLabel',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                  color: subColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Card món ăn vừa quét
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.fastfood_rounded, color: Color(0xFF2563EB), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dishName,
+                          style: GoogleFonts.inter(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$dishKcal kcal • ${dishProtein}g Protein • ${dishCarbs}g C • ${dishFat}g F',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE11D48),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Text(
+              'Chọn bữa ăn bạn muốn thay thế:',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: subColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // 4 lựa chọn bữa ăn
+            ...mealOptions.map((opt) {
+              final type = opt['type'] as String;
+              final name = opt['name'] as String;
+              final icon = opt['icon'] as IconData;
+              final color = opt['color'] as Color;
+              final existing = opt['existing'] as MealPlan?;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  onTap: () => Navigator.pop(context, type),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: existing != null ? color.withValues(alpha: 0.5) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        width: existing != null ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: color, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                existing != null
+                                    ? 'Hiện tại: ${existing.name} (${existing.kcal ?? 0} kcal)'
+                                    : 'Chưa có món trong lịch • Bấm để thêm mới',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  color: existing != null ? subColor : const Color(0xFF94A3B8),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subColor),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _applyMealReplacement({
+    required String selectedMealType,
+    required List<MealPlan> allPlans,
+    required List<MealPlan> todayMeals,
+    required DateTime now,
+    required String weekdayStr,
+    required String dateFormatted,
+  }) async {
+    final scannedKcal = _totalKcal;
+    final scannedName = _detectedDishName ?? 'Đĩa món ăn quét AI';
+
+    // 1. Tìm món hiện tại đang có ở bữa này (nếu có)
+    MealPlan? targetOldPlan;
+    for (final p in todayMeals) {
+      final t = p.mealType.toLowerCase();
+      if (selectedMealType == 'breakfast' && (t.contains('sáng') || t == 'breakfast')) {
+        targetOldPlan = p;
+        break;
+      }
+      if (selectedMealType == 'lunch' && (t.contains('trưa') || t == 'lunch')) {
+        targetOldPlan = p;
+        break;
+      }
+      if (selectedMealType == 'dinner' && (t.contains('tối') || t == 'dinner')) {
+        targetOldPlan = p;
+        break;
+      }
+      if (selectedMealType == 'snack' && (t.contains('phụ') || t == 'snack')) {
+        targetOldPlan = p;
+        break;
+      }
+    }
+
+    final oldMealKcal = targetOldPlan?.kcal ?? 0;
+
+    // 2. Tính tổng calo mục tiêu của ngày hôm nay (tổng kế hoạch ban đầu)
+    int targetDayKcal = todayMeals.fold(0, (sum, p) => sum + (p.kcal ?? 0));
+    if (targetDayKcal < 500) {
+      targetDayKcal = _userMealLimitKcal * 3;
+    }
+
+    // 3. Tạo MealPlan mới cho bữa được chọn
+    final newMeal = MealPlan(
+      id: targetOldPlan?.id ?? 'scan_${DateTime.now().millisecondsSinceEpoch}',
+      name: '$scannedName (Quét AI)',
+      servings: 1,
+      mealType: selectedMealType,
+      prepDate: targetOldPlan?.prepDate ?? now,
+      storedFrozen: false,
+      dayName: targetOldPlan?.dayName ?? weekdayStr,
+      dateStr: targetOldPlan?.dateStr ?? dateFormatted,
+      kcal: scannedKcal,
+      protein: _totalProtein.round(),
+      carbs: _totalCarbs.round(),
+      fat: _totalFat.round(),
+      cookType: 'Nấu tươi (Quét AI)',
+      notes: '📸 Món ăn thực tế nhận diện từ AI Vision',
+    );
+
+    // 4. Thứ tự các bữa ăn trong ngày: sáng (0) -> trưa (1) -> phụ (2) -> tối (3)
+    int getMealOrder(String mealType) {
+      final t = mealType.toLowerCase();
+      if (t.contains('sáng') || t == 'breakfast') return 0;
+      if (t.contains('trưa') || t == 'lunch') return 1;
+      if (t.contains('phụ') || t == 'snack') return 2;
+      if (t.contains('tối') || t == 'dinner') return 3;
+      return 99;
+    }
+
+    final selectedOrder = getMealOrder(selectedMealType);
+
+    // Các bữa ăn diễn ra SAU bữa này trong ngày
+    final subsequentMeals = todayMeals.where((p) =>
+      p.id != targetOldPlan?.id &&
+      getMealOrder(p.mealType) > selectedOrder
+    ).toList();
+
+    // 5. Tính toán xem tổng calo ngày có bị VƯỢT MỤC TIÊU không
+    // unadjustedDayKcal là tổng nếu thay thế mà không chỉnh sửa các bữa sau
+    int unadjustedDayKcal = 0;
+    for (final m in todayMeals) {
+      if (m.id == targetOldPlan?.id) {
+        unadjustedDayKcal += scannedKcal;
+      } else {
+        unadjustedDayKcal += (m.kcal ?? 0);
+      }
+    }
+    if (targetOldPlan == null) {
+      unadjustedDayKcal += scannedKcal;
+    }
+
+    bool exceedsTarget = unadjustedDayKcal > targetDayKcal;
+    int excessKcal = unadjustedDayKcal - targetDayKcal;
+
+    List<MealPlan> adjustedSubsequentMeals = [];
+    int totalReducedKcal = 0;
+
+    // 6. Nếu VƯỢT MỤC TIÊU và có các bữa sau: Tự động điều chỉnh giảm calo các bữa sau để không vượt mục tiêu
+    if (exceedsTarget && subsequentMeals.isNotEmpty) {
+      final sumSubsequent = subsequentMeals.fold(0, (sum, m) => sum + (m.kcal ?? 0));
+      if (sumSubsequent > 0) {
+        // Ngân sách calo còn lại cho các bữa sau
+        int targetSubsequentBudget = sumSubsequent - excessKcal;
+        // Đảm bảo mỗi bữa tối thiểu 100 kcal
+        if (targetSubsequentBudget < 100 * subsequentMeals.length) {
+          targetSubsequentBudget = 100 * subsequentMeals.length;
+        }
+
+        final double scaleRatio = targetSubsequentBudget / sumSubsequent;
+
+        for (final m in subsequentMeals) {
+          final origKcal = m.kcal ?? 0;
+          final newKcal = (origKcal * scaleRatio).round();
+          final diff = origKcal - newKcal;
+          totalReducedKcal += diff;
+
+          final origP = m.protein ?? 0;
+          final origC = m.carbs ?? 0;
+          final origF = m.fat ?? 0;
+
+          adjustedSubsequentMeals.add(
+            m.copyWith(
+              kcal: newKcal,
+              protein: (origP * scaleRatio).round(),
+              carbs: (origC * scaleRatio).round(),
+              fat: (origF * scaleRatio).round(),
+              notes: '⚡ Tự động giảm -$diff kcal (còn $newKcal kcal) để cân đối calo với $scannedName ở ${_mealLabel(selectedMealType)}',
+            ),
+          );
+        }
+      }
+    }
+
+    // 7. Cập nhật danh sách toàn bộ kế hoạch (allPlans)
+    final updatedPlans = List<MealPlan>.from(allPlans);
+
+    // Thay thế hoặc thêm bữa ăn mới
+    if (targetOldPlan != null) {
+      final idx = updatedPlans.indexWhere((p) => p.id == targetOldPlan!.id);
+      if (idx != -1) {
+        updatedPlans[idx] = newMeal;
+      } else {
+        updatedPlans.add(newMeal);
+      }
+    } else {
+      updatedPlans.add(newMeal);
+    }
+
+    // Thay thế các bữa sau đã điều chỉnh giảm calo
+    for (final adj in adjustedSubsequentMeals) {
+      final idx = updatedPlans.indexWhere((p) => p.id == adj.id);
+      if (idx != -1) {
+        updatedPlans[idx] = adj;
+      }
+    }
+
+    // Lưu lại toàn bộ kế hoạch đã cập nhật
+    await MealPlanService.overwriteAllPlans(updatedPlans);
+
+    // 8. Đồng bộ vào Nhật ký dinh dưỡng cá nhân
     try {
       final logData = {
-        'logDate': DateTime.now().toIso8601String().split('T')[0],
-        'mealType': mealType,
-        'foodName': _detectedDishName ?? 'Đĩa thức ăn quét AI',
+        'logDate': now.toIso8601String().split('T')[0],
+        'mealType': selectedMealType,
+        'foodName': scannedName,
         'servingSize': 1,
         'servingUnit': _detectedGrams != null ? '${_detectedGrams}g' : '1 đĩa',
-        'calories': _totalKcal,
+        'calories': scannedKcal,
         'protein': _totalProtein,
         'carbs': _totalCarbs,
         'fat': _totalFat,
       };
-
       try {
         await ApiService.addNutritionLog(logData);
       } catch (_) {
         final prefs = await SharedPreferences.getInstance();
-        final dateKey = 'local_diary_${DateTime.now().toIso8601String().split('T')[0]}';
+        final dateKey = 'local_diary_${now.toIso8601String().split('T')[0]}';
         final existing = prefs.getString(dateKey);
         List<dynamic> logs = [];
         if (existing != null) {
-          try {
-            logs = jsonDecode(existing);
-          } catch (_) {}
+          try { logs = jsonDecode(existing); } catch (_) {}
         }
         logs.add(logData);
         await prefs.setString(dateKey, jsonEncode(logs));
       }
+    } catch (_) {}
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 Đã ghi nhận ${_detectedDishName ?? "món ăn"} ($_totalKcal kcal) vào $mealName hôm nay!'),
-            backgroundColor: const Color(0xFF16A34A),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi ghi nhật ký: $e')),
-        );
-      }
+    // 9. Hiển thị Dialog báo kết quả chi tiết kèm nút Mở Trang Lịch
+    if (mounted) {
+      _showReplacementResultDialog(
+        selectedMealName: _mealLabel(selectedMealType),
+        scannedName: scannedName,
+        scannedKcal: scannedKcal,
+        oldMealKcal: oldMealKcal,
+        targetDayKcal: targetDayKcal,
+        exceedsTarget: exceedsTarget,
+        adjustedMeals: adjustedSubsequentMeals,
+        totalReducedKcal: totalReducedKcal,
+      );
     }
+  }
+
+  void _showReplacementResultDialog({
+    required String selectedMealName,
+    required String scannedName,
+    required int scannedKcal,
+    required int oldMealKcal,
+    required int targetDayKcal,
+    required bool exceedsTarget,
+    required List<MealPlan> adjustedMeals,
+    required int totalReducedKcal,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Đã Cập Nhật Kế Hoạch!',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🍽️ Đã thay thế $selectedMealName bằng món:',
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$scannedName ($scannedKcal kcal)',
+                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+
+                if (exceedsTarget && adjustedMeals.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.auto_fix_high_rounded, color: Color(0xFFEA580C), size: 18),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'TỰ ĐỘNG CÂN BẰNG CALO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFC2410C),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEA580C),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '-$totalReducedKcal kcal',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Món ăn mới nạp nhiều hơn (${scannedKcal - oldMealKcal} kcal). AI đã tự động cắt giảm khẩu phần các bữa sau để tổng calo ngày đạt đúng hạn mức $targetDayKcal kcal (không vượt mục tiêu):',
+                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF7C2D12), height: 1.35),
+                        ),
+                        const SizedBox(height: 8),
+                        ...adjustedMeals.map((adj) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.arrow_right_rounded, size: 18, color: Color(0xFFEA580C)),
+                              Expanded(
+                                child: Text(
+                                  '${_mealLabel(adj.mealType)}: còn ${adj.kcal} kcal',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF9A3412)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Tổng calo hôm nay không vượt mục tiêu ($targetDayKcal kcal). Các bữa ăn tiếp theo được giữ nguyên!',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF166534), fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ĐÓNG', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MealPrepScreen()),
+                );
+              },
+              icon: const Icon(Icons.calendar_month_rounded, size: 16),
+              label: const Text('XEM TRANG LỊCH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

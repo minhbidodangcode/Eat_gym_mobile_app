@@ -12,10 +12,40 @@ class EatGymBackendRecipeService implements RecipeService {
         final title = (r['title'] ?? r['name'] ?? 'Món ăn').toString();
         final time = (r['time'] ?? r['cooking_time_min'] ?? 15) as int;
         
-        final rawMatched = r['matchedIngredients'];
+        final rawIngredients = r['ingredients'] ?? r['matchedIngredients'];
         List<String> ings = [];
-        if (rawMatched is List) {
-          ings = rawMatched.map((i) => i.toString()).toList();
+        if (rawIngredients is List && rawIngredients.isNotEmpty) {
+          for (final item in rawIngredients) {
+            if (item is Map) {
+              final name = item['name']?.toString() ?? item['ingredient_name']?.toString() ?? '';
+              final amount = item['amount']?.toString() ?? '';
+              final unit = item['unit']?.toString() ?? '';
+              if (name.isNotEmpty) {
+                if (amount.isNotEmpty) {
+                  ings.add('$name ($amount$unit)');
+                } else {
+                  ings.add(name);
+                }
+              }
+            } else if (item != null && item.toString().trim().isNotEmpty) {
+              ings.add(item.toString().trim());
+            }
+          }
+        }
+
+        // Nếu database chưa có danh sách nguyên liệu bóc tách, trích xuất từ tên món ăn
+        if (ings.isEmpty) {
+          final words = title.replaceAll(RegExp(r'^(Bánh mì|Salad|Cơm|Cháo|Súp|Canh|Thịt)\s+', caseSensitive: false), '');
+          final parts = words.split(RegExp(r'\s+(kẹp|trộn|với|xào|hấp|luộc|nướng|áp chảo|ăn kèm|sốt)\s+', caseSensitive: false));
+          for (final p in parts) {
+            final clean = p.trim();
+            if (clean.length > 2 && !ings.contains(clean)) {
+              ings.add('$clean (vừa đủ)');
+            }
+          }
+          if (ings.isEmpty && ingredient.trim().isNotEmpty) {
+            ings.add('$ingredient (khẩu phần gymer)');
+          }
         }
 
         final instructions = (r['instructions'] ?? '').toString();

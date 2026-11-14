@@ -88,6 +88,50 @@ class MealPlan {
     workoutFocus: json['workoutFocus']?.toString(),
     carbLevel: json['carbLevel']?.toString(),
   );
+
+  MealPlan copyWith({
+    String? id,
+    String? name,
+    int? servings,
+    String? mealType,
+    DateTime? prepDate,
+    DateTime? thawAt,
+    bool? storedFrozen,
+    String? batchId,
+    String? dayName,
+    String? dateStr,
+    int? kcal,
+    int? protein,
+    int? carbs,
+    int? fat,
+    String? cookType,
+    String? notes,
+    String? workoutType,
+    String? workoutFocus,
+    String? carbLevel,
+  }) {
+    return MealPlan(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      servings: servings ?? this.servings,
+      mealType: mealType ?? this.mealType,
+      prepDate: prepDate ?? this.prepDate,
+      thawAt: thawAt ?? this.thawAt,
+      storedFrozen: storedFrozen ?? this.storedFrozen,
+      batchId: batchId ?? this.batchId,
+      dayName: dayName ?? this.dayName,
+      dateStr: dateStr ?? this.dateStr,
+      kcal: kcal ?? this.kcal,
+      protein: protein ?? this.protein,
+      carbs: carbs ?? this.carbs,
+      fat: fat ?? this.fat,
+      cookType: cookType ?? this.cookType,
+      notes: notes ?? this.notes,
+      workoutType: workoutType ?? this.workoutType,
+      workoutFocus: workoutFocus ?? this.workoutFocus,
+      carbLevel: carbLevel ?? this.carbLevel,
+    );
+  }
 }
 
 class MealPlanService {
@@ -143,6 +187,11 @@ class MealPlanService {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(plans.map((item) => item.toJson()).toList()));
+  }
+
+  static Future<void> overwriteAllPlans(List<MealPlan> allPlans) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, jsonEncode(allPlans.map((item) => item.toJson()).toList()));
   }
 
   static Future<void> deletePlan(MealPlan plan) async {

@@ -75,14 +75,15 @@ class MealRecommendationService {
         final aiIngLower = aiIng.toLowerCase();
         
         bool isMatch = recipeIngredientsLower.any((recipeIng) =>
-            recipeIng.contains(aiIngLower) || aiIngLower.contains(recipeIng));
+            recipeIng.contains(aiIngLower) || aiIngLower.contains(recipeIng)) ||
+            recipe.name.toLowerCase().contains(aiIngLower);
         
         if (isMatch) {
           score++;
         }
       }
       return _ScoredRecipe(recipe, score);
-    }).toList();
+    }).where((sr) => sr.score > 0).toList(); // Chỉ gợi ý công thức CÓ THÀNH PHẦN là nguyên liệu vừa quét
 
     // Sắp xếp thời gian nấu từ thấp tới cao, nếu bằng nhau thì ưu tiên món khớp nhiều nguyên liệu hơn
     scoredRecipes.sort((a, b) {

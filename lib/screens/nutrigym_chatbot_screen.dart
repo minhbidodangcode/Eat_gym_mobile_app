@@ -1400,11 +1400,6 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                           if (currentPrepMode == 'fresh') pTitle = 'Nấu tươi mỗi ngày';
                           if (currentPrepMode == 'carb_cycling') pTitle = 'Carb Cycling';
 
-                          ChatMessage? existingMealPlanMsg;
-                          try {
-                            existingMealPlanMsg = _messages.lastWhere((m) => m.type == ChatMessageType.mealPlanProposal);
-                          } catch (_) {}
-
                           final optionsMap = {
                             'goal': currentGoal,
                             'daysCount': currentDays,
@@ -1415,35 +1410,22 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                             'allergies': allergies,
                           };
 
-                          if (existingMealPlanMsg != null) {
-                            setState(() {
-                              _isTyping = true;
-                            });
-                            NutriGymChatService.generateMealPlan(
-                              prompt: 'Lập kế hoạch thực đơn $currentDays ngày',
-                              forceFromFridge: currentSourceMode == 'fridge_only',
-                              customOptions: optionsMap,
-                            ).then((updatedMsg) {
-                              if (mounted) {
-                                setState(() {
-                                  _isTyping = false;
-                                  final idx = _messages.indexOf(existingMealPlanMsg!);
-                                  if (idx != -1) {
-                                    _messages[idx] = updatedMsg;
-                                  } else {
-                                    _messages.add(updatedMsg);
-                                  }
-                                });
-                                _scrollToBottom();
-                              }
-                            });
-                          } else {
-                            final promptText = 'Lập kế hoạch thực đơn $currentDays ngày ($currentGoal, $pTitle)';
-                            _sendMessage(
-                              promptText,
-                              customMealPlanOptions: optionsMap,
-                            );
-                          }
+                          setState(() {
+                            _isTyping = true;
+                          });
+                          NutriGymChatService.generateMealPlan(
+                            prompt: 'Lập kế hoạch thực đơn $currentDays ngày ($currentGoal, $pTitle)',
+                            forceFromFridge: currentSourceMode == 'fridge_only',
+                            customOptions: optionsMap,
+                          ).then((newMealPlanMsg) {
+                            if (mounted) {
+                              setState(() {
+                                _isTyping = false;
+                                _messages.add(newMealPlanMsg);
+                              });
+                              _scrollToBottom();
+                            }
+                          });
                         },
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1459,12 +1441,16 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        '${item['icon']} ${item['label']}',
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-                                          color: isSel ? (isDark ? Colors.white : const Color(0xFF0F172A)) : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                                      Expanded(
+                                        child: Text(
+                                          '${item['icon']} ${item['label']}',
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                                            color: isSel ? (isDark ? Colors.white : const Color(0xFF0F172A)) : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       if (item['isRecommended'] == true) ...[
@@ -2957,10 +2943,14 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                         children: [
                           const Icon(Icons.shopping_cart_outlined, size: 18, color: AppColors.primary),
                           const SizedBox(width: 6),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Danh sách đi chợ & bù đắp thiếu hụt',
-                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              data['sourceMode'] == 'market_only'
+                                  ? 'Danh sách đi chợ (Mua mới toàn bộ)'
+                                  : (data['sourceMode'] == 'hybrid'
+                                      ? 'Danh sách đi chợ & bù đắp thiếu hụt'
+                                      : 'Danh sách nguyên liệu tủ lạnh'),
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.primary),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -2989,7 +2979,11 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'So sánh tự động với nguyên liệu có sẵn trong tủ lạnh:',
+                                data['sourceMode'] == 'market_only'
+                                    ? 'Tổng nguyên liệu cần mua cho cả đợt ${days.length} ngày:'
+                                    : (data['sourceMode'] == 'hybrid'
+                                        ? 'So sánh tự động với nguyên liệu có sẵn trong tủ lạnh (Tổng cả ${days.length} ngày):'
+                                        : 'Nguyên liệu từ tủ lạnh:'),
                                 style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic),
                               ),
                               const SizedBox(height: 6),
@@ -3001,6 +2995,7 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                                 final toBuy = s['toBuy'] ?? 0;
                                 final icon = s['icon']?.toString() ?? '🥗';
                                 final isShortfall = s['isShortfall'] == true;
+                                final isMarketOnly = data['sourceMode'] == 'market_only';
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 5),
@@ -3022,7 +3017,9 @@ class _NutriGymChatbotScreenState extends State<NutriGymChatbotScreen> with Sing
                                           children: [
                                             Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                                             Text(
-                                              'Cần: ${needed}g • Có: ${inFridge}g',
+                                              isMarketOnly
+                                                  ? 'Cần mua: ${needed}g'
+                                                  : 'Cần: ${needed}g • Tủ có: ${inFridge}g',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),

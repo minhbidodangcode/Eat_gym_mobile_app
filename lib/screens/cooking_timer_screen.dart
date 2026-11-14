@@ -35,13 +35,16 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
   int _totalStepSeconds = 300;
   int _remainingSeconds = 300;
   bool _isRunning = false;
+  bool _hasStarted = false; // Trạng thái bắt đầu nấu
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _initSteps();
-    _startTimer();
+    // Không tự động đếm giờ, chờ người dùng nhấn nút 'Bắt đầu'
+    _isRunning = false;
+    _hasStarted = false;
   }
 
   void _initSteps() {
@@ -670,6 +673,34 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
   }
 
   Widget _buildBottomButtons() {
+    if (!_hasStarted) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            setState(() {
+              _hasStarted = true;
+            });
+            _startTimer();
+          },
+          icon: const Icon(Icons.play_arrow_rounded, size: 24),
+          label: const Text(
+            'Bắt đầu',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onPrimary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      );
+    }
+
     final isLastStep = _currentStepIndex >= _steps.length - 1;
 
     return Row(

@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Base URL mặc định
-  static String _baseUrl = 'http://192.168.1.47:3000/api';
+  // Base URL ngrok công khai kết nối trực tiếp backend máy tính (dùng tốt cả Wi-Fi và 4G ngoài đường)
+  static String _baseUrl = 'https://kindly-absolve-concur.ngrok-free.dev/api';
 
   static String get baseUrl => _baseUrl;
 
@@ -12,12 +12,15 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('custom_base_url');
     if (saved != null && saved.trim().isNotEmpty) {
-      if (saved.contains('192.168.1.54')) {
-        _baseUrl = 'http://192.168.1.47:3000/api';
+      if (saved.contains('192.168.')) {
+        _baseUrl = 'https://kindly-absolve-concur.ngrok-free.dev/api';
         await prefs.setString('custom_base_url', _baseUrl);
       } else {
         _baseUrl = _normalizeUrl(saved);
       }
+    } else {
+      _baseUrl = 'https://kindly-absolve-concur.ngrok-free.dev/api';
+      await prefs.setString('custom_base_url', _baseUrl);
     }
   }
 
