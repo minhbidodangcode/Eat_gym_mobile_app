@@ -328,7 +328,6 @@ class NutriGymChatService {
         (forceFromFridge || customOptions?['forceFromFridge'] == true
             ? (lower.contains('bù đắp') || lower.contains('kết hợp') ? 'hybrid' : 'fridge_only')
             : (lower.contains('tủ lạnh') || lower.contains('có sẵn') ? 'hybrid' : 'market_only'));
-    final bool isFromFridge = sourceMode == 'fridge_only';
 
     // 1. Mục tiêu thể hình
     String goal = customOptions?['goal']?.toString() ??
@@ -409,10 +408,26 @@ class NutriGymChatService {
       safeguards.add('🛡️ Dị ứng thực phẩm: Đã loại bỏ hoàn toàn ${activeAllergies.join(', ')}.');
     }
 
-    // 7. Đồng bộ công thức từ Database Backend & Bộ công thức Gymer chuẩn an toàn
+    // 7. Đồng bộ công thức từ Database Backend & Bộ công thức Gymer chuẩn an toàn theo Tag Mục tiêu
+    final bool isTangCo = goal.toLowerCase().contains('tăng') || goal.toLowerCase().contains('bulk');
+    final bool isGiamMo = goal.toLowerCase().contains('giảm') || goal.toLowerCase().contains('siết') || goal.toLowerCase().contains('cut');
+    final String? goalTag = isTangCo ? 'tang-co' : (isGiamMo ? 'giam-mo' : null);
+
     List<Map<String, dynamic>> dbRecipes = [];
     try {
-      dbRecipes = await ApiService.getRecipes();
+      if (goalTag != null) {
+        dbRecipes = await ApiService.getRecipes(tag: goalTag);
+      }
+      if (dbRecipes.length < 20) {
+        final allDb = await ApiService.getRecipes();
+        final existingTitles = dbRecipes.map((r) => (r['title'] ?? r['name'] ?? '').toString().toLowerCase()).toSet();
+        for (final r in allDb) {
+          final t = (r['title'] ?? r['name'] ?? '').toString().toLowerCase();
+          if (!existingTitles.contains(t)) {
+            dbRecipes.add(r);
+          }
+        }
+      }
     } catch (_) {}
 
     // Lọc công thức database theo dị ứng và bệnh lý
@@ -430,15 +445,55 @@ class NutriGymChatService {
       activeMedical: activeMedical,
     );
 
-    // Ghép database recipes với curated recipes để đảm bảo đủ món cho cả tuần
+    // Tính điểm phù hợp theo mục tiêu thể hình (Goal Score)
+    int getGoalScore(Map<String, dynamic> r) {
+      int score = 0;
+      final tags = (r['tags'] is List ? (r['tags'] as List).join(' ') : (r['tags']?.toString() ?? '')).toLowerCase();
+      final title = (r['title'] ?? r['name'] ?? '').toLowerCase();
+      final kcal = (r['kcal'] is num) ? (r['kcal'] as num).toInt() : ((r['calories'] is num) ? (r['calories'] as num).toInt() : 400);
+      final pro = (r['protein'] is num) ? (r['protein'] as num).toDouble() : 20.0;
+      final fat = (r['fat'] is num) ? (r['fat'] as num).toDouble() : 10.0;
+
+      if (isTangCo) {
+        if (tags.contains('tang-co') || tags.contains('high-protein') || tags.contains('tăng cơ')) score += 40;
+        if (title.contains('thăn') || title.contains('bò') || title.contains('ức gà') || title.contains('cá hồi') || title.contains('tôm') || title.contains('bít tết')) score += 30;
+        if (pro >= 35) score += 20;
+        else if (pro >= 25) score += 10;
+        if (kcal >= 480) score += 15;
+      } else if (isGiamMo) {
+        if (tags.contains('giam-mo') || tags.contains('it-calo') || tags.contains('eat-clean') || tags.contains('low-carb')) score += 40;
+        if (title.contains('salad') || title.contains('hấp') || title.contains('luộc') || title.contains('thanh đạm') || title.contains('canh')) score += 30;
+        if (fat <= 12) score += 20;
+        if (kcal <= 480) score += 15;
+        if (pro >= 25) score += 10;
+      } else {
+        if (tags.contains('eat-clean') || tags.contains('high-protein')) score += 30;
+        if (pro >= 25 && kcal >= 400 && kcal <= 600) score += 20;
+      }
+      return score;
+    }
+
+    String getProteinSource(Map<String, dynamic> r) {
+      final text = "${r['title'] ?? r['name'] ?? ''} ${r['ingredients'] ?? ''}".toLowerCase();
+      if (text.contains('bò') || text.contains('beef') || text.contains('thịt thăn')) return 'beef';
+      if (text.contains('cá hồi') || text.contains('salmon') || text.contains('cá ngừ') || text.contains('tôm') || text.contains('shrimp') || text.contains('hải sản')) return 'seafood';
+      if (text.contains('gà') || text.contains('chicken') || text.contains('ức gà')) return 'chicken';
+      if (text.contains('trứng') || text.contains('egg')) return 'egg';
+      if (text.contains('đậu') || text.contains('tofu') || text.contains('nấm')) return 'tofu';
+      return 'other';
+    }
+
+    // Ghép curated chuẩn thể hình lên trước kết hợp cùng database recipes
     List<Map<String, dynamic>> allCandidateRecipes = [
-      ...safeDbRecipes,
       ...safeCurated,
+      ...safeDbRecipes,
     ];
+
+    // Sắp xếp ưu tiên theo điểm mục tiêu thể hình
+    allCandidateRecipes.sort((a, b) => getGoalScore(b).compareTo(getGoalScore(a)));
 
     // Xử lý nguồn nguyên liệu (sourceMode):
     if (sourceMode == 'fridge_only') {
-      // 1. Chỉ dùng nguyên liệu có sẵn trong tủ lạnh
       if (fridgeItems.isNotEmpty) {
         final fridgeNames = fridgeItems.map((f) => f['name']?.toString().toLowerCase() ?? '').toList();
         final matched = allCandidateRecipes.where((r) {
@@ -455,26 +510,6 @@ class NutriGymChatService {
           allCandidateRecipes = matched;
         }
       }
-    } else if (sourceMode == 'hybrid') {
-      // 2. Tối ưu tủ lạnh và mua nguyên liệu bù đắp:
-      // Ưu tiên các công thức có nguyên liệu trùng với tủ lạnh lên đầu,
-      // các món khác bổ sung đầy đủ từ kho công thức Gymer
-      if (fridgeItems.isNotEmpty) {
-        final fridgeNames = fridgeItems.map((f) => f['name']?.toString().toLowerCase() ?? '').toList();
-        allCandidateRecipes.sort((a, b) {
-          int countOverlap(Map<String, dynamic> r) {
-            final rawIngs = r['ingredients'];
-            if (rawIngs is List) {
-              return rawIngs.where((ing) {
-                final ingName = (ing is Map ? ing['name'] : ing?.toString())?.toString().toLowerCase() ?? '';
-                return fridgeNames.any((fn) => fn.isNotEmpty && (fn.contains(ingName) || ingName.contains(fn)));
-              }).length;
-            }
-            return 0;
-          }
-          return countOverlap(b).compareTo(countOverlap(a));
-        });
-      }
     }
 
     // Phân loại món theo khung giờ
@@ -483,28 +518,39 @@ class NutriGymChatService {
       final n = (r['title'] ?? r['name'] ?? '').toLowerCase();
       return t.contains('breakfast') || t.contains('sáng') || n.contains('yến mạch') || n.contains('bánh mì') || n.contains('sinh tố') || n.contains('trứng');
     }).toList();
-    if (breakfastPool.isEmpty) breakfastPool.addAll(safeCurated.take(4));
+    if (breakfastPool.isEmpty) breakfastPool.addAll(safeCurated.where((r) => r['type'] == 'Bữa Sáng'));
 
     final List<Map<String, dynamic>> lunchPool = allCandidateRecipes.where((r) {
       final t = (r['mealType'] ?? r['type'] ?? r['tags']?.toString() ?? '').toLowerCase();
       final n = (r['title'] ?? r['name'] ?? '').toLowerCase();
-      return t.contains('lunch') || t.contains('trưa') || n.contains('cơm') || n.contains('áp chảo') || n.contains('xào') || n.contains('hấp');
+      return t.contains('lunch') || t.contains('trưa') || n.contains('cơm') || n.contains('áp chảo') || n.contains('xào') || n.contains('hấp') || n.contains('thịt') || n.contains('bò') || n.contains('gà') || n.contains('cá') || n.contains('tôm');
     }).toList();
-    if (lunchPool.isEmpty) lunchPool.addAll(safeCurated.skip(2).take(4));
+    if (lunchPool.isEmpty) lunchPool.addAll(safeCurated.where((r) => r['type'] == 'Bữa Trưa'));
 
     final List<Map<String, dynamic>> dinnerPool = allCandidateRecipes.where((r) {
       final t = (r['mealType'] ?? r['type'] ?? r['tags']?.toString() ?? '').toLowerCase();
       final n = (r['title'] ?? r['name'] ?? '').toLowerCase();
-      return t.contains('dinner') || t.contains('tối') || n.contains('nướng') || n.contains('salad') || n.contains('canh') || n.contains('khoai');
+      return t.contains('dinner') || t.contains('tối') || n.contains('nướng') || n.contains('salad') || n.contains('canh') || n.contains('khoai') || n.contains('cuộn');
     }).toList();
-    if (dinnerPool.isEmpty) dinnerPool.addAll(safeCurated.skip(4).take(4));
+    if (dinnerPool.isEmpty) dinnerPool.addAll(safeCurated.where((r) => r['type'] == 'Bữa Tối'));
 
     final List<Map<String, dynamic>> snackPool = allCandidateRecipes.where((r) {
       final t = (r['mealType'] ?? r['type'] ?? r['tags']?.toString() ?? '').toLowerCase();
       final n = (r['title'] ?? r['name'] ?? '').toLowerCase();
-      return t.contains('snack') || t.contains('phụ') || n.contains('luộc') || n.contains('hạt') || n.contains('whey') || n.contains('sữa chua');
+      return t.contains('snack') || t.contains('phụ') || n.contains('luộc') || n.contains('hạt') || n.contains('whey') || n.contains('sữa chua') || n.contains('chuối');
     }).toList();
-    if (snackPool.isEmpty) snackPool.addAll(safeCurated.skip(6).take(4));
+    if (snackPool.isEmpty) snackPool.addAll(safeCurated.where((r) => r['type'] == 'Bữa Phụ'));
+
+    // Phân nhóm nguồn đạm cho bữa trưa và bữa tối để luân phiên đa dạng
+    final beefLunch = lunchPool.where((r) => getProteinSource(r) == 'beef').toList();
+    final seafoodLunch = lunchPool.where((r) => getProteinSource(r) == 'seafood').toList();
+    final chickenLunch = lunchPool.where((r) => getProteinSource(r) == 'chicken').toList();
+    final otherLunch = lunchPool.where((r) => getProteinSource(r) != 'beef' && getProteinSource(r) != 'seafood' && getProteinSource(r) != 'chicken').toList();
+
+    final beefDinner = dinnerPool.where((r) => getProteinSource(r) == 'beef').toList();
+    final seafoodDinner = dinnerPool.where((r) => getProteinSource(r) == 'seafood').toList();
+    final chickenDinner = dinnerPool.where((r) => getProteinSource(r) == 'chicken').toList();
+    final otherDinner = dinnerPool.where((r) => getProteinSource(r) != 'beef' && getProteinSource(r) != 'seafood' && getProteinSource(r) != 'chicken').toList();
 
     // 8. Tạo danh sách các ngày theo daysCount và prepMode
     final dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
@@ -571,10 +617,42 @@ class NutriGymChatService {
         }
       }
 
-      // Chọn món cho từng bữa
+      // Luân phiên nguồn đạm và đa dạng hóa món ăn từng ngày
       final bRecipe = breakfastPool[dayIdx % breakfastPool.length];
-      final lRecipe = lunchPool[dayIdx % lunchPool.length];
-      final dRecipe = dinnerPool[dayIdx % dinnerPool.length];
+
+      // Bữa trưa luân phiên theo chu kỳ: Bò -> Hải sản -> Gà -> Tôm/Cá -> Bò -> Gà -> Đậu/Khác
+      Map<String, dynamic> lRecipe;
+      final lunchCycle = dayIdx % 4;
+      if (lunchCycle == 0 && beefLunch.isNotEmpty) {
+        lRecipe = beefLunch[(dayIdx ~/ 4) % beefLunch.length];
+      } else if (lunchCycle == 1 && seafoodLunch.isNotEmpty) {
+        lRecipe = seafoodLunch[(dayIdx ~/ 4) % seafoodLunch.length];
+      } else if (lunchCycle == 2 && chickenLunch.isNotEmpty) {
+        lRecipe = chickenLunch[(dayIdx ~/ 4) % chickenLunch.length];
+      } else if (otherLunch.isNotEmpty) {
+        lRecipe = otherLunch[(dayIdx ~/ 4) % otherLunch.length];
+      } else {
+        lRecipe = lunchPool[dayIdx % lunchPool.length];
+      }
+
+      // Bữa tối chọn nguồn đạm khác bữa trưa để bữa ăn phong phú
+      Map<String, dynamic> dRecipe;
+      final lunchProtein = getProteinSource(lRecipe);
+      if (lunchProtein == 'beef' && chickenDinner.isNotEmpty) {
+        dRecipe = chickenDinner[dayIdx % chickenDinner.length];
+      } else if (lunchProtein == 'seafood' && chickenDinner.isNotEmpty) {
+        dRecipe = chickenDinner[(dayIdx + 1) % chickenDinner.length];
+      } else if (lunchProtein == 'chicken' && beefDinner.isNotEmpty) {
+        dRecipe = beefDinner[dayIdx % beefDinner.length];
+      } else if (lunchProtein == 'chicken' && seafoodDinner.isNotEmpty) {
+        dRecipe = seafoodDinner[dayIdx % seafoodDinner.length];
+      } else if (otherDinner.isNotEmpty) {
+        dRecipe = otherDinner[dayIdx % otherDinner.length];
+      } else {
+        dRecipe = dinnerPool[(dayIdx + 1) % dinnerPool.length];
+      }
+
+      // Bữa phụ luân phiên các món nhẹ lành mạnh (Trứng, Khoai lang, Hạnh nhân, Chuối sữa chua...)
       final sRecipe = snackPool[dayIdx % snackPool.length];
 
       int getRecipeBaseKcal(Map<String, dynamic> r) {
