@@ -309,6 +309,7 @@ class AppTheme {
 
     return ThemeData(
       brightness: brightness,
+      primaryColor: primaryColor,
       scaffoldBackgroundColor: bg,
       colorScheme: isDark
           ? ColorScheme.dark(
@@ -319,7 +320,7 @@ class AppTheme {
               outline: border,
             )
           : ColorScheme.light(
-              primary: const Color(0xFF0F172A),
+              primary: primaryColor,
               onPrimary: Colors.white,
               surface: surface,
               onSurface: text,

@@ -98,6 +98,7 @@ class SmartFridgeScreen extends StatefulWidget {
 
 class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
   static List<Map<String, dynamic>>? _cachedAllRecipes;
+  static List<Map<String, dynamic>>? _cachedDbIngredients;
 
   static const String _prefsKey = 'eatgym_smart_fridge_items_v4';
 
@@ -111,6 +112,16 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
   void initState() {
     super.initState();
     _loadFridgeItems();
+    _preloadDbIngredients();
+  }
+
+  Future<void> _preloadDbIngredients() async {
+    try {
+      final items = await ApiService.getIngredients();
+      if (items.isNotEmpty) {
+        _cachedDbIngredients = items;
+      }
+    } catch (_) {}
   }
 
   Future<String> _getUserFridgeKey() async {
@@ -1068,9 +1079,38 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
 
   void _showManualAddDialog() async {
     List<Map<String, dynamic>> dbIngredients = [];
-    try {
-      dbIngredients = await ApiService.getIngredients();
-    } catch (_) {}
+    if (_cachedDbIngredients != null && _cachedDbIngredients!.isNotEmpty) {
+      dbIngredients = List.from(_cachedDbIngredients!);
+    } else {
+      try {
+        dbIngredients = await ApiService.getIngredients();
+        if (dbIngredients.isNotEmpty) {
+          _cachedDbIngredients = dbIngredients;
+        }
+      } catch (_) {}
+    }
+
+    // Nếu API offline hoặc chưa có dữ liệu, bổ sung kho nguyên liệu tiêu chuẩn phong phú cho Gymer
+    if (dbIngredients.isEmpty) {
+      final fallbackStandard = [
+        {'name': 'Ức gà phi lê', 'category': 'Thịt & Hải sản', 'kcalPer100g': 165, 'protein': 31, 'carbs': 0, 'fat': 3.6, 'icon': '🍗'},
+        {'name': 'Thịt thăn bò', 'category': 'Thịt & Hải sản', 'kcalPer100g': 250, 'protein': 26, 'carbs': 0, 'fat': 15, 'icon': '🥩'},
+        {'name': 'Trứng gà ta', 'category': 'Trứng & Sữa', 'kcalPer100g': 155, 'protein': 13, 'carbs': 1.1, 'fat': 11, 'icon': '🥚'},
+        {'name': 'Cá hồi Na Uy', 'category': 'Thịt & Hải sản', 'kcalPer100g': 208, 'protein': 20, 'carbs': 0, 'fat': 13, 'icon': '🐟'},
+        {'name': 'Tôm sú tươi', 'category': 'Thịt & Hải sản', 'kcalPer100g': 99, 'protein': 24, 'carbs': 0.2, 'fat': 0.3, 'icon': '🦐'},
+        {'name': 'Bông cải xanh', 'category': 'Rau củ', 'kcalPer100g': 34, 'protein': 2.8, 'carbs': 7, 'fat': 0.4, 'icon': '🥦'},
+        {'name': 'Cơm gạo lứt', 'category': 'Ngũ cốc', 'kcalPer100g': 111, 'protein': 2.6, 'carbs': 23, 'fat': 0.9, 'icon': '🍚'},
+        {'name': 'Khoai lang mật', 'category': 'Củ quả', 'kcalPer100g': 86, 'protein': 1.6, 'carbs': 20, 'fat': 0.1, 'icon': '🍠'},
+        {'name': 'Yến mạch cán dẹt', 'category': 'Ngũ cốc', 'kcalPer100g': 389, 'protein': 16.9, 'carbs': 66, 'fat': 6.9, 'icon': '🥣'},
+        {'name': 'Quả bơ sáp', 'category': 'Trái cây', 'kcalPer100g': 160, 'protein': 2, 'carbs': 8.5, 'fat': 14.7, 'icon': '🥑'},
+        {'name': 'Đậu hũ non', 'category': 'Đậu & Hạt', 'kcalPer100g': 76, 'protein': 8, 'carbs': 1.9, 'fat': 4.8, 'icon': '🧈'},
+        {'name': 'Măng tây tươi', 'category': 'Rau củ', 'kcalPer100g': 20, 'protein': 2.2, 'carbs': 3.9, 'fat': 0.2, 'icon': '🌱'},
+        {'name': 'Cà chua bi', 'category': 'Rau củ', 'kcalPer100g': 18, 'protein': 0.9, 'carbs': 3.9, 'fat': 0.2, 'icon': '🍅'},
+        {'name': 'Sữa tươi không đường', 'category': 'Trứng & Sữa', 'kcalPer100g': 42, 'protein': 3.2, 'carbs': 5, 'fat': 1, 'icon': '🥛'},
+      ];
+      dbIngredients = fallbackStandard;
+    }
+
     if (!mounted) return;
 
     showModalBottomSheet(
@@ -1655,8 +1695,95 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
       } catch (_) {}
     }
 
+    // Nếu chưa có từ API hoặc API trả về rỗng, luôn nạp kho công thức chuẩn Gymer Eat Clean
+    if (allRecipes.isEmpty) {
+      allRecipes = [
+        {
+          'id': 'sf_recipe_1',
+          'title': 'Ức gà áp chảo sốt bơ tỏi hương thảo',
+          'kcal': 380,
+          'protein': 42,
+          'carbs': 8,
+          'fat': 12,
+          'time': 15,
+          'image': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800',
+          'ingredients': [
+            {'name': 'Ức gà tươi', 'amount': '250g'},
+            {'name': 'Bơ lạt Anchor', 'amount': '15g'},
+            {'name': 'Tỏi & tiêu', 'amount': '3 tép'},
+          ],
+          'instructions': '1. Ướp ức gà với chút muối tiêu.\n2. Áp chảo mỗi mặt 4-5 phút cho vàng giòn.\n3. Thêm bơ tỏi rưới đều lên bề mặt và tắt bếp.',
+        },
+        {
+          'id': 'sf_recipe_2',
+          'title': 'Salad thăn bò áp chảo rau mầm cà chua bi',
+          'kcal': 340,
+          'protein': 36,
+          'carbs': 14,
+          'fat': 10,
+          'time': 12,
+          'image': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800',
+          'ingredients': [
+            {'name': 'Thịt thăn bò', 'amount': '200g'},
+            {'name': 'Cà chua bi', 'amount': '80g'},
+            {'name': 'Dưa leo tươi', 'amount': '100g'},
+            {'name': 'Xà lách', 'amount': '100g'},
+          ],
+          'instructions': '1. Bò thái lát mỏng ướp tỏi tiêu.\n2. Áp chảo nhanh lửa lớn trong 2 phút.\n3. Trộn cùng xà lách, dưa leo, cà chua bi và sốt dấm táo.',
+        },
+        {
+          'id': 'sf_recipe_3',
+          'title': 'Phi lê cá hồi áp chảo măng tây sốt chanh leo',
+          'kcal': 450,
+          'protein': 40,
+          'carbs': 12,
+          'fat': 22,
+          'time': 15,
+          'image': 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=800',
+          'ingredients': [
+            {'name': 'Phi lê cá hồi tươi', 'amount': '220g'},
+            {'name': 'Măng tây tươi', 'amount': '100g'},
+            {'name': 'Chanh leo & bơ', 'amount': '1 quả'},
+          ],
+          'instructions': '1. Ướp cá hồi muối tiêu 3 phút.\n2. Áp chảo da giòn 4 phút, lật mặt 3 phút.\n3. Xào măng tây bơ tỏi ăn kèm sốt chanh leo.',
+        },
+        {
+          'id': 'sf_recipe_4',
+          'title': 'Trứng cuộn bông cải xanh sốt phô mai',
+          'kcal': 290,
+          'protein': 24,
+          'carbs': 6,
+          'fat': 18,
+          'time': 10,
+          'image': 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800',
+          'ingredients': [
+            {'name': 'Trứng gà tươi', 'amount': '3 quả'},
+            {'name': 'Bông cải xanh', 'amount': '100g'},
+            {'name': 'Cà chua bi', 'amount': '50g'},
+          ],
+          'instructions': '1. Đánh tan trứng cùng chút muối.\n2. Bông cải xanh chần sơ thái nhỏ.\n3. Đổ trứng vào chảo chống dính, rắc bông cải và cuộn tròn.',
+        },
+        {
+          'id': 'sf_recipe_5',
+          'title': 'Cơm gạo lứt thịt băm xào bắp cải thanh đạm',
+          'kcal': 410,
+          'protein': 34,
+          'carbs': 48,
+          'fat': 8,
+          'time': 15,
+          'image': 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800',
+          'ingredients': [
+            {'name': 'Thịt nạc vai băm', 'amount': '150g'},
+            {'name': 'Cơm gạo lứt huyết rồng', 'amount': '150g'},
+            {'name': 'Bắp cải trắng', 'amount': '120g'},
+          ],
+          'instructions': '1. Xào thịt băm chín tới với tỏi băm.\n2. Thêm bắp cải thái sợi vào xào chín giòn.\n3. Ăn kèm cơm gạo lứt nóng hổi.',
+        },
+      ];
+      _cachedAllRecipes = allRecipes;
+    }
+
     final pool = <Map<String, dynamic>>[...userRecipes, ...allRecipes];
-    if (pool.isEmpty) return [];
 
     bool isCondiment(String name) {
       final n = IngredientNormalizer.removeDiacritics(name.toLowerCase()).trim();
@@ -1742,6 +1869,56 @@ class _SmartFridgeScreenState extends State<SmartFridgeScreen> {
       mapped['time'] = mapped['time'] ?? mapped['cooking_time_min'] ?? 15;
       mapped['protein'] = mapped['protein'] ?? mapped['protein_g'] ?? 25;
       matchedList.add(mapped);
+    }
+
+    // NẾU CHƯA CÓ MÓN NÀO KHỚP TRỰC TIẾP: TỰ ĐỘNG SÁNG TẠO CÔNG THỨC GYMER TỪ CHÍNH NGUYÊN LIỆU ĐÃ CHỌN
+    if (matchedList.isEmpty && ingNames.isNotEmpty) {
+      final firstName = ingNames.first;
+      final otherNames = ingNames.skip(1).take(2).join(' & ');
+      final title = otherNames.isNotEmpty
+          ? 'Món xào Eat Clean Gymer: $firstName cùng $otherNames'
+          : 'Món ngon dinh dưỡng Gymer: $firstName áp chảo sốt tiêu';
+
+      double totalKcal = 0;
+      double totalPro = 0;
+      double totalCarbs = 0;
+      double totalFat = 0;
+
+      for (final name in ingNames) {
+        final details = IngredientNormalizer.getIngredientDetails(name);
+        final k100 = (details['kcal'] as num?)?.toDouble() ?? 100.0;
+        final p100 = (details['protein'] as num?)?.toDouble() ?? 15.0;
+        final c100 = (details['carbs'] as num?)?.toDouble() ?? 5.0;
+        final f100 = (details['fat'] as num?)?.toDouble() ?? 3.0;
+
+        totalKcal += (k100 * 1.5);
+        totalPro += (p100 * 1.5);
+        totalCarbs += (c100 * 1.5);
+        totalFat += (f100 * 1.5);
+      }
+
+      final calcKcal = totalKcal > 0 ? totalKcal.round() : (totalPro * 4 + totalCarbs * 4 + totalFat * 9).round();
+
+      matchedList.add({
+        'id': 'sf_auto_generated_${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'kcal': calcKcal,
+        'protein': totalPro.round(),
+        'carbs': totalCarbs.round(),
+        'fat': totalFat.round(),
+        'time': 15,
+        'matchingCount': ingNames.length,
+        'coreMatches': ingNames.length,
+        'score': 999,
+        'isSavedInKitchen': false,
+        'image': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600',
+        'description': 'Công thức tối ưu từ tủ lạnh: ${ingNames.join(", ")} được tính toán chính xác Macros (${totalPro.round()}g đạm, ${totalCarbs.round()}g carb, ${totalFat.round()}g béo, $calcKcal kcal) giúp phục hồi cơ bắp.',
+        'ingredients': ingNames.map((n) => {'name': n, 'amount': '150g'}).toList(),
+        'instructions': '1. Sơ chế sạch ${ingNames.join(", ")}, thái lát vừa ăn.\n'
+            '2. Ướp nhẹ cùng một nhúm muối tiêu, tỏi băm trong 3-5 phút.\n'
+            '3. Cho vào chảo nóng với 1 thìa dầu ô liu, áp chảo/xào chín đều trong 6-8 phút.\n'
+            '4. Bày ra đĩa và thưởng thức ngay bữa ăn Eat Clean lành mạnh!',
+      });
     }
 
     // 3. Sắp xếp danh sách theo điểm số từ cao xuống thấp

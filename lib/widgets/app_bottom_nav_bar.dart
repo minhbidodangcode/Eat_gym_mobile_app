@@ -79,7 +79,10 @@ class AppBottomNavBar extends StatelessWidget {
 
               return Expanded(
                 child: InkWell(
-                  onTap: () => onItemSelected(index),
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    onItemSelected(index);
+                  },
                   splashColor: Colors.transparent,
                   highlightColor: Colors.transparent,
                   child: Column(

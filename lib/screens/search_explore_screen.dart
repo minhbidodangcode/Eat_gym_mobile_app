@@ -1,9 +1,12 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import 'cooking_timer_screen.dart';
+import 'profile_screen.dart';
 import 'recipe_search_screen.dart';
 import 'scan_screen.dart';
 
@@ -213,6 +216,108 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
       'likes': 158,
     },
     {
+      'id': 'mock_salmon_1',
+      'title': 'Phi lê cá hồi áp chảo sốt chanh leo măng tây',
+      'category': 'Món ăn',
+      'calories': 450,
+      'protein': 40.0,
+      'carbs': 12.0,
+      'fat': 22.0,
+      'time': '15 phút',
+      'badge': 'HIGH PROTEIN',
+      'badgeColor': const Color(0xFF10B981),
+      'image': 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=800',
+      'author': 'Chef Gymer Huy',
+      'description': 'Cá hồi giàu Omega-3 và đạm tinh khiết, áp chảo sốt chanh leo chua ngọt thơm mềm.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 1)),
+      'likes': 380,
+    },
+    {
+      'id': 'mock_salmon_2',
+      'title': 'Cá hồi nướng bơ tỏi ăn kèm cơm gạo lứt',
+      'category': 'FoodBlogs',
+      'calories': 480,
+      'protein': 42.0,
+      'carbs': 38.0,
+      'fat': 18.0,
+      'time': '20 phút',
+      'badge': 'TĂNG CƠ',
+      'badgeColor': const Color(0xFFF97316),
+      'image': 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=800',
+      'author': 'Mai Linh EatClean',
+      'description': 'Món cá hồi nướng giấy bạc mọng nước béo ngậy, bổ sung năng lượng sạch cho cơ bắp.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 6)),
+      'likes': 295,
+    },
+    {
+      'id': 'mock_smoothie_1',
+      'title': 'Sinh tố whey protein chuối yến mạch phục hồi',
+      'category': 'Món ăn',
+      'calories': 320,
+      'protein': 34.0,
+      'carbs': 35.0,
+      'fat': 4.0,
+      'time': '5 phút',
+      'badge': 'HIGH PROTEIN',
+      'badgeColor': const Color(0xFF10B981),
+      'image': 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=800',
+      'author': 'HLV Tuấn Anh',
+      'description': 'Smoothie phục hồi sau buổi tập, kết hợp 1 muỗng whey isolate, chuối chín và yến mạch xay mịn.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 2)),
+      'likes': 410,
+    },
+    {
+      'id': 'mock_smoothie_2',
+      'title': 'Sinh tố việt quất dâu tây whey protein isolate',
+      'category': 'FoodBlogs',
+      'calories': 280,
+      'protein': 30.0,
+      'carbs': 28.0,
+      'fat': 3.5,
+      'time': '5 phút',
+      'badge': 'GIẢM MỠ',
+      'badgeColor': const Color(0xFF8B5CF6),
+      'image': 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=800',
+      'author': 'Minh Bi FoodBlog',
+      'description': 'Sinh tố mát lạnh giàu chất chống oxy hóa, hỗ trợ siết cơ giảm mỡ cực đỉnh.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 8)),
+      'likes': 365,
+    },
+    {
+      'id': 'mock_salad_1',
+      'title': 'Salad cá ngừ trứng luộc sốt giấm táo ô liu',
+      'category': 'Món ăn',
+      'calories': 310,
+      'protein': 38.0,
+      'carbs': 10.0,
+      'fat': 8.0,
+      'time': '10 phút',
+      'badge': 'GIẢM MỠ',
+      'badgeColor': const Color(0xFF8B5CF6),
+      'image': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800',
+      'author': 'Chef Minh',
+      'description': 'Salad thanh mát với cá ngừ ngâm dầu ô liu và trứng gà luộc lòng đào thơm bùi.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 10)),
+      'likes': 280,
+    },
+    {
+      'id': 'mock_salad_2',
+      'title': 'Salad thăn bò áp chảo rau mầm ngũ sắc',
+      'category': 'FoodBlogs',
+      'calories': 340,
+      'protein': 36.0,
+      'carbs': 14.0,
+      'fat': 10.0,
+      'time': '12 phút',
+      'badge': 'HIGH PROTEIN',
+      'badgeColor': const Color(0xFF10B981),
+      'image': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800',
+      'author': 'Coach Nam',
+      'description': 'Thịt bò thăn thái lát áp chảo vừa chín tới mềm ngọt cùng rau mầm và sốt dầu giấm.',
+      'createdAt': DateTime.now().subtract(const Duration(days: 1)),
+      'likes': 320,
+    },
+    {
       'id': 'mock_2',
       'title': 'Yến mạch ngâm qua đêm chuối quế',
       'category': 'FoodBlogs',
@@ -265,35 +370,35 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     },
     {
       'id': 'mock_5',
-      'title': 'Ức gà phi lê đông lạnh chuẩn Macro',
-      'category': 'Nguyên liệu',
-      'calories': 165,
-      'protein': 31.0,
-      'carbs': 0.0,
-      'fat': 3.6,
-      'time': '10 phút',
-      'badge': 'NGUYÊN LIỆU',
-      'badgeColor': const Color(0xFFF59E0B),
-      'image': 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=800',
-      'author': 'Siêu thị Gymer',
-      'description': 'Ức gà tươi sạch bỏ da không xương, hàm lượng đạm cao nhất cho dân thể hình.',
-      'createdAt': DateTime.now().subtract(const Duration(hours: 1)),
+      'title': 'Cơm gạo lứt thịt bò áp chảo măng tây',
+      'category': 'Món ăn',
+      'calories': 450,
+      'protein': 42.0,
+      'carbs': 36.0,
+      'fat': 8.5,
+      'time': '20 phút',
+      'badge': 'TĂNG CƠ',
+      'badgeColor': const Color(0xFFF97316),
+      'image': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800',
+      'author': 'Chef Gymer Huy',
+      'description': 'Cơm gạo lứt thơm dẻo kết hợp bò áp chảo và măng tây giàu chất xơ và đạm chất lượng cao.',
+      'createdAt': DateTime.now().subtract(const Duration(hours: 4)),
       'likes': 415,
     },
     {
       'id': 'mock_6',
-      'title': 'Kinh nghiệm siết cơ 8 tuần không mất cơ',
+      'title': 'Ức gà cuộn măng tây sốt tiêu đen',
       'category': 'FoodBlogs',
-      'calories': 0,
-      'protein': 0.0,
-      'carbs': 0.0,
-      'fat': 0.0,
-      'time': '5 phút đọc',
-      'badge': 'KINH NGHIỆM',
-      'badgeColor': const Color(0xFF06B6D4),
-      'image': 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800',
-      'author': 'Quang Huy Coach',
-      'description': 'Bí quyết cân bằng macro deficit và phân bổ bữa ăn quanh giờ tập gym để đốt mỡ tối đa.',
+      'calories': 360,
+      'protein': 48.0,
+      'carbs': 8.0,
+      'fat': 6.0,
+      'time': '18 phút',
+      'badge': 'FOODBLOG',
+      'badgeColor': const Color(0xFF10B981),
+      'image': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800',
+      'author': 'Minh Bi FoodBlog',
+      'description': 'Món ức gà cuộn giòn ngọt mọng nước, chuẩn thực đơn siết cơ giảm mỡ ít carb.',
       'createdAt': DateTime.now().subtract(const Duration(hours: 5)),
       'likes': 520,
     },
@@ -308,13 +413,65 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
 
   Future<void> _loadApiRecipes() async {
     try {
-      final recipes = await ApiService.getRecipes();
+      final recipes = await ApiService.getRecipes(limit: 3000);
+
+      final List<Map<String, dynamic>> extraSharedPosts = [];
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final allKeys = prefs.getKeys();
+        for (final key in allKeys) {
+          if (key.startsWith('eatgym_user_created_recipes_') || key == 'eatgym_user_recipes') {
+            final str = prefs.getString(key);
+            if (str != null && str.isNotEmpty) {
+              final list = jsonDecode(str);
+              if (list is List) {
+                for (final p in list) {
+                  if (p is Map) {
+                    extraSharedPosts.add({
+                      'id': p['id']?.toString() ?? 'blog_${DateTime.now().millisecondsSinceEpoch}',
+                      'title': p['title'] ?? p['name'] ?? '',
+                      'category': 'FoodBlogs',
+                      'calories': (p['kcal'] is num) ? (p['kcal'] as num).round() : 350,
+                      'protein': (p['protein'] is num) ? (p['protein'] as num).toDouble() : 35.0,
+                      'carbs': (p['carbs'] is num) ? (p['carbs'] as num).toDouble() : 20.0,
+                      'fat': (p['fat'] is num) ? (p['fat'] as num).toDouble() : 8.0,
+                      'time': '${p['time'] ?? 15} phút',
+                      'badge': 'FOODBLOG',
+                      'badgeColor': const Color(0xFF10B981),
+                      'image': RecipeImageDatabase.resolveImage(p['title'] ?? '', existingImage: p['image']),
+                      'author': p['authorName'] ?? p['authorUsername'] ?? 'Gymer FoodBlog',
+                      'authorAvatar': p['authorAvatar'],
+                      'description': p['description'] ?? p['tips'] ?? 'Công thức nấu ăn chia sẻ từ cộng đồng Gymer.',
+                      'createdAt': DateTime.now(),
+                      'likes': (p['likes_count'] is num) ? (p['likes_count'] as num).toInt() : 120,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
       if (recipes.isNotEmpty && mounted) {
         setState(() {
-          final apiItems = recipes.take(15).map((r) {
-            final title = r['title'] ?? r['name'] ?? 'Món ăn Gymer';
-            final calories = (r['calories'] is num) ? (r['calories'] as num).round() : 350;
-            final protein = (r['protein'] is num) ? (r['protein'] as num).toDouble() : 30.0;
+          final apiItems = recipes.map((r) {
+            final title = (r['title'] ?? r['name'] ?? 'Món ăn Gymer').toString();
+            final calories = (r['kcal'] is num)
+                ? (r['kcal'] as num).round()
+                : ((r['calories'] is num) ? (r['calories'] as num).round() : 350);
+            final protein = (r['protein'] is num)
+                ? (r['protein'] as num).toDouble()
+                : ((r['protein_g'] is num) ? (r['protein_g'] as num).toDouble() : 30.0);
+            final carbs = (r['carbs'] is num)
+                ? (r['carbs'] as num).toDouble()
+                : ((r['carbs_g'] is num) ? (r['carbs_g'] as num).toDouble() : 25.0);
+            final fat = (r['fat'] is num)
+                ? (r['fat'] as num).toDouble()
+                : ((r['fat_g'] is num) ? (r['fat_g'] as num).toDouble() : 8.0);
+            
+            final cookTime = r['time'] ?? r['cooking_time_min'] ?? r['cooking_time'] ?? 20;
+
             DateTime created = DateTime.now().subtract(Duration(hours: (r['id'] is num ? (r['id'] as num).toInt() : 2) % 48 + 1));
             if (r['created_at'] != null) {
               final parsed = DateTime.tryParse(r['created_at'].toString());
@@ -324,18 +481,34 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                 ? (r['likes_count'] as num).toInt()
                 : ((r['id'] is num ? (r['id'] as num).toInt() * 17 : 45) % 250 + 20);
 
+            // Xác định badge phù hợp theo tỷ lệ dinh dưỡng
+            String badge = 'BALANCED';
+            Color badgeColor = const Color(0xFF3B82F6);
+            if (protein >= 35) {
+              badge = 'HIGH PROTEIN';
+              badgeColor = const Color(0xFF10B981);
+            } else if (carbs >= 40) {
+              badge = 'CLEAN CARB';
+              badgeColor = const Color(0xFF6366F1);
+            } else if (carbs <= 15) {
+              badge = 'LOW CARB';
+              badgeColor = const Color(0xFFF59E0B);
+            }
+
             return {
               'id': r['id']?.toString() ?? '',
               'title': title,
-              'category': 'Món ăn',
+              'category': r['meal_type'] != null && r['meal_type'].toString().isNotEmpty
+                  ? (r['meal_type'] == 'breakfast' ? 'Bữa sáng' : (r['meal_type'] == 'snack' ? 'Bữa phụ' : 'Món ăn'))
+                  : 'Món ăn',
               'calories': calories,
               'protein': protein,
-              'carbs': (r['carbs'] is num) ? (r['carbs'] as num).toDouble() : 25.0,
-              'fat': (r['fat'] is num) ? (r['fat'] as num).toDouble() : 8.0,
-              'time': '${r['cooking_time'] ?? 20} phút',
-              'badge': protein >= 35 ? 'HIGH PROTEIN' : 'BALANCED',
-              'badgeColor': protein >= 35 ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-              'image': RecipeImageDatabase.resolveImage(title, existingImage: r['image_url']),
+              'carbs': carbs,
+              'fat': fat,
+              'time': '$cookTime phút',
+              'badge': badge,
+              'badgeColor': badgeColor,
+              'image': RecipeImageDatabase.resolveImage(title, existingImage: r['image_url'] ?? r['image']),
               'author': r['author'] ?? 'Cộng đồng EatGym',
               'description': r['description'] ?? 'Công thức chuẩn macro dinh dưỡng cho người tập thể hình.',
               'createdAt': created,
@@ -343,21 +516,83 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
             };
           }).toList();
 
-          _results = [..._mockResults, ...apiItems];
+          final List<Map<String, dynamic>> combined = [];
+          if (apiItems.isNotEmpty) {
+            combined.addAll(apiItems);
+          }
+          for (final mock in _mockResults) {
+            if (!combined.any((e) => e['title'] == mock['title'])) {
+              combined.add(mock);
+            }
+          }
+          final recipeState = RecipeSearchScreen.recipeScreenKey.currentState;
+          if (recipeState != null && recipeState.feedPosts.isNotEmpty) {
+            for (final p in recipeState.feedPosts) {
+              if (!combined.any((e) => e['title'] == p['title'])) {
+                combined.add({
+                  'id': p['id'] ?? 'post_${DateTime.now().millisecondsSinceEpoch}',
+                  'title': p['title'] ?? '',
+                  'category': 'FoodBlogs',
+                  'calories': p['kcal'] ?? 350,
+                  'protein': (p['protein'] ?? 30).toDouble(),
+                  'carbs': (p['carbs'] ?? 20).toDouble(),
+                  'fat': (p['fat'] ?? 8).toDouble(),
+                  'time': '${p['time'] ?? 15} phút',
+                  'badge': 'FOODBLOG',
+                  'badgeColor': const Color(0xFF10B981),
+                  'image': RecipeImageDatabase.resolveImage(p['title'] ?? '', existingImage: p['image']),
+                  'author': p['authorName'] ?? 'Gymer Chef',
+                  'authorAvatar': p['authorAvatar'],
+                  'description': p['description'] ?? p['tips'] ?? '',
+                  'createdAt': DateTime.now(),
+                  'likes': 150,
+                });
+              }
+            }
+          }
+
+          // Bổ sung các bài foodblog lấy từ SharedPreferences
+          for (final ep in extraSharedPosts) {
+            if (!combined.any((e) => e['title'] == ep['title'])) {
+              combined.add(ep);
+            }
+          }
+
+          // Lọc triệt để: Chỉ hiển thị công thức database + foodblog nấu ăn, loại bỏ mọi bài kinh nghiệm tập luyện không phải đồ ăn
+          final foodOnly = combined.where((item) {
+            final title = (item['title'] ?? '').toString().toLowerCase();
+            final badge = (item['badge'] ?? '').toString().toUpperCase();
+            final img = (item['image'] ?? '').toString().toLowerCase();
+            final id = (item['id'] ?? '').toString();
+
+            // Loại bỏ các công thức có ảnh không phải đồ ăn (ảnh 7: đĩa trắng, ảnh 8: sách vở/ví da, v.v.)
+            if (img.contains('dia-khum') ||
+                img.contains('longphuong') ||
+                img.contains('vi-nam') ||
+                img.contains('mediaelly') ||
+                img.contains('tapchixaydung') ||
+                id == '50082006-752f-4bda-bc77-0804e8d43b15' ||
+                id == '30a4c578-51e4-4b50-ae7f-b44fc13d015c' ||
+                id == 'd73bbde8-a6d3-4178-acdb-2083b298f7d4') {
+              return false;
+            }
+
+            if (badge == 'KINH NGHIỆM' || title.contains('kinh nghiệm') || title.contains('lịch tập') || title.contains('siết cơ 8 tuần')) {
+              return false;
+            }
+            final cal = (item['calories'] as num?)?.toDouble() ?? 0;
+            return cal > 50; // Chỉ giữ món ăn thực sự có calo
+          }).toList();
+
+          _results = foodOnly.isNotEmpty ? foodOnly : List.from(_mockResults);
         });
       }
-    } catch (_) {}
-  }
-
-  String _formatRelativeTime(dynamic dateVal) {
-    if (dateVal is! DateTime) return 'Vừa đăng';
-    final diff = DateTime.now().difference(dateVal);
-    if (diff.inMinutes < 60) {
-      return '${max(1, diff.inMinutes)} phút trước';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} giờ trước';
-    } else {
-      return '${diff.inDays} ngày trước';
+    } catch (_) {
+      if (mounted && _results.isEmpty) {
+        setState(() {
+          _results = List.from(_mockResults);
+        });
+      }
     }
   }
 
@@ -365,6 +600,7 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     double score = 0.0;
     final title = (item['title'] ?? '').toString().toLowerCase();
     final desc = (item['description'] ?? '').toString().toLowerCase();
+    final author = (item['author'] ?? '').toString().toLowerCase();
     final itemCat = (item['category'] ?? '').toString();
 
     // 1. Phân cụm K-Means Intent Boost (+100 điểm nếu đúng tâm cụm ý định)
@@ -376,10 +612,15 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
       score += 100.0;
     }
 
-    // 2. Trùng từ khóa tiêu đề (+50 điểm)
-    if (query.isNotEmpty && title.contains(query)) {
-      score += 50.0;
-      if (title.startsWith(query)) score += 20.0;
+    // 2. Trùng từ khóa tiêu đề hoặc tác giả foodblog (+50 điểm)
+    if (query.isNotEmpty) {
+      if (title.contains(query)) {
+        score += 50.0;
+        if (title.startsWith(query)) score += 20.0;
+      }
+      if (author.contains(query)) {
+        score += 60.0;
+      }
     }
 
     // 3. Trùng trong mô tả (+15 điểm)
@@ -394,31 +635,95 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     return score;
   }
 
+  String _removeDiacritics(String str) {
+    const withDia = 'áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ';
+    const withoutDia = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd';
+    String res = str.toLowerCase();
+    for (int i = 0; i < withDia.length; i++) {
+      res = res.replaceAll(withDia[i], withoutDia[i]);
+    }
+    return res;
+  }
+
+  bool get _isFiltering {
+    return _searchController.text.trim().isNotEmpty ||
+        _selectedSuggestion.isNotEmpty ||
+        _selectedMacroFilter != 'Tất cả';
+  }
+
+  List<Map<String, dynamic>> get _displayedResults {
+    if (_isFiltering) {
+      // Khi người dùng tìm kiếm hoặc lọc: Hiển thị đầy đủ tất cả kết quả khớp (Yêu cầu 5)
+      return _filteredResults;
+    }
+    // Mặc định ban đầu chỉ hiển thị 30 công thức cho mượt (Yêu cầu 5)
+    return _filteredResults.take(30).toList();
+  }
+
   List<Map<String, dynamic>> get _filteredResults {
     final query = _searchController.text.trim().toLowerCase();
+    final queryNormalized = _removeDiacritics(query);
     final activeQuery = query.isNotEmpty ? query : _selectedSuggestion.toLowerCase();
     final intentInfo = KMeansIntentClassifier.classifyIntent(activeQuery);
     final detectedCategory = intentInfo['category'] as IntentCategory;
 
     final filtered = _results.where((item) {
-      // 1. Lọc theo search input
+      final title = (item['title'] ?? '').toString().toLowerCase();
+      final titleNormalized = _removeDiacritics(title);
+      final author = (item['author'] ?? '').toString().toLowerCase();
+      final authorNormalized = _removeDiacritics(author);
+      final img = (item['image'] ?? '').toString().toLowerCase();
+      final id = (item['id'] ?? '').toString();
+
+      // Loại bỏ ảnh không phải món ăn (Ảnh 7: đĩa trắng, Ảnh 8: sách vở bút / ví da) - Yêu cầu 4
+      if (img.contains('dia-khum') ||
+          img.contains('longphuong') ||
+          img.contains('vi-nam') ||
+          img.contains('mediaelly') ||
+          img.contains('tapchixaydung') ||
+          id == '50082006-752f-4bda-bc77-0804e8d43b15' ||
+          id == '30a4c578-51e4-4b50-ae7f-b44fc13d015c' ||
+          id == 'd73bbde8-a6d3-4178-acdb-2083b298f7d4') {
+        return false;
+      }
+
+      // 1. Lọc theo search input: CHỈ lọc đúng từ khóa có trong TÊN CÔNG THỨC (Title) theo yêu cầu chính xác của người dùng
       if (query.isNotEmpty) {
-        final title = (item['title'] ?? '').toString().toLowerCase();
-        final desc = (item['description'] ?? '').toString().toLowerCase();
-        final author = (item['author'] ?? '').toString().toLowerCase();
-        final cat = (item['category'] ?? '').toString().toLowerCase();
-        if (!title.contains(query) && !desc.contains(query) && !author.contains(query) && !cat.contains(query)) {
+        final matchTitle = title.contains(query) || titleNormalized.contains(queryNormalized);
+        final matchAuthor = author.contains(query) || authorNormalized.contains(queryNormalized);
+        if (!matchTitle && !matchAuthor) {
           return false;
         }
       }
 
-      // 2. Lọc theo suggestion chip
+      // 2. Lọc theo suggestion chip: CHỈ lọc đúng từ khóa có trong TÊN CÔNG THỨC (Title) theo yêu cầu
       if (_selectedSuggestion.isNotEmpty) {
-        final title = (item['title'] ?? '').toString().toLowerCase();
-        final desc = (item['description'] ?? '').toString().toLowerCase();
-        if (!title.contains(_selectedSuggestion.toLowerCase()) && !desc.contains(_selectedSuggestion.toLowerCase())) {
-          return false;
+        final sug = _selectedSuggestion.toLowerCase();
+        final sugNormalized = _removeDiacritics(sug);
+        bool matches = false;
+
+        if (sug == 'bò xào') {
+          // Chỉ lọc đúng từ "bò xào" có trong tên công thức
+          matches = title.contains('bò xào') || titleNormalized.contains('bo xao');
+        } else if (sug == 'ức gà') {
+          // Chỉ lọc đúng từ "ức gà" có trong tên công thức
+          matches = title.contains('ức gà') || titleNormalized.contains('uc ga');
+        } else if (sug == 'cá hồi') {
+          // Chỉ lọc đúng từ "cá hồi" có trong tên công thức
+          matches = title.contains('cá hồi') || titleNormalized.contains('ca hoi') || titleNormalized.contains('salmon');
+        } else if (sug == 'sinh tố whey') {
+          // Chỉ lọc đúng từ sinh tố/whey có trong tên công thức
+          matches = title.contains('sinh tố') || title.contains('whey') || titleNormalized.contains('sinh to') || titleNormalized.contains('whey') || titleNormalized.contains('smoothie');
+        } else if (sug == 'salad') {
+          // Chỉ lọc đúng từ "salad" có trong tên công thức
+          matches = title.contains('salad') || titleNormalized.contains('salad');
+        } else if (sug == 'yến mạch') {
+          // Chỉ lọc đúng từ "yến mạch" có trong tên công thức
+          matches = title.contains('yến mạch') || titleNormalized.contains('yen mach') || titleNormalized.contains('oat');
+        } else {
+          matches = title.contains(sug) || titleNormalized.contains(sugNormalized);
         }
+        if (!matches) return false;
       }
 
       // 3. Lọc theo Macro
@@ -481,14 +786,20 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryAccent = SettingsService.instance.currentColor;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadApiRecipes,
-          color: primaryAccent,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadApiRecipes,
+            color: primaryAccent,
+            child: CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const BouncingScrollPhysics(),
             slivers: [
               // 1. THANH TÌM KIẾM TƯƠNG TÁC (Interactive Search Input Bar - fill: #ECF5FE)
               SliverToBoxAdapter(
@@ -640,6 +951,7 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                       final isSelected = _selectedMacroFilter == filter;
                       return GestureDetector(
                         onTap: () {
+                          FocusManager.instance.primaryFocus?.unfocus();
                           setState(() {
                             _selectedMacroFilter = isSelected ? 'Tất cả' : filter;
                           });
@@ -704,6 +1016,7 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                           final isSelected = _selectedSuggestion == sug;
                           return GestureDetector(
                             onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
                               setState(() {
                                 _selectedSuggestion = isSelected ? '' : sug;
                               });
@@ -768,26 +1081,13 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Quét món ăn AI & Tính Macro',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Chụp ảnh món ăn để ước tính ngay calo và protein',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5B5F63),
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            'Quét nguyên liệu AI',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -816,24 +1116,17 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                 ),
               ),
 
-              // 6. TIÊU ĐỀ KẾT QUẢ TÌM KIẾM
+              // 6. THÔNG TIN SỐ LƯỢNG KẾT QUẢ (Đã xóa dòng SẮP XẾP: PHÙ HỢP Ý ĐỊNH (K-MEANS) theo Yêu cầu 1)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        _getSortTitle(),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5B5F63),
-                        ),
-                      ),
-                      Text(
-                        '${_filteredResults.length} kết quả',
+                        _isFiltering
+                            ? '${_filteredResults.length} kết quả'
+                            : 'Hiển thị ${_displayedResults.length} / ${_filteredResults.length} công thức',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -876,10 +1169,10 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final item = _filteredResults[index];
+                      final item = _displayedResults[index];
                       return _buildRecipeCard(item, isDark);
                     },
-                    childCount: _filteredResults.length,
+                    childCount: _displayedResults.length,
                   ),
                 ),
 
@@ -888,18 +1181,8 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
           ),
         ),
       ),
+    ),
     );
-  }
-
-  String _getSortTitle() {
-    switch (_sortMode) {
-      case SearchSortMode.latest:
-        return 'SẮP XẾP: BÀI ĐĂNG MỚI NHẤT';
-      case SearchSortMode.hot:
-        return 'SẮP XẾP: ĐỘ HOT & TƯƠNG TÁC NHIỀU';
-      case SearchSortMode.relevance:
-        return 'SẮP XẾP: PHÙ HỢP Ý ĐỊNH (K-MEANS)';
-    }
   }
 
   Widget _buildSortOption(SearchSortMode mode, String label, bool isDark) {
@@ -907,6 +1190,7 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          FocusManager.instance.primaryFocus?.unfocus();
           setState(() {
             _sortMode = mode;
           });
@@ -957,7 +1241,6 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
     final badgeColor = item['badgeColor'] as Color? ?? const Color(0xFF10B981);
     final image = item['image'] as String?;
     final likes = (item['likes'] as num?)?.toInt() ?? 0;
-    final relTime = _formatRelativeTime(item['createdAt']);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -1033,90 +1316,132 @@ class _SearchExploreScreenState extends State<SearchExploreScreen> {
                   children: [
                     // Badge nhãn & Danh mục & Thời gian đăng
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                badge,
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: badgeColor,
-                                ),
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: badgeColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            badge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w800,
+                              color: badgeColor,
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                category,
-                                style: GoogleFonts.inter(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        // Lượt tim, Thời gian nấu & Thời gian đăng
-                        Row(
-                          children: [
-                            const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFEF4444)),
-                            const SizedBox(width: 2),
-                            Text(
-                              '$likes',
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              category,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
-                                fontSize: 10,
+                                fontSize: 8.5,
                                 fontWeight: FontWeight.w600,
                                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
                             ),
-                            const SizedBox(width: 6),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // Lượt tim & Thời gian
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite_rounded, size: 10, color: Color(0xFFEF4444)),
+                            const SizedBox(width: 2),
                             Text(
-                              '$time • $relTime',
+                              '$likes',
                               style: GoogleFonts.inter(
                                 fontSize: 9.5,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
                             ),
+                            if (time.isNotEmpty) ...[
+                              const SizedBox(width: 3),
+                              Text(
+                                '• $time',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     // Tên món ăn
                     Text(
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
                         height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    // Macro tags: Calo | Protein | Carb | Fat
-                    Row(
+                    if (item['author'] != null && (item['author'] as String).isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProfileScreen(
+                                authorData: {
+                                  'authorName': item['author'],
+                                  'authorAvatar': item['authorAvatar'] ?? item['image'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                                  'authorBadge': 'Gymer Chef',
+                                  'location': 'EatGym Kitchen',
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_pin_rounded, size: 13, color: Color(0xFF3B82F6)),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${item['author']}',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 5),
+                    // Macro tags: Calo | Protein | Carb
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [
                         _buildMacroPill('$calories kcal', isDark ? Colors.white70 : const Color(0xFF0F172A), isDark),
-                        const SizedBox(width: 5),
                         _buildMacroPill('${protein}g đạm', const Color(0xFF10B981), isDark),
-                        const SizedBox(width: 5),
                         _buildMacroPill('${carbs}g carb', const Color(0xFF3B82F6), isDark),
                       ],
                     ),

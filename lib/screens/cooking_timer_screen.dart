@@ -48,10 +48,33 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
     final recipe = widget.recipe ?? {};
     final totalMinutes = (recipe['time'] ?? recipe['cooking_time_min'] ?? 20) as int;
     final instructions = (recipe['instructions'] ?? '') as String;
+    final rawSteps = recipe['steps'];
 
     final parsedSteps = <CookingStep>[];
 
-    if (instructions.isNotEmpty) {
+    // 1. Ưu tiên đọc danh sách các bước có cấu trúc từ công thức người dùng tạo
+    if (rawSteps is List && rawSteps.isNotEmpty) {
+      for (int i = 0; i < rawSteps.length; i++) {
+        final s = rawSteps[i];
+        if (s is Map) {
+          final text = (s['step'] ?? s['title'] ?? '').toString();
+          final mins = (s['timeMinutes'] is num)
+              ? (s['timeMinutes'] as num).toInt()
+              : ((s['time'] is num) ? (s['time'] as num).toInt() : 5);
+          parsedSteps.add(CookingStep(
+            title: 'Bước ${i + 1}',
+            description: text,
+            seconds: max(mins * 60, 60),
+          ));
+        } else if (s is String) {
+          parsedSteps.add(CookingStep(
+            title: 'Bước ${i + 1}',
+            description: s,
+            seconds: 300,
+          ));
+        }
+      }
+    } else if (instructions.isNotEmpty) {
       // Split by newlines or by step prefixes (e.g. Bước X: or 1.)
       List<String> rawParts = [];
       if (instructions.contains('\n')) {
@@ -98,8 +121,8 @@ class _CookingTimerScreenState extends State<CookingTimerScreen> {
       }
     }
 
-    // Fallback if less than 3 steps so no recipe ever appears with only 1 or 2 steps
-    if (parsedSteps.length < 3) {
+    // Chỉ dùng fallback 5 bước mẫu khi công thức hoàn toàn KHÔNG CÓ bước nào
+    if (parsedSteps.isEmpty) {
       final dishName = (recipe['title'] ?? 'Món ăn').toString().replaceAll(RegExp(r'^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+', unicode: true), '').trim();
       parsedSteps.clear();
       parsedSteps.addAll([

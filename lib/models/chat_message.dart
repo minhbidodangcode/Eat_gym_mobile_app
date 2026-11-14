@@ -5,6 +5,8 @@ enum ChatMessageType {
   ingredientsAction,
   recipeSuggestions,
   inventorySummary,
+  mealPlanProposal,
+  interactiveQuestionnaire,
 }
 
 class ChatMessage {
@@ -16,6 +18,8 @@ class ChatMessage {
   final List<VoiceIngredientResult>? ingredients;
   final List<Map<String, dynamic>>? recipes;
   final List<Map<String, dynamic>>? inventoryItems;
+  final Map<String, dynamic>? mealPlanData;
+  final Map<String, dynamic>? questionnaireData;
   bool isActionDone;
 
   ChatMessage({
@@ -27,6 +31,8 @@ class ChatMessage {
     this.ingredients,
     this.recipes,
     this.inventoryItems,
+    this.mealPlanData,
+    this.questionnaireData,
     this.isActionDone = false,
   });
 
@@ -89,6 +95,20 @@ class ChatMessage {
       timestamp: DateTime.now(),
       type: ChatMessageType.inventorySummary,
       inventoryItems: inventoryItems,
+    );
+  }
+
+  factory ChatMessage.botMealPlan({
+    required String text,
+    required Map<String, dynamic> mealPlanData,
+  }) {
+    return ChatMessage(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      text: text,
+      isUser: false,
+      timestamp: DateTime.now(),
+      type: ChatMessageType.mealPlanProposal,
+      mealPlanData: mealPlanData,
     );
   }
 }

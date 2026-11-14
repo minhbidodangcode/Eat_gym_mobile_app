@@ -15,7 +15,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
+  FirebaseMessaging get _firebaseMessaging => _messaging ??= FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _localNotificationsReady = false;
@@ -36,33 +37,30 @@ class NotificationService {
   }
 
   Future<void> initialize() async {
-    // 1. Khởi tạo Firebase
-    await Firebase.initializeApp();
+    try {
+      await Firebase.initializeApp();
+      await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('Got a message whilst in the foreground!');
+        if (message.notification != null) {
+          showLocalNotification(
+            id: message.hashCode,
+            title: message.notification!.title ?? 'Thông báo',
+            body: message.notification!.body ?? '',
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Firebase initialize warning: $e');
+    }
 
-    // 2. Yêu cầu quyền Notification
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // 3. Khởi tạo Local Notifications
+    // Khởi tạo Local Notifications (độc lập với Firebase)
     await _ensureLocalNotificationsReady();
-
-    // 4. Lắng nghe FCM background
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // 5. Lắng nghe FCM foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Got a message whilst in the foreground!');
-      if (message.notification != null) {
-        showLocalNotification(
-          id: message.hashCode,
-          title: message.notification!.title ?? 'Thông báo',
-          body: message.notification!.body ?? '',
-        );
-      }
-    });
   }
 
   Future<void> showLocalNotification({
@@ -119,6 +117,56 @@ class NotificationService {
   Future<void> cancelReminder(int id) async {
     await _ensureLocalNotificationsReady();
     await _localNotificationsPlugin.cancel(id);
+  }
+
+  Future<void> scheduleWaterReminders({
+    int intervalMinutes = 45,
+    int startHour = 7,
+    int endHour = 21,
+  }) async {
+    await _ensureLocalNotificationsReady();
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'eatgym_water_channel',
+        'Nhắc uống nước EatGym',
+        channelDescription: 'Nhắc gymer uống nước định kỳ mỗi 45 phút',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+      ),
+    );
+
+    for (int i = 2000; i < 2050; i++) {
+      try {
+        await _localNotificationsPlugin.cancel(i);
+      } catch (_) {}
+    }
+
+    final now = DateTime.now();
+    int notifId = 2000;
+    DateTime slot = DateTime(now.year, now.month, now.day, startHour, 0);
+    final limit = DateTime(now.year, now.month, now.day, endHour, 0);
+
+    while (slot.isBefore(limit) || slot.isAtSameMomentAs(limit)) {
+      DateTime scheduledDate = slot;
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      try {
+        await _localNotificationsPlugin.zonedSchedule(
+          notifId,
+          '💧 Đã đến lúc uống nước rồi, Gymer!',
+          'Uống 200 - 300ml nước lọc để tăng trao đổi chất và phục hồi cơ bắp.',
+          tz.TZDateTime.from(scheduledDate, tz.local),
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+      } catch (_) {}
+      notifId++;
+      slot = slot.add(Duration(minutes: intervalMinutes));
+    }
   }
 
   Future<void> scheduleTimerNotification(int durationInSeconds) async {

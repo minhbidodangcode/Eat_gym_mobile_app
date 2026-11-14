@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/meal_plan_service.dart';
-import '../services/nutrition_advanced_api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
+import 'nutrigym_chatbot_screen.dart';
 
 class MealPrepScreen extends StatefulWidget {
   const MealPrepScreen({super.key});
@@ -14,19 +14,7 @@ class MealPrepScreen extends StatefulWidget {
 }
 
 class _MealPrepScreenState extends State<MealPrepScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController(text: 'Ức gà 4 bữa trưa');
-  final _servings = TextEditingController(text: '4');
-  final _weight = TextEditingController(text: '1000');
-
-  List<Map<String, dynamic>> _factors = [];
   List<MealPlan> _plans = [];
-  String? _factorId;
-  String _mealType = 'lunch';
-  DateTime _prepDate = DateTime.now();
-  DateTime _thawAt = DateTime.now().add(const Duration(days: 1, hours: 20));
-  bool _freeze = true;
-  bool _saving = false;
   bool _loading = true;
   double? _tdee;
 
@@ -36,207 +24,145 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
     _load();
   }
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _servings.dispose();
-    _weight.dispose();
-    super.dispose();
-  }
-
-  double get _factor {
-    if (_factorId == null || _factors.isEmpty) return 0.8;
-    final f = _factors.firstWhere(
-      (item) => item['id'].toString() == _factorId,
-      orElse: () => _factors.first,
-    );
-    return (f['rawToCookedFactor'] as num?)?.toDouble() ?? 0.8;
-  }
-
-  double get _inputWeightVal => double.tryParse(_weight.text) ?? 1000;
-  int get _servingsVal => int.tryParse(_servings.text) ?? 4;
-  double get _cookedPerServing => _servingsVal > 0 ? (_inputWeightVal * _factor) / _servingsVal : 0;
-
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
       final values = await Future.wait<dynamic>([
-        NutritionAdvancedApiService.getYieldFactors(),
         MealPlanService.loadPlans(),
         ApiService.getProfile(),
       ]);
       if (!mounted) return;
-      List<Map<String, dynamic>> factors = [];
-      if (values[0] != null && values[0]['yieldFactors'] is List) {
-        factors = List<Map<String, dynamic>>.from(values[0]['yieldFactors']);
-      }
-      if (factors.isEmpty) {
-        factors = [
-          {
-            'id': 'c392fdb2-1a41-4c6e-827d-94c3dc09d27f',
-            'ingredientName': 'Ức gà phi lê',
-            'cookingMethod': 'Luộc / Hấp',
-            'rawToCookedFactor': 0.80,
-          },
-          {
-            'id': 'beef-stirfry-1',
-            'ingredientName': 'Thịt thăn bò',
-            'cookingMethod': 'Áp chảo / Xào',
-            'rawToCookedFactor': 0.72,
-          },
-          {
-            'id': 'salmon-bake-1',
-            'ingredientName': 'Phi lê cá hồi',
-            'cookingMethod': 'Nướng / Áp chảo',
-            'rawToCookedFactor': 0.85,
-          },
-          {
-            'id': 'rice-cooked-1',
-            'ingredientName': 'Gạo lứt',
-            'cookingMethod': 'Nấu cơm',
-            'rawToCookedFactor': 2.40,
-          },
-        ];
-      }
       setState(() {
-        _factors = factors;
-        _factorId = factors.first['id'].toString();
-        _plans = List<MealPlan>.from(values[1]);
-        _tdee = (values[2]?['tdeeKcal'] as num?)?.toDouble() ?? 2200;
+        _plans = List<MealPlan>.from(values[0]);
+        _tdee = (values[1]?['tdeeKcal'] as num?)?.toDouble() ?? 2200;
       });
     } catch (_) {
-      if (_factors.isEmpty) {
-        _factors = [
-          {
-            'id': 'c392fdb2-1a41-4c6e-827d-94c3dc09d27f',
-            'ingredientName': 'Ức gà phi lê',
-            'cookingMethod': 'Luộc / Hấp',
-            'rawToCookedFactor': 0.80,
-          },
-          {
-            'id': 'beef-stirfry-1',
-            'ingredientName': 'Thịt thăn bò',
-            'cookingMethod': 'Áp chảo / Xào',
-            'rawToCookedFactor': 0.72,
-          },
-          {
-            'id': 'salmon-bake-1',
-            'ingredientName': 'Phi lê cá hồi',
-            'cookingMethod': 'Nướng / Áp chảo',
-            'rawToCookedFactor': 0.85,
-          },
-          {
-            'id': 'rice-cooked-1',
-            'ingredientName': 'Gạo lứt',
-            'cookingMethod': 'Nấu cơm',
-            'rawToCookedFactor': 2.40,
-          },
-        ];
-        _factorId = _factors.first['id'].toString();
+      final plans = await MealPlanService.loadPlans();
+      if (mounted) {
+        setState(() {
+          _plans = plans;
+        });
       }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _pickDate({required bool thaw}) async {
-    final initial = thaw ? _thawAt : _prepDate;
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
+  Future<void> _openChatbot() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NutriGymChatbotScreen()),
     );
-    if (date == null || !mounted) return;
-    if (!thaw) {
-      setState(() => _prepDate = DateTime(date.year, date.month, date.day, _prepDate.hour, _prepDate.minute));
-      return;
-    }
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_thawAt),
-    );
-    if (time != null) {
-      setState(() => _thawAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    if (mounted) {
+      _load();
     }
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate() || _factorId == null) return;
-    setState(() => _saving = true);
-    try {
-      String? batchId;
-      try {
-        final result = await NutritionAdvancedApiService.createMealPrepBatch(
-          name: _name.text.trim(),
-          servings: int.parse(_servings.text),
-          notes: 'Kế hoạch ${_mealLabel(_mealType)}${_freeze ? ' • bảo quản đông' : ''}',
-          items: [
-            {'yieldFactorId': _factorId, 'inputWeightG': double.parse(_weight.text), 'inputState': 'raw'}
-          ],
-        );
-        batchId = result['batch']?['id']?.toString();
-      } catch (_) {}
-
-      final plan = MealPlan(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        name: _name.text.trim(),
-        servings: int.parse(_servings.text),
-        mealType: _mealType,
-        prepDate: _prepDate,
-        storedFrozen: _freeze,
-        thawAt: _freeze ? _thawAt : null,
-        batchId: batchId,
-      );
-      await MealPlanService.savePlan(plan);
-      if (!mounted) return;
-      setState(() {
-        _plans = [..._plans, plan]..sort((a, b) => (a.thawAt ?? a.prepDate).compareTo(b.thawAt ?? b.prepDate));
-      });
+  Future<void> _deleteMeal(MealPlan plan) async {
+    await MealPlanService.deletePlan(plan);
+    if (mounted) {
+      setState(() => _plans.removeWhere((p) => p.id == plan.id));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _freeze
-                ? '❄️ Đã lập kế hoạch và kích hoạt thông báo nhắc rã đông!'
-                : '🍱 Đã lưu kế hoạch Meal Prep thành công!',
-          ),
-          backgroundColor: const Color(0xFF00E676),
+          content: Text('Đã xóa món "${plan.name}" khỏi lịch.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (error) {
+    }
+  }
+
+  Future<void> _confirmClearAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa toàn bộ thực đơn?'),
+        content: const Text('Bạn có chắc chắn muốn xóa toàn bộ lịch ăn và hủy tất cả thông báo nhắc rã đông không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('HỦY'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.fire),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('XÓA HẾT', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await MealPlanService.clearAllPlans();
       if (mounted) {
+        setState(() => _plans.clear());
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Chưa thể lưu kế hoạch: $error'),
-            backgroundColor: AppColors.fire,
+          const SnackBar(
+            content: Text('Đã làm trống lịch ăn thành công.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
   }
 
-  String _date(DateTime time) =>
+  static String _getWeekdayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Thứ 2';
+      case 2: return 'Thứ 3';
+      case 3: return 'Thứ 4';
+      case 4: return 'Thứ 5';
+      case 5: return 'Thứ 6';
+      case 6: return 'Thứ 7';
+      case 7: return 'Chủ nhật';
+      default: return 'Thứ $weekday';
+    }
+  }
+
+  Map<String, List<MealPlan>> _groupPlansByDay() {
+    final Map<String, List<MealPlan>> groups = {};
+    for (final plan in _plans) {
+      final weekdayStr = _getWeekdayName(plan.prepDate.weekday);
+      final dateFormatted = '${plan.prepDate.day.toString().padLeft(2, '0')}/${plan.prepDate.month.toString().padLeft(2, '0')}';
+      final key = '$weekdayStr ($dateFormatted)';
+      groups.putIfAbsent(key, () => []).add(plan);
+    }
+
+    final order = {'breakfast': 0, 'sáng': 0, 'lunch': 1, 'trưa': 1, 'dinner': 2, 'tối': 2, 'snack': 3, 'phụ': 3};
+    for (final dayMeals in groups.values) {
+      dayMeals.sort((a, b) {
+        int orderA = 99;
+        int orderB = 99;
+        order.forEach((k, v) {
+          if (a.mealType.toLowerCase().contains(k)) orderA = v;
+          if (b.mealType.toLowerCase().contains(k)) orderB = v;
+        });
+        return orderA.compareTo(orderB);
+      });
+    }
+
+    return groups;
+  }
+
+  String _formatDateTime(DateTime time) =>
       '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')} lúc ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
-  String _mealLabel(String value) =>
-      const {
-        'breakfast': 'Bữa sáng',
-        'lunch': 'Bữa trưa',
-        'dinner': 'Bữa tối',
-        'snack': 'Bữa phụ',
-      }[value] ?? value;
+  String _mealLabel(String value) {
+    final v = value.toLowerCase();
+    if (v.contains('sáng') || v == 'breakfast') return 'Bữa sáng';
+    if (v.contains('trưa') || v == 'lunch') return 'Bữa trưa';
+    if (v.contains('tối') || v == 'dinner') return 'Bữa tối';
+    if (v.contains('phụ') || v == 'snack') return 'Bữa phụ';
+    return value;
+  }
 
-  Color _mealColor(String value) =>
-      const {
-        'breakfast': Color(0xFFFFB300),
-        'lunch': Color(0xFF00E676),
-        'dinner': Color(0xFF2979FF),
-        'snack': Color(0xFFAB47BC),
-      }[value] ?? const Color(0xFF00E676);
+  Color _mealColor(String value) {
+    final v = value.toLowerCase();
+    if (v.contains('sáng') || v == 'breakfast') return const Color(0xFFFFB300);
+    if (v.contains('trưa') || v == 'lunch') return const Color(0xFF00E676);
+    if (v.contains('tối') || v == 'dinner') return const Color(0xFF2979FF);
+    if (v.contains('phụ') || v == 'snack') return const Color(0xFFAB47BC);
+    return const Color(0xFF00E676);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,326 +173,125 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
     final textColor = isDark ? Colors.white : AppColors.onSurface;
     final subTextColor = isDark ? const Color(0xFF94A3B8) : AppColors.textMuted;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
-      appBar: Navigator.canPop(context)
-          ? AppBar(
-              title: Text(
-                'Kế hoạch Meal Prep & Rã Đông',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17,
-                  color: textColor,
-                ),
-              ),
-              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              leading: IconButton(
+    final groupedPlans = _groupPlansByDay();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+        appBar: AppBar(
+        title: Text(
+          'Lịch Ăn & Meal Prep AI',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            color: textColor,
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: Navigator.canPop(context)
+            ? IconButton(
                 icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textColor),
                 onPressed: () => Navigator.pop(context),
-              ),
-            )
-          : null,
+              )
+            : null,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh_rounded, color: textColor),
+            tooltip: 'Tải lại lịch',
+            onPressed: _load,
+          ),
+          if (_plans.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+              tooltip: 'Xóa toàn bộ lịch',
+              onPressed: _confirmClearAll,
+            ),
+        ],
+      ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: primaryColor))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Banner TDEE & Hướng dẫn
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          primaryColor.withValues(alpha: 0.15),
-                          const Color(0xFF2563EB).withValues(alpha: 0.08),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.kitchen_rounded, color: primaryColor, size: 26),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Lập kế hoạch theo nhu cầu cá nhân',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: textColor,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                _tdee != null
-                                    ? 'Mục tiêu: ${_tdee!.round()} kcal/ngày. Hãy chia mẻ nguyên liệu thành các hộp nhỏ sẵn sàng cho các ngày tới.'
-                                    : 'Nấu mẻ lớn, tự động tính khối lượng chín từng hộp và hẹn giờ rã đông tự động.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12.5,
-                                  color: subTextColor,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ],
-                          ),
+          : RefreshIndicator(
+              onRefresh: _load,
+              color: primaryColor,
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Banner Thông Minh NutriGym AI
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryColor.withValues(alpha: 0.16),
+                            const Color(0xFF2563EB).withValues(alpha: 0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Khối Form Lập kế hoạch
-                  Text(
-                    'TẠO KẾ HOẠCH NẤU MỚI',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                      color: primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Form(
-                      key: _formKey,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: primaryColor.withValues(alpha: 0.35)),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Tên kế hoạch
-                          TextFormField(
-                            controller: _name,
-                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'Tên kế hoạch',
-                              labelStyle: TextStyle(color: subTextColor, fontSize: 13),
-                              hintText: 'Ví dụ: Ức gà 4 bữa trưa',
-                              hintStyle: TextStyle(color: subTextColor.withValues(alpha: 0.6), fontSize: 13),
-                              filled: true,
-                              fillColor: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-                              prefixIcon: Icon(Icons.bookmark_border_rounded, color: primaryColor, size: 20),
-                            ),
-                            validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên kế hoạch' : null,
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Số hộp & Bữa dùng
                           Row(
                             children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _servings,
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (_) => setState(() {}),
-                                  style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
-                                  decoration: InputDecoration(
-                                    labelText: 'Số hộp (bữa)',
-                                    labelStyle: TextStyle(color: subTextColor, fontSize: 13),
-                                    filled: true,
-                                    fillColor: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-                                    prefixIcon: Icon(Icons.takeout_dining_rounded, color: primaryColor, size: 20),
-                                  ),
-                                  validator: (v) => (int.tryParse(v ?? '') ?? 0) < 1 ? 'Tối thiểu 1' : null,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
+                                child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: _mealType,
-                                  dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
-                                  style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
-                                  decoration: InputDecoration(
-                                    labelText: 'Bữa dùng',
-                                    labelStyle: TextStyle(color: subTextColor, fontSize: 13),
-                                    filled: true,
-                                    fillColor: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 'breakfast', child: Text('Sáng')),
-                                    DropdownMenuItem(value: 'lunch', child: Text('Trưa')),
-                                    DropdownMenuItem(value: 'dinner', child: Text('Tối')),
-                                    DropdownMenuItem(value: 'snack', child: Text('Bữa phụ')),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Lịch Ăn Khoa Học Cùng AI',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _tdee != null
+                                          ? 'Mục tiêu: ${_tdee!.round()} kcal/ngày • Tự động tính Macros'
+                                          : 'Tự động tính calo, rã đông & đi chợ',
+                                      style: TextStyle(color: subTextColor, fontSize: 12),
+                                    ),
                                   ],
-                                  onChanged: (v) => setState(() => _mealType = v!),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
-
-                          // Chọn nguyên liệu & cách nấu
-                          DropdownButtonFormField<String>(
-                            initialValue: _factorId,
-                            isExpanded: true,
-                            dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
-                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 13.5),
-                            decoration: InputDecoration(
-                              labelText: 'Nguyên liệu & cách nấu',
-                              labelStyle: TextStyle(color: subTextColor, fontSize: 13),
-                              filled: true,
-                              fillColor: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-                              prefixIcon: Icon(Icons.restaurant_menu_rounded, color: primaryColor, size: 20),
-                            ),
-                            items: _factors
-                                .map((f) => DropdownMenuItem(
-                                      value: f['id'].toString(),
-                                      child: Text(
-                                        '${f['ingredientName']} • ${f['cookingMethod']} (x${(f['rawToCookedFactor'] as num).toStringAsFixed(2)})',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
-                                .toList(),
-                            onChanged: (v) => setState(() => _factorId = v),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Khối lượng sống cần chuẩn bị
-                          TextFormField(
-                            controller: _weight,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (_) => setState(() {}),
-                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'Khối lượng sống cần chuẩn bị (g)',
-                              labelStyle: TextStyle(color: subTextColor, fontSize: 13),
-                              filled: true,
-                              fillColor: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: borderColor)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-                              prefixIcon: Icon(Icons.scale_rounded, color: primaryColor, size: 20),
-                            ),
-                            validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Nhập khối lượng hợp lệ' : null,
-                          ),
                           const SizedBox(height: 12),
-
-                          // Bảng ước tính tự động cho từng hộp
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: borderColor),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.info_outline_rounded, color: primaryColor, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Dự tính: ~${(_inputWeightVal * _factor).round()}g chín tổng mẻ • Cân ~${_cookedPerServing.round()}g thịt chín/hộp',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            'Lịch ăn của bạn được lên kế hoạch và tối ưu trực tiếp cùng Trợ lý Chatbot AI. Bạn không cần phải tính toán thủ công từng món!',
+                            style: GoogleFonts.inter(
+                              fontSize: 12.5,
+                              color: textColor.withValues(alpha: 0.85),
+                              height: 1.4,
                             ),
                           ),
                           const SizedBox(height: 14),
-
-                          // Ngày nấu
-                          InkWell(
-                            onTap: () => _pickDate(thaw: false),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: borderColor),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.calendar_month_outlined, color: primaryColor, size: 20),
-                                  const SizedBox(width: 10),
-                                  Text('Ngày nấu:', style: TextStyle(color: subTextColor, fontSize: 13)),
-                                  const Spacer(),
-                                  Text(_date(_prepDate), style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.edit_calendar_outlined, size: 16, color: subTextColor),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Bảo quản ngăn đông switch
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            value: _freeze,
-                            activeTrackColor: primaryColor,
-                            activeThumbColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
-                            onChanged: (v) => setState(() => _freeze = v),
-                            title: Text('Bảo quản ngăn đông', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: textColor)),
-                            subtitle: Text('Tự động lên lịch nhắc bạn chuyển xuống ngăn mát trước khi ăn', style: TextStyle(color: subTextColor, fontSize: 11.5)),
-                          ),
-
-                          // Nhắc rã đông (nếu bật ngăn đông)
-                          if (_freeze) ...[
-                            const SizedBox(height: 6),
-                            InkWell(
-                              onTap: () => _pickDate(thaw: true),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.ac_unit_rounded, color: primaryColor, size: 20),
-                                    const SizedBox(width: 10),
-                                    Text('Nhắc rã đông lúc:', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
-                                    const Spacer(),
-                                    Text(_date(_thawAt), style: GoogleFonts.inter(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                    const SizedBox(width: 4),
-                                    Icon(Icons.edit_calendar_rounded, size: 16, color: primaryColor),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 18),
-
-                          // Nút Lưu kế hoạch
                           SizedBox(
                             width: double.infinity,
-                            height: 48,
+                            height: 44,
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
@@ -574,170 +299,392 @@ class _MealPrepScreenState extends State<MealPrepScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
-                              onPressed: _saving || _factorId == null ? null : _save,
-                              icon: _saving
-                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                                  : const Icon(Icons.add_task_rounded, size: 20),
+                              onPressed: _openChatbot,
+                              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                               label: Text(
-                                'LƯU KẾ HOẠCH & ĐẶT LỊCH RÃ ĐÔNG',
-                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.3),
+                                'TRÒ CHUYỆN VỚI AI ĐỂ ĐỔI LỊCH ĂN',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5, letterSpacing: 0.2),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                  // Khối Danh sách kế hoạch sắp tới
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'KẾ HOẠCH SẮP TỚI',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                          color: primaryColor,
+                    // Tiêu đề & Tổng kết lịch
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'KẾ HOẠCH BỮA ĂN CHI TIẾT',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: primaryColor,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_plans.length} kế hoạch',
-                        style: TextStyle(color: subTextColor, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_plans.length} món ăn',
+                            style: TextStyle(color: primaryColor, fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
 
-                  if (_plans.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.event_available_rounded, size: 36, color: subTextColor.withValues(alpha: 0.4)),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Chưa có kế hoạch Meal Prep nào',
-                            style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Hãy lập mẻ nấu đầu tiên để hệ thống tự động nhắc nhở rã đông chuẩn giờ.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: subTextColor, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ..._plans.map((plan) {
-                      final mealColor = _mealColor(plan.mealType);
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(14),
+                    // Trạng thái nếu rỗng
+                    if (_plans.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
                         decoration: BoxDecoration(
                           color: cardColor,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: borderColor),
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
                             Container(
-                              width: 42,
-                              height: 42,
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: (plan.storedFrozen ? const Color(0xFF00E5FF) : mealColor).withValues(alpha: 0.15),
+                                color: primaryColor.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                plan.storedFrozen ? Icons.ac_unit_rounded : Icons.restaurant_rounded,
-                                color: plan.storedFrozen ? const Color(0xFF00E5FF) : mealColor,
-                                size: 22,
-                              ),
+                              child: Icon(Icons.calendar_today_rounded, size: 40, color: primaryColor),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          plan.name,
-                                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: mealColor.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          _mealLabel(plan.mealType),
-                                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: mealColor),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${plan.servings} hộp • Ngày nấu: ${_date(plan.prepDate)}',
-                                    style: TextStyle(color: subTextColor, fontSize: 12),
-                                  ),
-                                  if (plan.storedFrozen && plan.thawAt != null) ...[
-                                    const SizedBox(height: 3),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.alarm_on_rounded, size: 14, color: Color(0xFF00E5FF)),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Nhắc rã đông: ${_date(plan.thawAt!)}',
-                                          style: GoogleFonts.inter(
-                                            color: const Color(0xFF00E5FF),
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Chưa có thực đơn nào trong lịch',
+                              style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 15),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                              tooltip: 'Xóa kế hoạch',
-                              onPressed: () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                await MealPlanService.deletePlan(plan);
-                                if (!mounted) return;
-                                setState(() => _plans.removeWhere((p) => p.id == plan.id));
-                                messenger.showSnackBar(
-                                  const SnackBar(content: Text('Đã xóa kế hoạch & hủy nhắc nhở.'), behavior: SnackBarBehavior.floating),
-                                );
-                              },
+                            const SizedBox(height: 6),
+                            Text(
+                              'Hãy mở Chatbot AI để tạo thực đơn theo những nguyên liệu có sẵn trong tủ lạnh hoặc theo mục tiêu tăng cơ giảm mỡ!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: subTextColor, fontSize: 12.5, height: 1.4),
+                            ),
+                            const SizedBox(height: 18),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: _openChatbot,
+                              icon: const Icon(Icons.auto_awesome, size: 18),
+                              label: const Text('Tạo Thực Đơn Cùng AI Ngay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                           ],
                         ),
-                      );
-                    }),
-                  const SizedBox(height: 24),
-                ],
+                      )
+                    else
+                      // Danh sách các ngày đã lên lịch
+                      ...groupedPlans.entries.map((entry) {
+                        final dayTitle = entry.key;
+                        final dayMeals = entry.value;
+
+                        // Tính tổng Macros của ngày & Thông tin Carb Cycling
+                        int dayKcal = 0;
+                        int dayProtein = 0;
+                        int dayCarbs = 0;
+                        String? dayWorkoutFocus;
+                        String? dayWorkoutType;
+                        String? dayCarbLevel;
+
+                        for (final m in dayMeals) {
+                          dayKcal += m.kcal ?? 0;
+                          dayProtein += m.protein ?? 0;
+                          dayCarbs += m.carbs ?? 0;
+                          if (m.workoutFocus != null && m.workoutFocus!.isNotEmpty) {
+                            dayWorkoutFocus = m.workoutFocus;
+                          }
+                          if (m.workoutType != null && m.workoutType!.isNotEmpty) {
+                            dayWorkoutType = m.workoutType;
+                          }
+                          if (m.carbLevel != null && m.carbLevel!.isNotEmpty) {
+                            dayCarbLevel = m.carbLevel;
+                          }
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderColor),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header Ngày
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: 0.08),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.event_note_rounded, size: 18, color: primaryColor),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            dayTitle,
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                        ),
+                                        if (dayKcal > 0)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? const Color(0xFF1E2420) : Colors.white,
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: borderColor),
+                                            ),
+                                            child: Text(
+                                              '🔥 $dayKcal kcal • 🌾 ${dayCarbs}g C • 💪 ${dayProtein}g P',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    if (dayWorkoutFocus != null || dayCarbLevel != null) ...[
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: (dayWorkoutType == 'heavy'
+                                                      ? const Color(0xFFEF4444)
+                                                      : (dayWorkoutType == 'rest'
+                                                          ? const Color(0xFF10B981)
+                                                          : const Color(0xFFF59E0B)))
+                                                  .withValues(alpha: 0.16),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              dayWorkoutType == 'heavy'
+                                                  ? '🔥 High Carb (Tập nặng)'
+                                                  : (dayWorkoutType == 'rest'
+                                                      ? '🌿 Low Carb (Nghỉ ngơi)'
+                                                      : '⚡ Moderate Carb (Tập nhẹ)'),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: dayWorkoutType == 'heavy'
+                                                    ? const Color(0xFFEF4444)
+                                                    : (dayWorkoutType == 'rest'
+                                                        ? const Color(0xFF10B981)
+                                                        : const Color(0xFFF59E0B)),
+                                              ),
+                                            ),
+                                          ),
+                                          if (dayWorkoutFocus != null) ...[
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                dayWorkoutFocus,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: subTextColor,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+
+                              // Danh sách món trong ngày
+                              Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: dayMeals.map((plan) {
+                                    final mealColor = _mealColor(plan.mealType);
+                                    final isFrozen = plan.storedFrozen;
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1A221E) : const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: borderColor),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            width: 38,
+                                            height: 38,
+                                            decoration: BoxDecoration(
+                                              color: (isFrozen ? const Color(0xFF00E5FF) : mealColor).withValues(alpha: 0.15),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              isFrozen ? Icons.ac_unit_rounded : Icons.restaurant_rounded,
+                                              color: isFrozen ? const Color(0xFF0097A7) : mealColor,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: mealColor.withValues(alpha: 0.15),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        _mealLabel(plan.mealType),
+                                                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: mealColor),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: isFrozen
+                                                            ? const Color(0xFF00E5FF).withValues(alpha: 0.15)
+                                                            : AppColors.green.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        isFrozen ? '❄️ Meal Prep' : '🍳 Nấu tươi',
+                                                        style: GoogleFonts.inter(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: isFrozen ? const Color(0xFF0097A7) : AppColors.green,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 5),
+                                                Text(
+                                                  plan.name,
+                                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5, color: textColor),
+                                                ),
+                                                if (plan.notes != null && plan.notes!.isNotEmpty) ...[
+                                                  const SizedBox(height: 3),
+                                                  Text(
+                                                    plan.notes!,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      color: subTextColor,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ],
+                                                const SizedBox(height: 4),
+                                                Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 4,
+                                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                                  children: [
+                                                    if (plan.kcal != null)
+                                                      Text(
+                                                        '🔥 ${plan.kcal} kcal',
+                                                        style: const TextStyle(fontSize: 11.5, color: AppColors.fire, fontWeight: FontWeight.bold),
+                                                      ),
+                                                    if (plan.protein != null)
+                                                      Text(
+                                                        '💪 ${plan.protein}g đạm',
+                                                        style: TextStyle(fontSize: 11.5, color: primaryColor, fontWeight: FontWeight.bold),
+                                                      ),
+                                                    if (plan.carbs != null)
+                                                      Text(
+                                                        '🌾 ${plan.carbs}g C',
+                                                        style: TextStyle(fontSize: 11, color: subTextColor),
+                                                      ),
+                                                    if (plan.fat != null)
+                                                      Text(
+                                                        '🥑 ${plan.fat}g F',
+                                                        style: TextStyle(fontSize: 11, color: subTextColor),
+                                                      ),
+                                                  ],
+                                                ),
+                                                if (isFrozen && plan.thawAt != null) ...[
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(Icons.alarm_on_rounded, size: 14, color: Color(0xFF0097A7)),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'Nhắc rã đông: ${_formatDateTime(plan.thawAt!)}',
+                                                        style: GoogleFonts.inter(
+                                                          color: const Color(0xFF0097A7),
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                                            tooltip: 'Xóa món này',
+                                            onPressed: () => _deleteMeal(plan),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
+      ),
     );
   }
 }

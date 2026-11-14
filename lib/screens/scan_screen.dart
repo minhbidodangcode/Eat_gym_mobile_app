@@ -1,9 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 import '../models/recipe.dart';
 import '../services/ai/ai_service_factory.dart';
+import '../services/ai/ingredient_normalizer.dart';
 import '../services/ai/meal_recommendation_service.dart';
+import '../services/ai/providers/gemini_food_recognition_service.dart';
+import '../services/api_service.dart';
 
 // Nội dung chính của màn hình Quét
 class ScanScreen extends StatefulWidget {
@@ -16,21 +23,60 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   bool _isFlashOn = false;
   bool _isLoading = false;
+  bool _isDishMode = false; // Chế độ quét: false = Quét nguyên liệu, true = Quét đĩa món ăn
   double _confidenceThreshold = 0.4;
   File? _selectedImage;
   List<Recipe> _recommendedRecipes = [];
   List<String> _detectedIngredients = [];
 
+  // Thông tin phân tích đĩa thức ăn
+  String? _detectedDishName;
+  int? _detectedGrams;
+  String? _dishSuggestion;
+  int _userMealLimitKcal = 750; // Hạn mức 1 bữa ăn mặc định (~35% TDEE)
+  String _userGoal = 'Tăng cơ';
+
+  int _totalKcal = 0;
+  double _totalProtein = 0;
+  double _totalCarbs = 0;
+  double _totalFat = 0;
+
   // Khởi tạo AI Services
+  late final FoodRecognitionService _foodRecognitionService;
   late final MealRecommendationService _recommendationService;
 
   @override
   void initState() {
     super.initState();
+    _foodRecognitionService = AIServiceFactory.createFoodRecognitionService();
     _recommendationService = MealRecommendationService(
-      foodRecognitionService: AIServiceFactory.createFoodRecognitionService(),
+      foodRecognitionService: _foodRecognitionService,
       recipeService: AIServiceFactory.createRecipeService(),
     );
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await ApiService.getProfile() ?? await ApiService.getLocalProfile();
+      if (profile != null) {
+        final double tdee = (profile['tdeeKcal'] as num?)?.toDouble() ?? 2200;
+        final goal = profile['fitnessGoal']?.toString() ?? 'Tăng cơ';
+        double target = tdee;
+        if (goal.contains('Tăng')) {
+          target = tdee + 300;
+        } else if (goal.contains('Giảm')) {
+          target = tdee - 400;
+        }
+        if (mounted) {
+          setState(() {
+            _userGoal = goal;
+            // Một bữa ăn chính thường chiếm khoảng 30% - 35% tổng calo trong ngày
+            _userMealLimitKcal = (target * 0.35).round();
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -43,31 +89,89 @@ class _ScanScreenState extends State<ScanScreen> {
         _isLoading = true;
         _recommendedRecipes = [];
         _detectedIngredients = [];
+        _detectedDishName = null;
+        _detectedGrams = null;
+        _dishSuggestion = null;
+        _totalKcal = 0;
+        _totalProtein = 0;
+        _totalCarbs = 0;
+        _totalFat = 0;
       });
 
       try {
-        // Gọi service nhận diện theo độ tin cậy và gợi ý công thức xếp theo thời gian nấu từ thấp đến cao
-        final result = await _recommendationService.recommendMeals(
-          _selectedImage!,
-          minConfidence: _confidenceThreshold,
-        );
+        if (_isDishMode) {
+          // 🍽️ CHẾ ĐỘ QUÉT ĐĨA MÓN ĂN ĐÃ NẤU CHÍN
+          final dishData = await _foodRecognitionService.recognizeCookedDish(_selectedImage!);
+          if (!mounted) return;
 
-        if (!mounted) return;
+          final dishName = dishData['dishName']?.toString() ?? 'Đĩa thức ăn Gymer';
+          final grams = (dishData['estimatedGrams'] as num?)?.toInt() ?? 420;
+          final kcal = (dishData['calories'] as num?)?.toInt() ?? 550;
+          final pro = (dishData['protein'] as num?)?.toDouble() ?? 40.0;
+          final carb = (dishData['carbs'] as num?)?.toDouble() ?? 50.0;
+          final fat = (dishData['fat'] as num?)?.toDouble() ?? 12.0;
+          final ingList = dishData['ingredients'] is List
+              ? (dishData['ingredients'] as List).map((e) => e.toString()).toList()
+              : <String>[];
+          final suggestion = dishData['suggestion']?.toString() ?? 'Bữa ăn cân đối chuẩn macro Gymer.';
 
-        setState(() {
-          _recommendedRecipes = result.recipes;
-          _detectedIngredients = result.recognizedIngredients
-              .map((r) => r.foodName)
-              .toList();
-          _isLoading = false;
-        });
-
-        if (_recommendedRecipes.isNotEmpty) {
-          _showRecipesDialog();
+          setState(() {
+            _detectedDishName = dishName;
+            _detectedGrams = grams;
+            _totalKcal = kcal;
+            _totalProtein = pro;
+            _totalCarbs = carb;
+            _totalFat = fat;
+            _detectedIngredients = ingList;
+            _dishSuggestion = suggestion;
+            _isLoading = false;
+          });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không tìm thấy nguyên liệu hoặc công thức phù hợp')),
+          // 🥦 CHẾ ĐỘ QUÉT NGUYÊN LIỆU TƯƠI SỐNG
+          final result = await _recommendationService.recommendMeals(
+            _selectedImage!,
+            minConfidence: _confidenceThreshold,
           );
+
+          if (!mounted) return;
+
+          int kcal = 0;
+          double pro = 0;
+          double carbs = 0;
+          double fat = 0;
+
+          for (final item in result.recognizedIngredients) {
+            final details = IngredientNormalizer.getIngredientDetails(item.foodName);
+            final k = (details['kcal'] as num?)?.toInt() ?? 120;
+            final p = (details['protein'] as num?)?.toDouble() ?? 10.0;
+            final c = (details['carbs'] as num?)?.toDouble() ?? 5.0;
+            final f = (details['fat'] as num?)?.toDouble() ?? 3.0;
+
+            kcal += k;
+            pro += p;
+            carbs += c;
+            fat += f;
+          }
+
+          setState(() {
+            _recommendedRecipes = result.recipes;
+            _detectedIngredients = result.recognizedIngredients
+                .map((r) => r.foodName)
+                .toList();
+            _totalKcal = kcal;
+            _totalProtein = pro;
+            _totalCarbs = carbs;
+            _totalFat = fat;
+            _isLoading = false;
+          });
+
+          if (_recommendedRecipes.isNotEmpty) {
+            _showRecipesDialog();
+          } else if (_detectedIngredients.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không tìm thấy nguyên liệu hoặc công thức phù hợp')),
+            );
+          }
         }
       } catch (e) {
         if (!mounted) return;
@@ -79,6 +183,75 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+
+  void _showUpdateApiKeyDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentKey = prefs.getString('gemini_api_key') ?? '';
+    final controller = TextEditingController(text: currentKey);
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.key_rounded, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text('Cập nhật API Key AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dán Gemini API Key mới vào đây. Hệ thống sẽ ngay lập tức sử dụng Key này để nhận diện nguyên liệu:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF4B5563)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Dán API Key (AQ... hoặc AIzaSy...)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final newKey = controller.text.trim();
+              if (newKey.isNotEmpty) {
+                await GeminiFoodRecognitionService.saveApiKey(newKey);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✨ Đã lưu và kích hoạt Gemini API Key mới thành công!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+              if (mounted) Navigator.pop(dCtx);
+            },
+            child: const Text('Lưu & Kích hoạt'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _simulateCapture() {
     _pickImage(ImageSource.camera);
@@ -312,11 +485,192 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 
+  Future<void> _addDetectedIngredientsToFridge() async {
+    if (_detectedIngredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chụp ảnh hoặc chọn ảnh quét nguyên liệu trước!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = await ApiService.getUserId() ?? 'guest';
+      final userKey = 'smart_fridge_items_$userId';
+      final jsonStr = prefs.getString(userKey);
+      List<Map<String, dynamic>> fridgeItems = [];
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        fridgeItems = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+
+      int addedCount = 0;
+      for (int i = 0; i < _detectedIngredients.length; i++) {
+        final rawName = _detectedIngredients[i];
+        final details = IngredientNormalizer.getIngredientDetails(rawName);
+        final itemMap = {
+          'id': 'scan_${DateTime.now().millisecondsSinceEpoch}_$i',
+          'name': details['vi'] ?? rawName,
+          'icon': details['icon'] ?? '🥗',
+          'weight': 200,
+          'unit': 'g',
+          'compartment': details['cat'] == 'protein' ? 'freezer' : 'cool',
+          'kcalPer100g': (details['kcal'] as num?)?.toInt() ?? 100,
+          'protein': (details['protein'] as num?)?.toInt() ?? 15,
+          'carbs': (details['carbs'] as num?)?.toInt() ?? 5,
+          'fat': (details['fat'] as num?)?.toInt() ?? 3,
+          'addedAt': DateTime.now().toIso8601String(),
+        };
+
+        final existingIdx = fridgeItems.indexWhere((it) => it['name'] == itemMap['name']);
+        if (existingIdx != -1) {
+          fridgeItems[existingIdx]['weight'] = ((fridgeItems[existingIdx]['weight'] as num?)?.toInt() ?? 0) + 200;
+        } else {
+          fridgeItems.add(itemMap);
+        }
+        addedCount++;
+      }
+
+      await prefs.setString(userKey, jsonEncode(fridgeItems));
+      CameraScanContent.sessionIngredients = List<Map<String, dynamic>>.from(fridgeItems);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 Đã thêm $addedCount nguyên liệu quét được vào Tủ Lạnh Thông Minh!'),
+            backgroundColor: const Color(0xFF16A34A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu vào tủ lạnh: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _logDishToNutritionDiary() async {
+    if (_detectedDishName == null && _totalKcal == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chụp ảnh hoặc chọn ảnh đĩa món ăn để phân tích trước!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final hour = DateTime.now().hour;
+    String mealType = 'lunch';
+    String mealName = 'Bữa trưa';
+    if (hour >= 5 && hour < 11) {
+      mealType = 'breakfast';
+      mealName = 'Bữa sáng';
+    } else if (hour >= 11 && hour < 15) {
+      mealType = 'lunch';
+      mealName = 'Bữa trưa';
+    } else if (hour >= 15 && hour < 18) {
+      mealType = 'snack';
+      mealName = 'Bữa phụ';
+    } else {
+      mealType = 'dinner';
+      mealName = 'Bữa tối';
+    }
+
+    try {
+      final logData = {
+        'logDate': DateTime.now().toIso8601String().split('T')[0],
+        'mealType': mealType,
+        'foodName': _detectedDishName ?? 'Đĩa thức ăn quét AI',
+        'servingSize': 1,
+        'servingUnit': _detectedGrams != null ? '${_detectedGrams}g' : '1 đĩa',
+        'calories': _totalKcal,
+        'protein': _totalProtein,
+        'carbs': _totalCarbs,
+        'fat': _totalFat,
+      };
+
+      try {
+        await ApiService.addNutritionLog(logData);
+      } catch (_) {
+        final prefs = await SharedPreferences.getInstance();
+        final dateKey = 'local_diary_${DateTime.now().toIso8601String().split('T')[0]}';
+        final existing = prefs.getString(dateKey);
+        List<dynamic> logs = [];
+        if (existing != null) {
+          try {
+            logs = jsonDecode(existing);
+          } catch (_) {}
+        }
+        logs.add(logData);
+        await prefs.setString(dateKey, jsonEncode(logs));
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 Đã ghi nhận ${_detectedDishName ?? "món ăn"} ($_totalKcal kcal) vào $mealName hôm nay!'),
+            backgroundColor: const Color(0xFF16A34A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi ghi nhật ký: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // AI Status Pill Bar
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0B0E0D) : const Color(0xFFF6FAFF),
+      appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Quét Nguyên Liệu AI',
+          style: GoogleFonts.inter(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E9F2),
+            height: 1,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            // AI Status Pill Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           child: Container(
@@ -344,20 +698,33 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'AI VISION 4.2 • ${_isLoading ? "PROCESSING" : "READY"}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF111827), letterSpacing: 0.5),
+                GestureDetector(
+                  onTap: _showUpdateApiKeyDialog,
+                  onLongPress: _showUpdateApiKeyDialog,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI VISION 4.2 • ${_isLoading ? "PROCESSING" : "READY"}',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF111827), letterSpacing: 0.5),
+                      ),
+                    ],
+                  ),
                 ),
                 const Spacer(),
                 const Icon(Icons.videocam_outlined, color: Color(0xFF6B7280), size: 18),
                 const SizedBox(width: 12),
-                const Icon(Icons.close, color: Color(0xFF6B7280), size: 18),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.close, color: Color(0xFF6B7280), size: 18),
+                ),
                 const SizedBox(width: 12),
               ],
             ),
@@ -525,19 +892,27 @@ class _ScanScreenState extends State<ScanScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildNutritionClickable(
-                          label: "NĂNG LƯỢNG", value: "--", unit: "KCAL",
+                          label: "NĂNG LƯỢNG",
+                          value: _totalKcal > 0 ? '$_totalKcal' : '--',
+                          unit: "KCAL",
                           onTap: () => _showNutritionDetailDialog("Năng lượng"),
                         ),
                         _buildNutritionClickable(
-                          label: "PROTEIN", value: "--", unit: "--",
+                          label: "PROTEIN",
+                          value: _totalProtein > 0 ? '${_totalProtein.round()}' : '--',
+                          unit: _totalProtein > 0 ? 'G' : '--',
                           onTap: () => _showNutritionDetailDialog("Protein"),
                         ),
                         _buildNutritionClickable(
-                          label: "CARBS", value: "--", unit: "--",
+                          label: "CARBS",
+                          value: _totalCarbs > 0 ? '${_totalCarbs.round()}' : '--',
+                          unit: _totalCarbs > 0 ? 'G' : '--',
                           onTap: () => _showNutritionDetailDialog("Carbs"),
                         ),
                         _buildNutritionClickable(
-                          label: "CHẤT BÉO", value: "--", unit: "--",
+                          label: "CHẤT BÉO",
+                          value: _totalFat > 0 ? '${_totalFat.round()}' : '--',
+                          unit: _totalFat > 0 ? 'G' : '--',
                           onTap: () => _showNutritionDetailDialog("Chất béo"),
                         ),
                       ],
@@ -546,14 +921,16 @@ class _ScanScreenState extends State<ScanScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 52,
-                      child: ElevatedButton(
+                      child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF111827),
-                          foregroundColor: Colors.white,
+                          backgroundColor: isDark ? primaryColor : const Color(0xFF0F172A),
+                          foregroundColor: isDark ? Colors.black : Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
                         ),
-                        onPressed: _showRecipesDialog,
-                        child: const Text('Tạo công thức phù hợp', style: TextStyle(fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.kitchen_rounded),
+                        onPressed: _addDetectedIngredientsToFridge,
+                        label: const Text('Thêm nguyên liệu vào tủ lạnh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
                     ),
                   ],
@@ -563,7 +940,9 @@ class _ScanScreenState extends State<ScanScreen> {
           ),
         ),
       ],
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildNutritionClickable({required String label, required String value, required String unit, required VoidCallback onTap}) {

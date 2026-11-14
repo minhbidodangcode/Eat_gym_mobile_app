@@ -35,53 +35,51 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
   @override
   Widget build(BuildContext context) {
     // Kiểm tra xem màn hình có thể pop an toàn không
-    final bool canPop = widget.isSubPage && Navigator.canPop(context);
+    final bool canPop = Navigator.canPop(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PopScope(
       canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        // Nếu là Trang Chủ (không có route trước), không pop để tránh màn hình đen
       },
       child: Scaffold(
         backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
-        appBar: canPop
-            ? AppBar(
-                backgroundColor: isDark ? const Color(0xFF0F172A) : AppColors.background,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 18,
-                    color: isDark ? Colors.white : AppColors.onSurface,
-                  ),
-                  onPressed: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    }
-                  },
-                ),
-                title: Text(
-                  'Thành Tựu & Báo Cáo',
-                  style: GoogleFonts.inter(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : AppColors.onSurface,
-                  ),
-                ),
-                centerTitle: true,
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(1),
-                  child: Container(
-                    color: isDark ? const Color(0xFF1E293B) : AppColors.outline,
-                    height: 1,
-                  ),
-                ),
-              )
-            : null,
-        body: AnimatedBuilder(
+        appBar: AppBar(
+          backgroundColor: isDark ? const Color(0xFF0F172A) : AppColors.background,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(
+              Icons.chevron_left_rounded,
+              size: 32,
+              color: isDark ? Colors.white : AppColors.onSurface,
+            ),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
+          ),
+          title: Text(
+            'Thành Tựu & Báo Cáo',
+            style: GoogleFonts.inter(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : AppColors.onSurface,
+            ),
+          ),
+          centerTitle: true,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              color: isDark ? const Color(0xFF1E293B) : AppColors.outline,
+              height: 1,
+            ),
+          ),
+        ),
+        body: SafeArea(
+          child: AnimatedBuilder(
           animation: _model,
           builder: (context, _) {
             return RefreshIndicator(
@@ -163,6 +161,7 @@ class _BadgesAndReportScreenState extends State<BadgesAndReportScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

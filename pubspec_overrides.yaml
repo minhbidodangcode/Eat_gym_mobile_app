@@ -1,0 +1,4 @@
+dependency_overrides:
+  path_provider: ">=2.1.4 <=2.1.5"
+  printing: "<=5.14.2"
+  pdf: "<=3.11.3"

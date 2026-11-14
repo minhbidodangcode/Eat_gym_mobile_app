@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'notification_service.dart';
 
 class SettingsService {
   SettingsService._internal();
@@ -19,6 +20,9 @@ class SettingsService {
 
   final ValueNotifier<bool> remindersEnabledNotifier = ValueNotifier<bool>(true);
   final ValueNotifier<String> waterTimeNotifier = ValueNotifier<String>('08:30');
+  final ValueNotifier<int> waterIntervalNotifier = ValueNotifier<int>(45); // Mặc định 45 phút/lần
+  final ValueNotifier<int> waterStartHourNotifier = ValueNotifier<int>(7); // Mặc định từ 7h sáng
+  final ValueNotifier<int> waterEndHourNotifier = ValueNotifier<int>(21); // Đến trước 9h tối (21h)
   final ValueNotifier<String> mealTimeNotifier = ValueNotifier<String>('12:30');
   final ValueNotifier<String> workoutTimeNotifier = ValueNotifier<String>('17:30');
 
@@ -35,6 +39,9 @@ class SettingsService {
   static const String _keyUnitWeight = 'settings_unit_weight';
   static const String _keyUnitHeight = 'settings_unit_height';
   static const String _keyWaterTime = 'settings_water_time';
+  static const String _keyWaterInterval = 'settings_water_interval';
+  static const String _keyWaterStartHour = 'settings_water_start_hour';
+  static const String _keyWaterEndHour = 'settings_water_end_hour';
   static const String _keyMealTime = 'settings_meal_time';
   static const String _keyWorkoutTime = 'settings_workout_time';
 
@@ -76,9 +83,37 @@ class SettingsService {
     // Reminders: reminders_enabled
     remindersEnabledNotifier.value = prefs.getBool(_keyRemindersEnabled) ?? prefs.getBool('settings_reminders_enabled') ?? true;
     waterTimeNotifier.value = prefs.getString(_keyWaterTime) ?? '08:30';
+    waterIntervalNotifier.value = prefs.getInt(_keyWaterInterval) ?? 45;
+    waterStartHourNotifier.value = prefs.getInt(_keyWaterStartHour) ?? 7;
+    waterEndHourNotifier.value = prefs.getInt(_keyWaterEndHour) ?? 21;
     mealTimeNotifier.value = prefs.getString(_keyMealTime) ?? '12:30';
     workoutTimeNotifier.value = prefs.getString(_keyWorkoutTime) ?? '17:30';
     userAvatarNotifier.value = prefs.getString(_keyUserAvatar) ?? defaultAvatar;
+
+    if (remindersEnabledNotifier.value) {
+      NotificationService().scheduleWaterReminders(
+        intervalMinutes: waterIntervalNotifier.value,
+        startHour: waterStartHourNotifier.value,
+        endHour: waterEndHourNotifier.value,
+      );
+    }
+  }
+
+  Future<void> setWaterReminderSchedule({int interval = 45, int startHour = 7, int endHour = 21}) async {
+    waterIntervalNotifier.value = interval;
+    waterStartHourNotifier.value = startHour;
+    waterEndHourNotifier.value = endHour;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyWaterInterval, interval);
+    await prefs.setInt(_keyWaterStartHour, startHour);
+    await prefs.setInt(_keyWaterEndHour, endHour);
+    if (remindersEnabledNotifier.value) {
+      await NotificationService().scheduleWaterReminders(
+        intervalMinutes: interval,
+        startHour: startHour,
+        endHour: endHour,
+      );
+    }
   }
 
   Future<void> setUserAvatar(String avatarPathOrUrl) async {

@@ -234,6 +234,22 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
                         // Main Header matching Figma nutrigym_body_stats
                         Row(
                           children: [
+                            IconButton(
+                              icon: Icon(
+                                Icons.chevron_left_rounded,
+                                size: 32,
+                                color: isDark ? Colors.white : AppColors.onSurface,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Quay lại',
+                              onPressed: () {
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               width: 40,
                               height: 40,

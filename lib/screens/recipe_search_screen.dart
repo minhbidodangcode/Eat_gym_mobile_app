@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
@@ -93,11 +94,16 @@ class RecipeImageDatabase {
   /// Phân tích tiêu đề và mô tả món ăn để trả về ảnh CHUẨN 100% MÓN ĂN ĐÃ NẤU CHÍN
   static String resolveImage(String title, {String? existingImage, String? description}) {
     if (existingImage != null && existingImage.isNotEmpty) {
-      // Bỏ qua nếu là placeholder hoặc ảnh cũ của ngô sống/hạt sống
+      // Bỏ qua nếu là placeholder hoặc ảnh không phải món ăn (đĩa trắng sứ, sách vở bút, ví da, bài báo...)
       if (existingImage.contains('placeholder') ||
+          existingImage.contains('dia-khum') ||
+          existingImage.contains('longphuong') ||
+          existingImage.contains('vi-nam') ||
+          existingImage.contains('mediaelly') ||
+          existingImage.contains('tapchixaydung') ||
           existingImage.contains('photo-1551754655-cd27e38d2076') ||
           existingImage.contains('photo-1514733670139-4d87a1941d55')) {
-        // Tự động phân tích theo tiêu đề bên dưới để gán ảnh chuẩn
+        // Tự động phân tích theo tiêu đề bên dưới để gán ảnh món ăn chuẩn!
       } else {
         // Sử dụng trực tiếp ảnh chuẩn đã lưu từ Database cho từng món!
         return existingImage;
@@ -225,6 +231,7 @@ class RecipeImageDatabase {
 
 class RecipeSearchScreen extends StatefulWidget {
   static final GlobalKey<RecipeSearchScreenState> recipeScreenKey = GlobalKey<RecipeSearchScreenState>();
+  static final ValueNotifier<int> postsRevisionNotifier = ValueNotifier<int>(0);
 
   const RecipeSearchScreen({super.key});
 
@@ -353,6 +360,16 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     super.initState();
     _loadSavedAndLikedState();
     _loadFeed();
+    _preloadDbIngredients();
+  }
+
+  Future<void> _preloadDbIngredients() async {
+    try {
+      final items = await ApiService.getIngredients();
+      if (items.isNotEmpty) {
+        _cachedDbIngredients = items;
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadSavedAndLikedState() async {
@@ -417,6 +434,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
+      RecipeSearchScreen.postsRevisionNotifier.value++;
     } catch (_) {}
   }
 
@@ -888,73 +906,145 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
 
   void _showShareSheet(Map<String, dynamic> recipe) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+    final title = (recipe['title'] ?? recipe['name'] ?? 'Công thức Gymer').toString();
+    final recipeUrl = 'https://eatgym.app/r/${recipe['id'] ?? 'recipe'}';
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? const Color(0xFF191C1B) : AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
+      backgroundColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.outlineVariant,
+                    color: isDark ? Colors.white24 : Colors.grey[300],
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text('CHIA SẺ CÔNG THỨC', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 6),
-                Text(recipe['title'] ?? '', style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant), maxLines: 1),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildShareAction(
-                      icon: Icons.link,
-                      label: 'Sao chép link',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Đã sao chép liên kết công thức vào bộ nhớ tạm! 📋')),
-                        );
-                      },
-                    ),
-                    _buildShareAction(
-                      icon: Icons.send_rounded,
-                      label: 'Gửi bạn bè',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Đã mở danh sách gửi công thức cho đồng đội Gym! 🚀')),
-                        );
-                      },
-                    ),
-                    _buildShareAction(
-                      icon: Icons.share_rounded,
-                      label: 'Chia sẻ khác',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Đã mở hộp thoại chia sẻ công thức! 📲')),
-                        );
-                      },
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'CHIA SẺ CÔNG THỨC NẤU ĂN',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
-                const SizedBox(height: 12),
-              ],
-            ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tùy chọn 1: Sao chép link
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isDark ? primaryAccent : const Color(0xFF2563EB)).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.link_rounded, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 20),
+                ),
+                title: Text('Sao chép liên kết', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: Text(recipeUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.grey)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: recipeUrl));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Đã sao chép liên kết "$title" vào bộ nhớ tạm!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF16A34A),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 2: Gửi bạn bè Gymer
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.people_alt_outlined, color: Colors.purple, size: 20),
+                ),
+                title: Text('Gửi cho bạn bè Gymer', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Gửi công thức món ăn qua tin nhắn đến đồng đội Gym', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã mở danh sách đồng đội Gym để gửi công thức "$title"!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 3: Ứng dụng khác
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.share_rounded, color: Colors.orange, size: 20),
+                ),
+                title: Text('Chia sẻ qua ứng dụng khác', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Facebook, Zalo, Messenger, Instagram Stories...', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: '$title - Công thức Gymer Eat Clean: $recipeUrl'));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã sao chép nội dung chia sẻ công thức để dán vào ứng dụng khác (Zalo, FB, Messenger)!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1153,22 +1243,85 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                       ),
                     );
                   }),
-                  if (recipe['instructions'] != null) ...[
-                    const SizedBox(height: 20),
-                    Text('Cách thực hiện', style: AppTypography.titleMedium(color: AppColors.onSurface)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        recipe['instructions'],
-                        style: AppTypography.bodyMedium(color: AppColors.onSurface),
-                      ),
-                    ),
-                  ],
+                  // Hiển thị các bước nấu ăn (Ưu tiên danh sách steps thực tế của người dùng)
+                  Builder(
+                    builder: (context) {
+                      final rawSteps = recipe['steps'];
+                      if (rawSteps is List && rawSteps.isNotEmpty) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            Text('Các bước thực hiện (${rawSteps.length} bước):', style: AppTypography.titleMedium(color: isDark ? Colors.white : AppColors.onSurface)),
+                            const SizedBox(height: 10),
+                            ...rawSteps.asMap().entries.map((entry) {
+                              final idx = entry.key + 1;
+                              final s = entry.value is Map ? entry.value : {'step': entry.value.toString(), 'timeMinutes': 5};
+                              final desc = (s['step'] ?? s['title'] ?? '').toString();
+                              final timeMin = s['timeMinutes'] ?? s['time'] ?? 5;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: primaryAccent,
+                                      child: Text('$idx', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.black : Colors.white)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(desc, style: TextStyle(fontSize: 13, height: 1.35, color: isDark ? Colors.white : AppColors.onSurface)),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white70 : AppColors.onSurfaceVariant),
+                                              const SizedBox(width: 4),
+                                              Text('$timeMin phút', style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : AppColors.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        );
+                      } else if (recipe['instructions'] != null && (recipe['instructions'] as String).isNotEmpty) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            Text('Cách thực hiện', style: AppTypography.titleMedium(color: isDark ? Colors.white : AppColors.onSurface)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF151B18) : AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                recipe['instructions'],
+                                style: AppTypography.bodyMedium(color: isDark ? Colors.white : AppColors.onSurface),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -1233,16 +1386,22 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryAccent = SettingsService.instance.currentColor;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
-      appBar: null, // Đã chuyển lên AppHeader chính để tránh bị 2 tầng header
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryAccent))
-          : RefreshIndicator(
-              onRefresh: _loadFeed,
-              color: primaryAccent,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0B0E0D) : AppColors.background,
+        appBar: null, // Đã chuyển lên AppHeader chính để tránh bị 2 tầng header
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator(color: primaryAccent))
+            : RefreshIndicator(
+                onRefresh: _loadFeed,
+                color: primaryAccent,
+                child: CustomScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const BouncingScrollPhysics(),
                 slivers: [
                   // 1. THANH CHỦ ĐỀ CÔNG THỨC (Đã bỏ story tròn)
                   SliverToBoxAdapter(
@@ -1272,6 +1431,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -1756,6 +1916,352 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     _openRecipeFormSheet(isEditing: true, initialData: existingPost, customContext: customContext);
   }
 
+  static List<Map<String, dynamic>>? _cachedDbIngredients;
+
+  String _getItemIcon(Map<String, dynamic> item) {
+    final currentIcon = item['icon']?.toString();
+    if (currentIcon != null && (currentIcon.startsWith('assets/') || currentIcon.endsWith('.png'))) {
+      return currentIcon;
+    }
+    final name = (item['name'] ?? '').toString();
+    final detected = IngredientNormalizer.detectIcon(name);
+    if (detected != '🥗') {
+      return detected;
+    }
+    if (currentIcon != null && currentIcon.isNotEmpty) {
+      return currentIcon;
+    }
+    return '🥗';
+  }
+
+  Widget _buildItemIconWidget(Map<String, dynamic> item, {double size = 22}) {
+    final name = (item['name'] ?? '').toString().toLowerCase();
+    final icon = _getItemIcon(item);
+    String? assetPath;
+
+    if (icon.startsWith('assets/') || icon.endsWith('.png')) {
+      assetPath = icon;
+    } else if (name.contains('thanh long')) {
+      assetPath = 'assets/icons/thanh_long.png';
+    } else if (name.contains('dầu ô liu') || name.contains('olive')) {
+      assetPath = 'assets/icons/dau_o_liu.png';
+    } else if (name.contains('dầu mè') || name.contains('dầu ăn') || name.contains('dầu thực vật') || (name.contains('dầu') && !name.contains('hào'))) {
+      assetPath = 'assets/icons/dau_an.png';
+    } else if (name.contains('hạnh nhân') || name.contains('almond')) {
+      assetPath = 'assets/icons/hat_hanh_nhan.png';
+    } else if (name.contains('óc chó') || name.contains('walnut')) {
+      assetPath = 'assets/icons/hat_oc_cho.png';
+    } else if (name.contains('hạt điều') || name.contains('cashew')) {
+      assetPath = 'assets/icons/hat_dieu.png';
+    } else if (name.contains('hạt chia') || name.contains('chia')) {
+      assetPath = 'assets/icons/hat_chia.png';
+    } else if ((name.contains('mè') || name.contains('vừng') || name.contains('sesame')) && !name.contains('cá') && !name.contains('dầu')) {
+      assetPath = 'assets/icons/me.png';
+    } else if (name.contains('xì dầu') || name.contains('nước tương') || name.contains('soy sauce')) {
+      assetPath = 'assets/icons/xi_dau.png';
+    } else if (name.contains('ớt')) {
+      assetPath = 'assets/icons/ot_tuoi.png';
+    } else if (name.contains('tương cà') || name.contains('ketchup')) {
+      assetPath = 'assets/icons/tuong_ca.png';
+    } else if (name.contains('tương ớt') || name.contains('chili sauce') || name.contains('sriracha')) {
+      assetPath = 'assets/icons/tuong_ot.png';
+    } else if (name.contains('tương đen') || name.contains('hoisin')) {
+      assetPath = 'assets/icons/tuong_den.png';
+    } else if (name.contains('sốt mayonnaise') || name.contains('sốt mè rang') || name.contains('mayo')) {
+      assetPath = 'assets/icons/sot_mayo.png';
+    } else if (name.contains('sả')) {
+      assetPath = 'assets/icons/sa.png';
+    } else if (name.contains('rượu')) {
+      assetPath = 'assets/icons/ruou_trang.png';
+    } else if (name.contains('dầu hào')) {
+      assetPath = 'assets/icons/dau_hao.png';
+    } else if (name.contains('ngó sen')) {
+      assetPath = 'assets/icons/ngo_sen.png';
+    } else if (name.contains('măng tây')) {
+      assetPath = 'assets/icons/mang_tay.png';
+    } else if (name.contains('bắp cải trắng') || (name.contains('bắp cải') && !name.contains('tím'))) {
+      assetPath = 'assets/icons/bap_cai_trang.png';
+    } else if (name.contains('nấm hương') || name.contains('nấm đông cô') || name.contains('shiitake')) {
+      assetPath = 'assets/icons/nam_huong.png';
+    } else if (name.contains('nước mắm') || name.contains('fish sauce')) {
+      assetPath = 'assets/icons/nuoc_mam.png';
+    } else if (name.contains('giấm táo') || name.contains('apple cider')) {
+      assetPath = 'assets/icons/giam_tao.png';
+    } else if (name.contains('cari') || name.contains('cà ri') || name.contains('curry')) {
+      assetPath = 'assets/icons/cari_bot.png';
+    } else if (name.contains('nấm kim châm')) {
+      assetPath = 'assets/icons/nam_kim_cham.png';
+    }
+
+    if (assetPath != null && assetPath.isNotEmpty) {
+      return Image.asset(
+        assetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Text(icon.isNotEmpty && !icon.startsWith('assets') ? icon : '🥗', style: TextStyle(fontSize: size * 0.85)),
+      );
+    }
+    return Text(icon.isNotEmpty && !icon.startsWith('assets') ? icon : '🥗', style: TextStyle(fontSize: size * 0.85));
+  }
+
+  void _openIngredientPickerSheet({
+    required BuildContext parentContext,
+    required StateSetter setParentModalState,
+    required List<Map<String, TextEditingController>> ingredientCtrls,
+    required VoidCallback onIngredientsUpdated,
+    required bool isDark,
+    required Color primaryAccent,
+  }) {
+    final searchCtrl = TextEditingController();
+    String filterQuery = '';
+
+    final standardList = [
+      {'name': 'Ức gà phi lê tươi', 'amount': '250g', 'icon': '🍗', 'desc': '120 kcal • 26g đạm / 100g'},
+      {'name': 'Thịt thăn bò nạc', 'amount': '200g', 'icon': '🥩', 'desc': '142 kcal • 26g đạm / 100g'},
+      {'name': 'Phi lê cá hồi tươi', 'amount': '150g', 'icon': '🐟', 'desc': '208 kcal • 22g đạm / 100g'},
+      {'name': 'Trứng gà tươi', 'amount': '3 quả', 'icon': '🥚', 'desc': '143 kcal • 13g đạm / 100g'},
+      {'name': 'Tôm sú tươi bóc vỏ', 'amount': '200g', 'icon': '🦐', 'desc': '92 kcal • 21g đạm / 100g'},
+      {'name': 'Đậu hũ non chiên', 'amount': '150g', 'icon': '🧈', 'desc': '150 kcal • 12g đạm / 100g'},
+      {'name': 'Thịt nạc vai băm', 'amount': '150g', 'icon': '🥩', 'desc': '145 kcal • 21g đạm / 100g'},
+      {'name': 'Cơm gạo lứt huyết rồng', 'amount': '150g', 'icon': '🍚', 'desc': '111 kcal • 23g carb / 100g'},
+      {'name': 'Khoai lang luộc', 'amount': '200g', 'icon': '🍠', 'desc': '140 kcal • 30g carb / 100g'},
+      {'name': 'Yến mạch cán dẹt', 'amount': '60g', 'icon': '🥣', 'desc': '380 kcal • 60g carb / 100g'},
+      {'name': 'Bánh mì đen nguyên cám', 'amount': '2 lát', 'icon': '🍞', 'desc': '265 kcal • 9g đạm / 100g'},
+      {'name': 'Bông cải xanh (Broccoli)', 'amount': '150g', 'icon': '🥦', 'desc': '34 kcal • 2.8g đạm / 100g'},
+      {'name': 'Măng tây tươi', 'amount': '100g', 'icon': '🌱', 'desc': '20 kcal • 2.2g đạm / 100g'},
+      {'name': 'Bắp cải trắng', 'amount': '150g', 'icon': '🥬', 'desc': '25 kcal • 1.3g đạm / 100g'},
+      {'name': 'Dưa leo tươi', 'amount': '100g', 'icon': '🥒', 'desc': '15 kcal • 0.7g đạm / 100g'},
+      {'name': 'Cà chua bi', 'amount': '80g', 'icon': '🍅', 'desc': '18 kcal • 0.9g đạm / 100g'},
+      {'name': 'Nấm đùi gà', 'amount': '100g', 'icon': '🍄', 'desc': '35 kcal • 3g đạm / 100g'},
+      {'name': 'Bơ lạt Anchor', 'amount': '15g', 'icon': '🧈', 'desc': '717 kcal • 81g béo / 100g'},
+      {'name': 'Dầu ô liu nguyên chất', 'amount': '10ml', 'icon': '🫒', 'desc': '884 kcal • 100g béo / 100g'},
+      {'name': 'Chuối tiêu chín', 'amount': '1 quả', 'icon': '🍌', 'desc': '89 kcal • 23g carb / 100g'},
+      {'name': 'Bơ đậu phộng không đường', 'amount': '20g', 'icon': '🥜', 'desc': '588 kcal • 25g đạm / 100g'},
+      {'name': 'Sữa tươi không đường', 'amount': '200ml', 'icon': '🥛', 'desc': '42 kcal • 3.2g đạm / 100g'},
+      {'name': 'Hạt hạnh nhân rang', 'amount': '30g', 'icon': '🌰', 'desc': '579 kcal • 21g đạm / 100g'},
+    ];
+
+    List<Map<String, dynamic>> allAvailable = [];
+    if (_cachedDbIngredients != null && _cachedDbIngredients!.isNotEmpty) {
+      for (final dbItem in _cachedDbIngredients!) {
+        final name = (dbItem['name'] ?? '').toString();
+        if (name.isNotEmpty) {
+          final kcal = dbItem['kcalPer100g'] ?? dbItem['calories'] ?? 100;
+          final pro = dbItem['protein'] ?? 10;
+          final carb = dbItem['carbs'] ?? 0;
+          final unit = dbItem['unit']?.toString() ?? 'g';
+          allAvailable.add({
+            'name': name,
+            'amount': '100$unit',
+            'icon': dbItem['icon'] ?? '🥗',
+            'desc': '$kcal kcal • ${pro}g đạm • ${carb}g carb / 100$unit',
+          });
+        }
+      }
+    }
+
+    final existingNames = allAvailable.map((e) => (e['name'] ?? '').toString().toLowerCase()).toSet();
+    for (final item in standardList) {
+      final name = (item['name'] ?? '').toString();
+      if (!existingNames.contains(name.toLowerCase())) {
+        allAvailable.add(item);
+        existingNames.add(name.toLowerCase());
+      }
+    }
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (pickerCtx) {
+        return StatefulBuilder(
+          builder: (context, setPickerState) {
+            // Tải ngầm từ Database API nếu chưa có cache
+            if (_cachedDbIngredients == null) {
+              ApiService.getIngredients().then((remoteItems) {
+                if (remoteItems.isNotEmpty) {
+                  _cachedDbIngredients = remoteItems;
+                  final existingNames = allAvailable.map((e) => (e['name'] ?? '').toString().toLowerCase()).toSet();
+                  for (final dbItem in remoteItems) {
+                    final name = (dbItem['name'] ?? '').toString();
+                    if (name.isNotEmpty && !existingNames.contains(name.toLowerCase())) {
+                      final kcal = dbItem['kcalPer100g'] ?? dbItem['calories'] ?? 100;
+                      final pro = dbItem['protein'] ?? 10;
+                      final carb = dbItem['carbs'] ?? 0;
+                      allAvailable.add({
+                        'name': name,
+                        'amount': '100g',
+                        'icon': dbItem['icon'] ?? '🥗',
+                        'desc': '$kcal kcal • ${pro}g đạm • ${carb}g carb',
+                      });
+                      existingNames.add(name.toLowerCase());
+                    }
+                  }
+                  if (pickerCtx.mounted) setPickerState(() {});
+                }
+              }).catchError((_) {});
+            }
+
+            final query = filterQuery.toLowerCase().trim();
+            final filtered = allAvailable.where((item) {
+              final name = (item['name'] ?? '').toString().toLowerCase();
+              return name.contains(query);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: 16,
+                right: 16,
+                top: 12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.inventory_2_outlined, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'CHỌN NGUYÊN LIỆU MÓN ĂN',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(pickerCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Thanh tìm kiếm phía trên
+                  TextField(
+                    controller: searchCtrl,
+                    onChanged: (val) => setPickerState(() => filterQuery = val),
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm nguyên liệu (ức gà, bò, trứng, cá hồi...)...',
+                      hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : Colors.grey, fontSize: 13),
+                      prefixIcon: Icon(Icons.search, color: isDark ? primaryAccent : const Color(0xFF0F172A), size: 20),
+                      suffixIcon: filterQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                searchCtrl.clear();
+                                setPickerState(() => filterQuery = '');
+                              },
+                            )
+                          : null,
+                      isDense: true,
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        if (query.isNotEmpty && !allAvailable.any((e) => (e['name'] ?? '').toString().toLowerCase() == query))
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: (isDark ? primaryAccent : const Color(0xFF2563EB)).withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.add, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 18),
+                            ),
+                            title: Text('Thêm: "$filterQuery"', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                            subtitle: const Text('Thêm nguyên liệu tự nhập vào công thức', style: TextStyle(fontSize: 11.5)),
+                            onTap: () {
+                              setParentModalState(() {
+                                ingredientCtrls.add({
+                                  'name': TextEditingController(text: filterQuery.trim()),
+                                  'amount': TextEditingController(text: '100g'),
+                                });
+                              });
+                              onIngredientsUpdated();
+                              Navigator.pop(pickerCtx);
+                            },
+                          ),
+                        ...filtered.map((item) {
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: _buildItemIconWidget(item, size: 24),
+                            ),
+                            title: Text(
+                              item['name']!,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${item['amount']} • ${item['desc']}',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            trailing: Icon(Icons.add_circle_outline, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 22),
+                            onTap: () {
+                              setParentModalState(() {
+                                ingredientCtrls.add({
+                                  'name': TextEditingController(text: item['name']),
+                                  'amount': TextEditingController(text: item['amount']),
+                                });
+                              });
+                              onIngredientsUpdated();
+                              Navigator.pop(pickerCtx);
+                            },
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _openRecipeFormSheet({required bool isEditing, Map<String, dynamic>? initialData, BuildContext? customContext}) {
     final titleCtrl = TextEditingController(text: initialData?['title'] ?? '');
     final timeCtrl = TextEditingController(text: initialData != null ? '${initialData['time']}' : '20');
@@ -1817,6 +2323,88 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
     final activeContext = customContext ?? context;
     final isDark = Theme.of(activeContext).brightness == Brightness.dark;
     final primaryAccent = SettingsService.instance.currentColor;
+
+    void autoCalcMacros() {
+      double totalKcal = 0;
+      double totalPro = 0;
+      double totalCarbs = 0;
+      double totalFat = 0;
+
+      for (final ing in ingredientCtrls) {
+        final name = ing['name']?.text.trim() ?? '';
+        final amountText = ing['amount']?.text.trim().toLowerCase() ?? '100';
+        if (name.isEmpty) continue;
+
+        double grams = 100;
+        final numMatch = RegExp(r'(\d+(\.\d+)?)').firstMatch(amountText);
+        if (numMatch != null) {
+          final parsed = double.tryParse(numMatch.group(1)!) ?? 100;
+          if (amountText.contains('kg') || amountText.contains('kí') || amountText.contains('ký') || amountText.contains('cân')) {
+            grams = parsed * 1000;
+          } else if (amountText.contains('lạng')) {
+            grams = parsed * 100;
+          } else if (amountText.contains('lát')) {
+            grams = parsed * 30;
+          } else if (amountText.contains('thìa') || amountText.contains('muỗng')) {
+            grams = parsed * 15;
+          } else if (amountText.contains('quả') || amountText.contains('trứng') || amountText.contains('hột') || amountText.contains('trái')) {
+            grams = parsed * 50;
+          } else {
+            grams = parsed;
+          }
+        }
+
+        double k100 = 0;
+        double p100 = 0;
+        double c100 = 0;
+        double f100 = 0;
+        bool foundInDb = false;
+
+        // 1. Kiểm tra trực tiếp trong Database nguyên liệu
+        if (_cachedDbIngredients != null && _cachedDbIngredients!.isNotEmpty) {
+          final queryNorm = name.toLowerCase();
+          for (final db in _cachedDbIngredients!) {
+            final dbName = (db['name'] ?? '').toString().toLowerCase();
+            if (dbName == queryNorm || dbName.contains(queryNorm) || queryNorm.contains(dbName)) {
+              k100 = (db['kcalPer100g'] ?? db['calories'] ?? 0).toDouble();
+              p100 = (db['protein'] ?? 0).toDouble();
+              c100 = (db['carbs'] ?? 0).toDouble();
+              f100 = (db['fat'] ?? 0).toDouble();
+              foundInDb = true;
+              break;
+            }
+          }
+        }
+
+        // 2. Tra cứu trong bộ từ điển chuyên sâu IngredientNormalizer
+        if (!foundInDb || (k100 == 0 && p100 == 0)) {
+          final details = IngredientNormalizer.getIngredientDetails(name);
+          k100 = (details['kcal'] as num?)?.toDouble() ?? 100;
+          p100 = (details['protein'] as num?)?.toDouble() ?? 10;
+          c100 = (details['carbs'] as num?)?.toDouble() ?? 5;
+          f100 = (details['fat'] as num?)?.toDouble() ?? 2;
+        }
+
+        totalKcal += (k100 * grams / 100);
+        totalPro += (p100 * grams / 100);
+        totalCarbs += (c100 * grams / 100);
+        totalFat += (f100 * grams / 100);
+      }
+
+      // Chuẩn hóa Calo sinh lý học Atwater: Kcal = Pro*4 + Carb*4 + Fat*9
+      final atwaterKcal = totalPro * 4 + totalCarbs * 4 + totalFat * 9;
+      final finalKcal = totalKcal > 0 ? totalKcal : atwaterKcal;
+
+      kcalCtrl.text = finalKcal.round().toString();
+      proCtrl.text = totalPro.round().toString();
+      carbsCtrl.text = totalCarbs.round().toString();
+      fatCtrl.text = totalFat.round().toString();
+    }
+
+    // Tự động tính toán sơ bộ lúc mở form
+    if (!isEditing && initialData == null) {
+      autoCalcMacros();
+    }
 
     showModalBottomSheet(
       context: activeContext,
@@ -2155,16 +2743,21 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                     Row(
                                       children: ['Dễ', 'Vừa', 'Khó'].map((diff) {
                                         final isSel = selectedDifficulty == diff;
-                                        return Padding(
-                                          padding: const EdgeInsets.only(right: 6),
-                                          child: ChoiceChip(
-                                            label: Text(diff, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.w600)),
-                                            selected: isSel,
-                                            onSelected: (_) => setModalState(() => selectedDifficulty = diff),
-                                            selectedColor: isDark ? primaryAccent : const Color(0xFF0F172A),
-                                            labelStyle: TextStyle(color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF334155))),
-                                            backgroundColor: isDark ? const Color(0xFF202623) : const Color(0xFFF1F5F9),
-                                            visualDensity: VisualDensity.compact,
+                                        return Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                                            child: ChoiceChip(
+                                              label: Center(
+                                                child: Text(diff, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.w600)),
+                                              ),
+                                              selected: isSel,
+                                              onSelected: (_) => setModalState(() => selectedDifficulty = diff),
+                                              selectedColor: isDark ? primaryAccent : const Color(0xFF0F172A),
+                                              labelStyle: TextStyle(color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF334155))),
+                                              backgroundColor: isDark ? const Color(0xFF202623) : const Color(0xFFF1F5F9),
+                                              visualDensity: VisualDensity.compact,
+                                              padding: EdgeInsets.zero,
+                                            ),
                                           ),
                                         );
                                       }).toList(),
@@ -2176,53 +2769,47 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                           ),
                           const SizedBox(height: 14),
 
-                          // 4. Chỉ số dinh dưỡng (Macros)
-                          Text(
-                            '4. Chỉ số Dinh dưỡng (Macros ước tính):',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Expanded(child: _buildMacroInputField('🔥 Kcal', kcalCtrl, isDark: isDark, primaryAccent: primaryAccent)),
-                              const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🍗 Pro(g)', proCtrl, isDark: isDark, primaryAccent: primaryAccent)),
-                              const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🍚 Carb(g)', carbsCtrl, isDark: isDark, primaryAccent: primaryAccent)),
-                              const SizedBox(width: 6),
-                              Expanded(child: _buildMacroInputField('🥑 Fat(g)', fatCtrl, isDark: isDark, primaryAccent: primaryAccent)),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 5. Danh sách nguyên liệu
+                          // 4. Danh sách nguyên liệu
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '5. Nguyên liệu chuẩn bị:',
+                                '4. Nguyên liệu chuẩn bị:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
                                   color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 ),
                               ),
-                              TextButton.icon(
-                                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? primaryAccent.withValues(alpha: 0.2) : const Color(0xFFEFF6FF),
+                                  foregroundColor: isDark ? primaryAccent : const Color(0xFF2563EB),
+                                  elevation: 0,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
                                 onPressed: () {
-                                  setModalState(() {
-                                    ingredientCtrls.add({'name': TextEditingController(), 'amount': TextEditingController(text: '100g')});
-                                  });
+                                  _openIngredientPickerSheet(
+                                    parentContext: activeContext,
+                                    setParentModalState: setModalState,
+                                    ingredientCtrls: ingredientCtrls,
+                                    onIngredientsUpdated: () {
+                                      setModalState(() {
+                                        autoCalcMacros();
+                                      });
+                                    },
+                                    isDark: isDark,
+                                    primaryAccent: primaryAccent,
+                                  );
                                 },
-                                icon: Icon(Icons.add, size: 16, color: isDark ? primaryAccent : const Color(0xFF2563EB)),
-                                label: Text('Thêm', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: isDark ? primaryAccent : const Color(0xFF2563EB))),
+                                icon: Icon(Icons.search, size: 15, color: isDark ? primaryAccent : const Color(0xFF2563EB)),
+                                label: Text('+ Thêm nguyên liệu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? primaryAccent : const Color(0xFF2563EB))),
                               ),
                             ],
                           ),
+                          const SizedBox(height: 8),
                           ...ingredientCtrls.asMap().entries.map((entry) {
                             final idx = entry.key;
                             final ing = entry.value;
@@ -2234,6 +2821,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                     flex: 6,
                                     child: TextField(
                                       controller: ing['name'],
+                                      onChanged: (_) => setModalState(() => autoCalcMacros()),
                                       style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
                                       cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
@@ -2253,6 +2841,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                     flex: 3,
                                     child: TextField(
                                       controller: ing['amount'],
+                                      onChanged: (_) => setModalState(() => autoCalcMacros()),
                                       style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
                                       cursorColor: isDark ? primaryAccent : const Color(0xFF0F172A),
                                       decoration: InputDecoration(
@@ -2267,17 +2856,73 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                       ),
                                     ),
                                   ),
-                                  if (ingredientCtrls.length > 1)
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
-                                      visualDensity: VisualDensity.compact,
-                                      onPressed: () => setModalState(() => ingredientCtrls.removeAt(idx)),
+                                  if (ingredientCtrls.length > 1) ...[
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      onTap: () {
+                                        setModalState(() {
+                                          ingredientCtrls.removeAt(idx);
+                                          autoCalcMacros();
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                                      ),
                                     ),
+                                  ],
                                 ],
                               ),
                             );
                           }),
                           const SizedBox(height: 14),
+
+                          // 5. Chỉ số dinh dưỡng (Macros) - Đặt sau phần nguyên liệu và tự động tính toán
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '5. Chỉ số Dinh dưỡng (Macros tự tính):',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12.5,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: (isDark ? primaryAccent : const Color(0xFF16A34A)).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '✨ Tự động tính',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark ? primaryAccent : const Color(0xFF16A34A),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(child: _buildMacroInputField('🔥 Kcal', kcalCtrl, isDark: isDark, primaryAccent: primaryAccent)),
+                              const SizedBox(width: 6),
+                              Expanded(child: _buildMacroInputField('🍗 Pro(g)', proCtrl, isDark: isDark, primaryAccent: primaryAccent)),
+                              const SizedBox(width: 6),
+                              Expanded(child: _buildMacroInputField('🍚 Carb(g)', carbsCtrl, isDark: isDark, primaryAccent: primaryAccent)),
+                              const SizedBox(width: 6),
+                              Expanded(child: _buildMacroInputField('🥑 Fat(g)', fatCtrl, isDark: isDark, primaryAccent: primaryAccent)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
 
                           // 6. Các bước nấu & Thời gian từng bước
                           Row(
@@ -2472,7 +3117,7 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
                                   } else {
                                     _userPosts.insert(0, newPostMap);
                                     _feedPosts.insert(0, newPostMap);
-                                    _savedRecipeIds.add(newPostId); // Tự động lưu công thức của mình
+                                    // Không tự động lưu vào trang lưu để đúng yêu cầu của người dùng
                                   }
                                 });
                                 _saveUserPosts();
@@ -2514,18 +3159,20 @@ class RecipeSearchScreenState extends State<RecipeSearchScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A)),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A)),
         ),
         const SizedBox(height: 4),
         TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w700),
+          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w700),
           cursorColor: isDark ? (primaryAccent ?? Colors.white) : const Color(0xFF0F172A),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
             filled: true,
             fillColor: isDark ? const Color(0xFF202623) : const Color(0xFFF1F5F9),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFCBD5E1))),

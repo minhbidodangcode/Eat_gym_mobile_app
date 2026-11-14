@@ -17,11 +17,31 @@ class _NutritionDiaryScreenState extends State<NutritionDiaryScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   Map<String, dynamic>? _diaryData;
+  List<Map<String, dynamic>> _quickDatabaseFoods = [];
 
   @override
   void initState() {
     super.initState();
     _fetchDiary();
+    _loadDatabaseFoods();
+  }
+
+  Future<void> _loadDatabaseFoods() async {
+    try {
+      final ingredients = await ApiService.getIngredients();
+      if (ingredients.isNotEmpty && mounted) {
+        setState(() {
+          _quickDatabaseFoods = ingredients.map((i) => {
+            'name': i['name'] ?? '',
+            'icon': i['icon'] ?? '🥗',
+            'kcal': (i['kcalPer100g'] as num?)?.round() ?? 100,
+            'p': (i['protein'] as num?)?.round() ?? 10,
+            'c': (i['carbs'] as num?)?.round() ?? 0,
+            'f': (i['fat'] as num?)?.round() ?? 0,
+          }).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchDiary() async {
@@ -100,7 +120,50 @@ class _NutritionDiaryScreenState extends State<NutritionDiaryScreen> {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_quickDatabaseFoods.isNotEmpty) ...[
+                Text(
+                  '⚡ Chọn nhanh từ CSDL nguyên liệu:',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 34,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _quickDatabaseFoods.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (ctx, idx) {
+                      final item = _quickDatabaseFoods[idx];
+                      return ActionChip(
+                        label: Text(
+                          '${item['icon']} ${item['name']}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        backgroundColor: isDark ? const Color(0xFF26322B) : const Color(0xFFF1F5F9),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        onPressed: () {
+                          foodCtrl.text = item['name'].toString();
+                          proCtrl.text = item['p'].toString();
+                          carbCtrl.text = item['c'].toString();
+                          fatCtrl.text = item['f'].toString();
+                          calCtrl.text = item['kcal'].toString();
+                          servingCtrl.text = '100g';
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               TextField(
                 controller: foodCtrl,
                 style: TextStyle(color: isDark ? Colors.white : AppColors.onSurface),

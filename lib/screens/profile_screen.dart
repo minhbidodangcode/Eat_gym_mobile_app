@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,9 +11,6 @@ import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'recipe_search_screen.dart';
-import 'meal_prep_screen.dart';
-import 'settings_screen.dart';
-import 'update_body_stats_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? authorData;
@@ -103,11 +101,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
+    });
+    RecipeSearchScreen.postsRevisionNotifier.addListener(_onPostsRevisionChanged);
     _loadProfileAndPosts();
+  }
+
+  void _onPostsRevisionChanged() {
+    if (mounted) {
+      _loadProfileAndPosts();
+    }
   }
 
   @override
   void dispose() {
+    RecipeSearchScreen.postsRevisionNotifier.removeListener(_onPostsRevisionChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -145,47 +156,26 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       if (_isMe) {
         // TRANG CÁ NHÂN CỦA BẢN THÂN
-        if (recipeState != null && recipeState.userPosts.isNotEmpty) {
-          _userPosts = List<Map<String, dynamic>>.from(recipeState.userPosts);
+        final currentUsername = prefs.getString('user_custom_username') ?? profile?['username'] ?? 'user';
+        final currentEmail = profile?['email'] ?? prefs.getString('user_email') ?? '';
+        final userSpecificKey = 'eatgym_user_created_recipes_${currentUsername.toLowerCase().trim()}';
+
+        final userPostsJson = prefs.getString(userSpecificKey) ?? prefs.getString(_userPostsKey);
+        if (userPostsJson != null && userPostsJson.isNotEmpty) {
+          final List<dynamic> decoded = jsonDecode(userPostsJson);
+          _userPosts = decoded
+              .map((e) => Map<String, dynamic>.from(e))
+              .where((p) {
+                final aU = (p['authorUsername'] ?? p['authorName'] ?? p['author'] ?? '').toString().toLowerCase();
+                final aE = (p['authorEmail'] ?? '').toString().toLowerCase();
+                if (aE.isNotEmpty && currentEmail.isNotEmpty) {
+                  return aE == currentEmail.toLowerCase();
+                }
+                return aU == currentUsername.toLowerCase() || aU == 'bạn (gymer)';
+              })
+              .toList();
         } else {
-          final userPostsJson = prefs.getString(_userPostsKey);
-          if (userPostsJson != null && userPostsJson.isNotEmpty) {
-            final List<dynamic> decoded = jsonDecode(userPostsJson);
-            _userPosts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-          } else {
-            _userPosts = [
-              {
-                'id': 'user_recipe_sample_1',
-                'title': 'Ức gà áp chảo sốt bơ tỏi của tôi',
-                'time': 20,
-                'difficulty': 'Dễ',
-                'kcal': 360,
-                'protein': 44,
-                'carbs': 8,
-                'fat': 10,
-                'image': 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800',
-                'description': 'Công thức bí quyết áp chảo lửa vừa giúp ức gà giữ trọn độ mềm mọng nước, không bị khô xơ!',
-                'authorName': 'Bạn (Gymer)',
-                'authorAvatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-                'authorBadge': 'Gymer Tác Giả',
-                'location': 'EatGym Kitchen • Bếp Của Tôi',
-                'postedTime': '1 ngày trước',
-                'isMine': true,
-                'baseLikes': 12,
-                'commentsCount': 3,
-                'ingredients': [
-                  {'name': 'Ức gà tươi', 'amount': '250g'},
-                  {'name': 'Bơ lạt Anchor', 'amount': '15g'},
-                  {'name': 'Tỏi băm & tiêu', 'amount': '2 tép'},
-                ],
-                'steps': [
-                  {'step': 'Khứa nhẹ bề mặt ức gà, ướp tiêu muối trong 5 phút.', 'timeMinutes': 5},
-                  {'step': 'Làm nóng chảo, áp chảo mỗi mặt 4-5 phút cho vàng giòn.', 'timeMinutes': 10},
-                  {'step': 'Cho bơ tỏi vào rưới đều lên bề mặt và tắt bếp.', 'timeMinutes': 5},
-                ],
-              }
-            ];
-          }
+          _userPosts = [];
         }
 
         if (allFeedPosts.isEmpty) {
@@ -438,9 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               title: const Text('Chia sẻ bài đăng'),
               onTap: () {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã sao chép liên kết công thức!'), behavior: SnackBarBehavior.floating),
-                );
+                _showShareRecipeSheet(post);
               },
             ),
           ],
@@ -469,7 +457,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               });
 
               final prefs = await SharedPreferences.getInstance();
-              await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
+              final curUser = prefs.getString('user_custom_username') ?? _userProfile?['username'] ?? 'user';
+final userKey = 'eatgym_user_created_recipes_${curUser.toLowerCase().trim()}';
+await prefs.setString(userKey, jsonEncode(_userPosts));
+await prefs.setString(_userPostsKey, jsonEncode(_userPosts));
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -485,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   // Chức năng: Chỉnh sửa trang cá nhân (Sửa mô tả / bio, tên, username, website)
-  void _showEditProfileModal() {
+  Future<void> _showEditProfileModal() async {
     final profile = _userProfile;
     final currentFullName = _customName.isNotEmpty
         ? _customName
@@ -557,7 +548,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(bCtx),
+                      onPressed: () {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        Navigator.pop(bCtx);
+                      },
                       child: Text(
                         'Hủy',
                         style: TextStyle(
@@ -608,6 +602,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             _customGoal = selectedGoal;
                             _userProfile = updatedProfile;
                           });
+                          FocusManager.instance.primaryFocus?.unfocus();
                           Navigator.pop(bCtx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -875,114 +870,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-                        Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
-                        const SizedBox(height: 12),
-
-                        // Lối tắt: Chỉnh sửa số đo 3 vòng & cân nặng (tiện lợi cho gymer)
-                        InkWell(
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const UpdateBodyStatsScreen()),
-                            ).then((_) => _loadProfileAndPosts());
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.straighten_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A), size: 22),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Chỉnh sửa số đo 3 vòng & cân nặng',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13.5,
-                                          color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Cập nhật chỉ số cơ thể, tỷ lệ mỡ, chiều cao...',
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Lối tắt: Kế hoạch Meal Prep & Nhắc nhở rã đông
-                        InkWell(
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const MealPrepScreen()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.kitchen_outlined, color: isDark ? primaryAccent : const Color(0xFF0F172A), size: 22),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Kế hoạch Meal Prep & Nhắc rã đông',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13.5,
-                                          color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Lập khẩu phần, tính thịt chín/hộp & hẹn giờ rã đông...',
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -1126,6 +1014,293 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return raw;
   }
 
+  void _showShareRecipeSheet(Map<String, dynamic> recipe) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+    final title = recipe['title'] ?? recipe['name'] ?? 'Công thức Gymer';
+    final recipeUrl = 'https://eatgym.app/r/${recipe['id'] ?? 'recipe'}';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'CHIA SẺ CÔNG THỨC NẤU ĂN',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tùy chọn 1: Sao chép link
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isDark ? primaryAccent : const Color(0xFF2563EB)).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.link_rounded, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 20),
+                ),
+                title: Text('Sao chép liên kết', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: Text(recipeUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.grey)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: recipeUrl));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Đã sao chép liên kết "$title" vào bộ nhớ tạm!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF16A34A),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 2: Gửi bạn bè Gymer
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.people_alt_outlined, color: Colors.purple, size: 20),
+                ),
+                title: Text('Gửi cho bạn bè Gymer', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Gửi công thức món ăn qua tin nhắn đến đồng đội Gym', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã mở danh sách đồng đội Gym để gửi công thức "$title"!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 3: Ứng dụng khác
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.share_rounded, color: Colors.orange, size: 20),
+                ),
+                title: Text('Chia sẻ qua ứng dụng khác', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Facebook, Zalo, Messenger, Instagram Stories...', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: '$title - Công thức Gymer Eat Clean: $recipeUrl'));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã sao chép nội dung chia sẻ công thức để dán vào ứng dụng khác (Zalo, FB, Messenger)!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showShareProfileSheet(String username, String fullName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryAccent = SettingsService.instance.currentColor;
+    final profileUrl = 'https://eatgym.app/u/$username';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'CHIA SẺ HỒ SƠ BẾP GYMER',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$fullName (@$username)',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tùy chọn 1: Sao chép link
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isDark ? primaryAccent : const Color(0xFF2563EB)).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.link_rounded, color: isDark ? primaryAccent : const Color(0xFF2563EB), size: 20),
+                ),
+                title: Text('Sao chép liên kết', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: Text(profileUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.grey)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: profileUrl));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Đã sao chép liên kết hồ sơ @$username vào bộ nhớ tạm!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF16A34A),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 2: Gửi bạn bè
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.people_alt_outlined, color: Colors.purple, size: 20),
+                ),
+                title: Text('Gửi cho bạn bè Gymer', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Gửi tin nhắn hoặc chia sẻ đến cộng đồng phòng Gym', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã mở danh sách bạn bè Gymer để gửi trang của @$username!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 12),
+
+              // Tùy chọn 3: App khác
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.share_rounded, color: Colors.orange, size: 20),
+                ),
+                title: Text('Chia sẻ qua ứng dụng khác', style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+                subtitle: const Text('Zalo, Facebook, Messenger, Telegram, Instagram...', style: TextStyle(fontSize: 11)),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Clipboard.setData(ClipboardData(text: 'Xem hồ sơ Gymer $fullName trên EatGym: $profileUrl'));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Đã sao chép nội dung chia sẻ để dán vào ứng dụng khác (Zalo, FB, Messenger)!'),
+                        backgroundColor: isDark ? primaryAccent : const Color(0xFF0F172A),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMe = _isMe;
@@ -1193,99 +1368,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final String weightDisplay = isLbs ? '${(weight * 2.20462).toStringAsFixed(1)} lbs' : '${weight.toStringAsFixed(1)} kg';
     final String heightDisplay = isFtIn ? '${(height / 30.48).floor()} ft ${((height % 30.48) / 2.54).round()} in' : '${height.toStringAsFixed(0)} cm';
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
-      appBar: Navigator.canPop(context)
-          ? AppBar(
-              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                onPressed: () => Navigator.pop(context),
-              ),
-        titleSpacing: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isMe) ...[
-              Icon(Icons.lock_outline, size: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF0F172A)),
-              const SizedBox(width: 4),
-            ],
-            // Sử dụng Flexible + ellipsis để tên dài không bao giờ bị tràn/lỗi font
-            Flexible(
-              child: Text(
-                displayUsername,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? const Color(0xFFE1E3E1) : const Color(0xFF0F172A),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.verified, size: 15, color: Color(0xFF3897F0)),
-            if (isMe) Icon(Icons.keyboard_arrow_down, size: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF0F172A)),
-          ],
-        ),
-        actions: [
-          if (isMe) ...[
-            // NÚT [+] THÊM CÔNG THỨC (CỦA BẢN THÂN)
-            IconButton(
-              icon: Icon(Icons.add_box_outlined, size: 24, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              tooltip: 'Thêm công thức mới',
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              onPressed: _onCreateRecipe,
-            ),
-            // Nút Cài đặt hệ thống
-            IconButton(
-              icon: Icon(Icons.settings_outlined, size: 22, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              tooltip: 'Cài đặt hệ thống',
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-                if (mounted) setState(() {});
-              },
-            ),
-            // Nút Đăng xuất
-            IconButton(
-              icon: Icon(Icons.logout_rounded, size: 21, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-              tooltip: 'Đăng xuất',
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              onPressed: _confirmLogout,
-            ),
-            const SizedBox(width: 4),
-          ] else ...[
-            // Nút Chia sẻ trang cá nhân tác giả
-            IconButton(
-              icon: Icon(Icons.share_outlined, size: 22, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-              tooltip: 'Chia sẻ trang cá nhân',
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Đã sao chép liên kết trang cá nhân của @$displayUsername!'), behavior: SnackBarBehavior.floating),
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-          ],
-        ],
-      )
-          : null,
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryAccent))
-          : NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+        appBar: null,
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator(color: primaryAccent))
+            : NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   SliverToBoxAdapter(
                     child: Padding(
@@ -1293,6 +1387,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (Navigator.canPop(context)) ...[
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () => Navigator.pop(context),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white12 : const Color(0xFFF1F5F9),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 8),
 
                           // 1. DÒNG THÔNG TIN AVATAR + 3 CỘT STATS (INSTAGRAM STYLE)
@@ -1533,22 +1642,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                       elevation: 0,
                                     ),
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                                              const SizedBox(width: 8),
-                                              Expanded(child: Text('Đã sao chép liên kết trang bếp cá nhân @$displayUsername!')),
-                                            ],
-                                          ),
-                                          backgroundColor: const Color(0xFF16A34A),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () => _showShareProfileSheet(displayUsername, displayName),
                                     icon: Icon(
                                       Icons.share_outlined,
                                       size: 16,
@@ -1571,7 +1665,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               children: [
                                 // Nút 1: Theo dõi / Đang theo dõi
                                 Expanded(
-                                  flex: 5,
+                                  flex: 1,
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _isFollowing
@@ -1584,8 +1678,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       side: _isFollowing
                                           ? BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1))
                                           : BorderSide.none,
-                                      padding: const EdgeInsets.symmetric(vertical: 8.5),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(vertical: 9.5),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
                                     onPressed: () async {
                                       final prefs = await SharedPreferences.getInstance();
@@ -1608,7 +1702,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       _isFollowing ? 'Đang theo dõi' : 'Theo dõi',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 13,
+                                        fontSize: 13.5,
                                         color: _isFollowing
                                             ? (isDark ? Colors.white : const Color(0xFF0F172A))
                                             : (isDark ? Colors.black : Colors.white),
@@ -1616,48 +1710,29 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 10),
 
-                                // Nút 2: Nhắn tin
+                                // Nút 2: Chia sẻ to (thay cho Nhắn tin và nút icon nhỏ)
                                 Expanded(
-                                  flex: 4,
-                                  child: OutlinedButton(
+                                  flex: 1,
+                                  child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
                                       foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
                                       side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
-                                      padding: const EdgeInsets.symmetric(vertical: 8.5),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(vertical: 9.5),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Đang mở hộp thoại trò chuyện với @$displayUsername...'),
-                                          behavior: SnackBarBehavior.floating,
-                                        ),
-                                      );
-                                    },
-                                    child: Text('Nhắn tin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Nút 3: Chia sẻ
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
-                                    border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(Icons.share_outlined, size: 20, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                                    tooltip: 'Chia sẻ tác giả',
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Đã sao chép liên kết trang @$displayUsername!'), behavior: SnackBarBehavior.floating),
-                                      );
-                                    },
+                                    onPressed: () => _showShareProfileSheet(displayUsername, displayName),
+                                    icon: Icon(Icons.share_outlined, size: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                                    label: Text(
+                                      'Chia sẻ',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.5,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1714,6 +1789,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -1878,6 +1954,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
       itemBuilder: (context, idx) {
         final post = _savedPosts[idx];
+        final protein = post['protein'] ?? 40;
+        final likes = post['baseLikes'] ?? post['likes'] ?? post['likesCount'] ?? 1;
+
         return GestureDetector(
           onTap: () => _onOpenRecipeDetails(post),
           onLongPress: () => _showPostActionsSheet(post),
@@ -1910,11 +1989,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                  child: Text(
-                    post['title'] ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '⚡ ${protein}g P',
+                        style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.favorite, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$likes',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1973,6 +2065,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
       itemBuilder: (context, idx) {
         final post = _likedPosts[idx];
+        final protein = post['protein'] ?? 40;
+        final likes = post['baseLikes'] ?? post['likes'] ?? post['likesCount'] ?? 1;
+
         return GestureDetector(
           onTap: () => _onOpenRecipeDetails(post),
           onLongPress: () => _showPostActionsSheet(post),
@@ -1990,6 +2085,40 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.favorite, size: 13, color: Colors.redAccent),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '⚡ ${protein}g P',
+                        style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.favorite, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$likes',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

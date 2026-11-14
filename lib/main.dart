@@ -16,6 +16,7 @@ import 'screens/settings_screen.dart';
 import 'screens/profile_screen.dart';
 
 import 'services/api_service.dart';
+import 'services/notification_service.dart';
 
 import 'services/ai/ai_service_factory.dart';
 
@@ -216,6 +217,11 @@ Widget buildFoodIconWidget(String? icon, {double size = 22, String? name}) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await NotificationService().initialize();
+  } catch (e) {
+    debugPrint('NotificationService init error: $e');
+  }
   await SettingsService.instance.init();
   await ApiService.initBaseUrl();
   final bool loggedIn = await ApiService.isLoggedIn();
@@ -256,11 +262,17 @@ class NutriGymApp extends StatelessWidget {
                       ),
                       themeMode: currentThemeMode,
                       builder: (context, child) {
-                        return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(
-                            textScaler: TextScaler.linear(fontScale),
+                        return GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                          },
+                          child: MediaQuery(
+                            data: MediaQuery.of(context).copyWith(
+                              textScaler: TextScaler.linear(fontScale),
+                            ),
+                            child: child!,
                           ),
-                          child: child!,
                         );
                       },
                       home: AppStartupGate(isLoggedIn: isLoggedIn),
@@ -374,39 +386,47 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 1. TOP HEADER BAR (Chuẩn EatGym Figma)
-            AppHeader(
-              currentTab: _currentTab,
-              onAvatarTap: () {
-                setState(() {
-                  _currentTab = 2; // Chuyển sang Tab Hồ Sơ
-                });
-              },
-            ),
-
-            // 2. DYNAMIC BODY (Giữ trạng thái qua IndexedStack)
-            Expanded(
-              child: IndexedStack(
-                index: _currentTab,
-                children: _screens,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6FAFF),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 1. TOP HEADER BAR (Chuẩn EatGym Figma)
+              AppHeader(
+                currentTab: _currentTab,
+                onAvatarTap: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  setState(() {
+                    _currentTab = 2; // Chuyển sang Tab Hồ Sơ
+                  });
+                },
               ),
-            ),
 
-            // 3. BOTTOM NAVIGATION BAR (Chuẩn 5 Tabs EatGym Figma)
-            AppBottomNavBar(
-              selectedIndex: _currentTab,
-              onItemSelected: (index) {
-                setState(() {
-                  _currentTab = index;
-                });
-              },
-            ),
-          ],
+              // 2. DYNAMIC BODY (Giữ trạng thái qua IndexedStack)
+              Expanded(
+                child: IndexedStack(
+                  index: _currentTab,
+                  children: _screens,
+                ),
+              ),
+
+              // 3. BOTTOM NAVIGATION BAR (Chuẩn 5 Tabs EatGym Figma)
+              AppBottomNavBar(
+                selectedIndex: _currentTab,
+                onItemSelected: (index) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  setState(() {
+                    _currentTab = index;
+                  });
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2191,67 +2211,59 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
 
 
+  Future<List<Map<String, dynamic>>> _fetchSuggestedRecipes(List<String> names) async {
+    try {
+      final res = await ApiService.suggestRecipes(names);
+      if (res.isNotEmpty) return res;
+    } catch (_) {}
+    try {
+      final all = await ApiService.getRecipes();
+      if (all.isNotEmpty) {
+        if (names.isNotEmpty) {
+          final matched = all.where((r) {
+            final t = (r['title'] ?? '').toString().toLowerCase();
+            final ings = (r['ingredients'] as List?)?.map((i) => i.toString().toLowerCase()).join(' ') ?? '';
+            return names.any((n) => t.contains(n.toLowerCase()) || ings.contains(n.toLowerCase()));
+          }).toList();
+          if (matched.isNotEmpty) return matched;
+        }
+        return all.take(6).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   void _showRecipesForIngredients(List<String> ingNames) {
-
     showDialog(
-
       context: context,
-
       builder: (context) => AlertDialog(
-
         backgroundColor: AppColors.surface,
-
         surfaceTintColor: AppColors.surface,
-
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
         title: Column(
-
           children: [
-
             Text(
-
               'CÔNG THỨC GỢI Ý TỪ AI',
-
               style: AppTypography.badge(color: AppColors.primary).copyWith(
-
                 letterSpacing: 1.5,
-
               ),
-
             ),
-
             const SizedBox(height: 4),
-
             Text(
-
               'Xếp theo thời gian nấu từ nhanh đến lâu • CSDL 4,008 món',
-
               style: AppTypography.labelCaption(color: AppColors.onSurfaceVariant),
-
             ),
-
             const SizedBox(height: 8),
-
             Container(width: 30, height: 2, color: AppColors.outlineVariant),
-
           ],
-
         ),
-
         contentPadding: const EdgeInsets.all(16),
-
         content: SizedBox(
-
           width: double.maxFinite,
-
           height: 380,
-
           child: FutureBuilder<List<Map<String, dynamic>>>(
-
-            future: ApiService.suggestRecipes(ingNames),
+            future: _fetchSuggestedRecipes(ingNames),
 
             builder: (context, snapshot) {
 
@@ -2584,16 +2596,6 @@ class _CameraScanContentState extends State<CameraScanContent> {
     }
 
     return total.round();
-
-  }
-
-
-
-  void _showRecipesDialog() {
-
-    final ingNames = _ingredients.map((i) => i['name'].toString()).toList();
-
-    _showRecipesForIngredients(ingNames);
 
   }
 
@@ -3601,11 +3603,11 @@ class _CameraScanContentState extends State<CameraScanContent> {
 
                       ),
 
-                      icon: const Icon(Icons.restaurant_menu),
+                      icon: const Icon(Icons.kitchen_rounded),
 
-                      onPressed: _showRecipesDialog,
+                      onPressed: _saveToInventory,
 
-                      label: const Text('Tạo công thức phù hợp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      label: const Text('Thêm nguyên liệu vào tủ lạnh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
 
                     ),
 

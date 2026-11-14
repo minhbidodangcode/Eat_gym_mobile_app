@@ -62,4 +62,18 @@ class RoboflowFoodRecognitionService implements FoodRecognitionService {
       throw Exception("Failed to recognize ingredients: $e");
     }
   }
+
+  @override
+  Future<Map<String, dynamic>> recognizeCookedDish(File image) async {
+    return {
+      'dishName': 'Đĩa thức ăn Gymer',
+      'estimatedGrams': 420,
+      'calories': 560,
+      'protein': 44.0,
+      'carbs': 56.0,
+      'fat': 13.0,
+      'ingredients': ['Ức gà áp chảo (~200g)', 'Cơm gạo lứt (~150g)', 'Bông cải xanh (~100g)'],
+      'suggestion': 'Bữa ăn cân đối chuẩn macro tăng cơ giảm mỡ.',
+    };
+  }
 }

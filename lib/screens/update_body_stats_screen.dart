@@ -672,7 +672,7 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: measurementSource,
+            value: measurementSource,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               border: OutlineInputBorder(
@@ -871,19 +871,54 @@ class _UpdateBodyStatsScreenState extends State<UpdateBodyStatsScreen> {
       if (profile != null) {
         profile['weightKg'] = weight;
         profile['targetWeightKg'] = targetWeight;
+
+        // Tự động tính toán chuẩn xác lại BMR & TDEE theo công thức Mifflin-St Jeor
+        final sex = (profile['sex'] ?? 'male').toString().toLowerCase();
+        final heightCm = (profile['heightCm'] as num?)?.toDouble() ?? 170.0;
+        final dob = profile['dateOfBirth']?.toString() ?? '2000-01-01';
+        int age = 24;
+        try {
+          final birthYear = int.tryParse(dob.split('-')[0]) ?? 2000;
+          age = DateTime.now().year - birthYear;
+        } catch (_) {}
+        final sexAdjustment = (sex == 'female' || sex == 'nữ') ? -161.0 : 5.0;
+        final newBmr = (10 * weight) + (6.25 * heightCm) - (5 * age) + sexAdjustment;
+
+        final act = (profile['activityLevel'] ?? 'moderate').toString().toLowerCase();
+        double multiplier = 1.55;
+        if (act == 'sedentary' || act == 'low' || act == 'ít vận động') {
+          multiplier = 1.2;
+        } else if (act == 'light' || act == 'nhẹ') {
+          multiplier = 1.375;
+        } else if (act == 'moderate' || act == 'medium' || act == 'vừa phải') {
+          multiplier = 1.55;
+        } else if (act == 'active' || act == 'high' || act == 'nhiều') {
+          multiplier = 1.725;
+        } else if (act == 'very_active' || act == 'rất nhiều') {
+          multiplier = 1.9;
+        }
+
+        final newTdee = (newBmr * multiplier).round();
+        profile['bmrKcal'] = newBmr.round();
+        profile['tdeeKcal'] = newTdee;
+
         await ApiService.saveLocalProfile(profile);
         try {
-          await ApiService.saveProfile(
+          final res = await ApiService.saveProfile(
             sex: profile['sex'] ?? 'male',
             dateOfBirth: profile['dateOfBirth'] ?? '2000-01-01',
-            heightCm: (profile['heightCm'] as num?)?.toDouble() ?? 170.0,
+            heightCm: heightCm,
             weightKg: weight,
             activityLevel: profile['activityLevel'] ?? 'moderate',
             fitnessGoal: profile['fitnessGoal'] ?? 'maintenance',
+            targetWeightKg: targetWeight,
             allergies: profile['allergies'] != null ? List<String>.from(profile['allergies']) : null,
             dietaryPreferences: profile['dietaryPreferences'] != null ? List<String>.from(profile['dietaryPreferences']) : null,
             targetMacros: profile['targetMacros'] != null ? Map<String, dynamic>.from(profile['targetMacros']) : null,
           );
+          if (res['profile'] != null) {
+            await ApiService.saveLocalProfile(Map<String, dynamic>.from(res['profile']));
+          }
         } catch (_) {}
       }
 

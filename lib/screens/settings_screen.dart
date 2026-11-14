@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import 'login_screen.dart';
-import 'meal_prep_screen.dart';
 import 'smart_fridge_screen.dart';
 import 'body_stats_screen.dart';
 import 'badges_and_report_screen.dart';
@@ -229,7 +228,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ? (isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.35))
             : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline);
 
-        return Scaffold(
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: Scaffold(
           backgroundColor: bgColor,
           appBar: Navigator.canPop(context)
               ? AppBar(
@@ -305,6 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 )
               : null,
           body: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
@@ -644,6 +649,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 14),
                   Divider(color: borderColor, height: 1),
                   const SizedBox(height: 8),
+
+                  // Nút Bệnh lí và dị ứng
+                  InkWell(
+                    onTap: () => _showMedicalAndAllergiesDialog(context, primaryColor, cardColor, textColor, subTextColor, borderColor, isDark),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F3F4),
+                            ),
+                            child: Icon(Icons.health_and_safety_outlined, size: 18, color: const Color(0xFF0284C7)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Bệnh lí và dị ứng',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                ),
+                                Text(
+                                  'Cập nhật bệnh lý kiêng cữ & dị ứng thực phẩm',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: subTextColor, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Divider(color: borderColor, height: 1),
+                  const SizedBox(height: 8),
+
+                  // Nút Ứng dụng liên kết (Đồng hồ thông minh & Chợ online)
+                  InkWell(
+                    onTap: () => _showConnectedAppsDialog(context, primaryColor, cardColor, textColor, subTextColor, borderColor, isDark),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F3F4),
+                            ),
+                            child: const Icon(Icons.hub_outlined, size: 18, color: Color(0xFF8B5CF6)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ứng dụng liên kết',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                ),
+                                Text(
+                                  'Đồng hồ thông minh & Ứng dụng chợ online',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: subTextColor, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Divider(color: borderColor, height: 1),
+                  const SizedBox(height: 8),
                   InkWell(
                     onTap: () => _showChangePasswordDialog(context, primaryColor, cardColor, textColor, subTextColor, borderColor),
                     borderRadius: BorderRadius.circular(12),
@@ -940,7 +1041,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return Switch(
                             value: highContrast,
                             onChanged: (val) => _changeHighContrast(val),
-                            activeThumbColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
+                            activeColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
                             activeTrackColor: primaryColor,
                           );
                         },
@@ -1146,7 +1247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return Switch(
                             value: enabled,
                             onChanged: (val) => _settings.setRemindersEnabled(val),
-                            activeThumbColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
+                            activeColor: primaryColor.computeLuminance() > 0.4 ? Colors.black : Colors.white,
                             activeTrackColor: primaryColor,
                           );
                         },
@@ -1164,11 +1265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 14),
                           Divider(color: borderColor, height: 1),
                           const SizedBox(height: 12),
-                          _buildReminderRow(
-                            icon: Icons.water_drop_outlined,
-                            title: 'Giờ nhắc uống nước',
-                            timeNotifier: _settings.waterTimeNotifier,
-                            type: 'water',
+                          _buildWaterReminderRow(
                             primaryColor: primaryColor,
                             textColor: textColor,
                             subTextColor: subTextColor,
@@ -1199,61 +1296,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       );
                     },
-                  ),
-
-                  const SizedBox(height: 12),
-                  Divider(color: borderColor, height: 1),
-                  const SizedBox(height: 10),
-
-                  // Lối tắt: Kế hoạch Meal Prep & Nhắc nhở rã đông
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MealPrepScreen()),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F3F4),
-                            ),
-                            child: Icon(Icons.kitchen_outlined, size: 17, color: primaryColor),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Kế hoạch Meal Prep & Nhắc rã đông',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor,
-                                  ),
-                                ),
-                                Text(
-                                  'Chia khẩu phần theo hộp & hẹn giờ rã đông tự động',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: subTextColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 13, color: subTextColor),
-                        ],
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -1350,6 +1392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    ),
     );
   },
 );
@@ -1625,6 +1668,318 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWaterReminderRow({
+    required Color primaryColor,
+    required Color textColor,
+    required Color subTextColor,
+    required bool isDark,
+  }) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        _settings.waterIntervalNotifier,
+        _settings.waterStartHourNotifier,
+        _settings.waterEndHourNotifier,
+      ]),
+      builder: (context, _) {
+        final interval = _settings.waterIntervalNotifier.value;
+        final startHour = _settings.waterStartHourNotifier.value;
+        final endHour = _settings.waterEndHourNotifier.value;
+        final startStr = '${startHour.toString().padLeft(2, '0')}:00';
+        final endStr = '${endHour.toString().padLeft(2, '0')}:00';
+
+        void showEditWaterDialog() {
+          int tempInterval = interval;
+          int tempStartHour = startHour;
+          int tempEndHour = endHour;
+          final customCtrl = TextEditingController(text: '$tempInterval');
+
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            builder: (ctx) => StatefulBuilder(
+              builder: (ctx, setModalState) {
+                return SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                      left: 20,
+                      right: 20,
+                      top: 16,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white24 : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Icon(Icons.water_drop, color: primaryColor, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Cài đặt nhắc nhở uống nước',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tùy chỉnh tần suất lặp lại và khung giờ nhắc nhở phù hợp với lịch trình của bạn.',
+                          style: TextStyle(color: subTextColor, fontSize: 12.5),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Phần 1: Tần suất nhắc
+                        Text(
+                          '1. Khoảng cách nhắc nhở (Tần suất):',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: textColor),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [15, 30, 45, 60, 90, 120].map((mins) {
+                            final isSel = tempInterval == mins;
+                            return ChoiceChip(
+                              label: Text('$mins phút'),
+                              selected: isSel,
+                              selectedColor: primaryColor,
+                              backgroundColor: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.white : textColor,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 12.5,
+                              ),
+                              onSelected: (val) {
+                                if (val) {
+                                  setModalState(() {
+                                    tempInterval = mins;
+                                    customCtrl.text = '$mins';
+                                  });
+                                }
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text('Hoặc tự nhập số phút: ', style: TextStyle(fontSize: 12, color: subTextColor)),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 80,
+                              height: 36,
+                              child: TextField(
+                                controller: customCtrl,
+                                keyboardType: TextInputType.number,
+                                style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  filled: true,
+                                  fillColor: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                  suffixText: 'p',
+                                ),
+                                onChanged: (val) {
+                                  final parsed = int.tryParse(val.trim());
+                                  if (parsed != null && parsed > 0 && parsed <= 360) {
+                                    setModalState(() => tempInterval = parsed);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Phần 2: Khung giờ nhắc trong ngày
+                        Text(
+                          '2. Khung giờ nhắc nhở trong ngày:',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: textColor),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Bắt đầu từ:', style: TextStyle(fontSize: 11.5, color: subTextColor)),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<int>(
+                                        value: tempStartHour,
+                                        isExpanded: true,
+                                        dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+                                        items: List.generate(11, (i) => i + 5).map((h) => DropdownMenuItem(
+                                          value: h,
+                                          child: Text('${h.toString().padLeft(2, '0')}:00 sáng', style: TextStyle(color: textColor, fontSize: 13)),
+                                        )).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) setModalState(() => tempStartHour = val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Kết thúc lúc:', style: TextStyle(fontSize: 11.5, color: subTextColor)),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF262E2A) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<int>(
+                                        value: tempEndHour,
+                                        isExpanded: true,
+                                        dropdownColor: isDark ? const Color(0xFF1E2420) : Colors.white,
+                                        items: List.generate(8, (i) => i + 17).map((h) => DropdownMenuItem(
+                                          value: h,
+                                          child: Text('${h.toString().padLeft(2, '0')}:00 tối', style: TextStyle(color: textColor, fontSize: 13)),
+                                        )).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) setModalState(() => tempEndHour = val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Nút Xác nhận lưu
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.check, size: 18),
+                            label: const Text('LƯU CÀI ĐẶT NHẮC UỐNG NƯỚC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            onPressed: () {
+                              _settings.setWaterReminderSchedule(
+                                interval: tempInterval,
+                                startHour: tempStartHour,
+                                endHour: tempEndHour,
+                              );
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('💧 Đã cài đặt nhắc uống nước mỗi $tempInterval phút (từ ${tempStartHour}h00 đến ${tempEndHour}h00)!'),
+                                  backgroundColor: primaryColor,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+          return InkWell(
+          onTap: showEditWaterDialog,
+          borderRadius: BorderRadius.circular(8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.water_drop_outlined, size: 18, color: primaryColor),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nhắc uống nước ($interval phút / lần)',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            'Khung giờ: Từ $startStr đến $endStr',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: subTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E2420) : const Color(0xFFF1F3F4),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '$interval phút',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.edit_outlined, size: 12, color: primaryColor),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1922,6 +2277,719 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         );
       },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HỘP THOẠI: ỨNG DỤNG LIÊN KẾT (ĐỒNG HỒ THÔNG MINH & CHỢ ONLINE)
+  // ---------------------------------------------------------------------------
+  void _showConnectedAppsDialog(
+    BuildContext context,
+    Color primaryColor,
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+    Color borderColor,
+    bool isDark,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    bool connectAppleHealth = prefs.getBool('connect_apple_health') ?? true;
+    bool connectGarmin = prefs.getBool('connect_garmin') ?? false;
+    bool connectStrava = prefs.getBool('connect_strava') ?? true;
+    bool connectSamsung = prefs.getBool('connect_samsung_health') ?? false;
+    bool connectGoogleFit = prefs.getBool('connect_google_fit') ?? true;
+    bool connectNothingX = prefs.getBool('connect_nothing_x') ?? true;
+
+    bool connectGrabMart = prefs.getBool('connect_grabmart') ?? true;
+    bool connectShopeeFood = prefs.getBool('connect_shopeefood') ?? true;
+    bool connectCoopmart = prefs.getBool('connect_coopmart') ?? false;
+    bool connectWinmart = prefs.getBool('connect_winmart') ?? false;
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          return SafeArea(
+            child: Container(
+              height: MediaQuery.of(modalCtx).size.height * 0.85,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.hub_rounded, color: Color(0xFF8B5CF6), size: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Ứng dụng liên kết',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(modalCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Kết nối thiết bị & dịch vụ ngoại vi để tự động hóa dinh dưỡng EatGym:',
+                    style: TextStyle(fontSize: 12, color: subTextColor),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        // PHẦN 1: ĐỒNG HỒ THÔNG MINH
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.watch_rounded, size: 16, color: Color(0xFF0284C7)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ĐỒNG HỒ THÔNG MINH & WEARABLE',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF0284C7)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        _buildAppTile(
+                          icon: Icons.apple_rounded,
+                          title: 'Apple Health / Apple Watch',
+                          subtitle: 'Đồng bộ nhịp tim, bước chân & Calo đốt cháy theo thời gian thực',
+                          color: const Color(0xFF0F172A),
+                          isConnected: connectAppleHealth,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectAppleHealth = val);
+                            prefs.setBool('connect_apple_health', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.directions_run_rounded,
+                          title: 'Garmin Connect',
+                          subtitle: 'Đồng bộ cường độ tập tạ kháng lực & phục hồi cơ bắp',
+                          color: const Color(0xFF007CC3),
+                          isConnected: connectGarmin,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectGarmin = val);
+                            prefs.setBool('connect_garmin', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.directions_bike_rounded,
+                          title: 'Strava',
+                          subtitle: 'Tự động tính năng lượng bù đắp sau mỗi buổi đạp xe & chạy bộ',
+                          color: const Color(0xFFFC4C02),
+                          isConnected: connectStrava,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectStrava = val);
+                            prefs.setBool('connect_strava', val);
+                          },
+                        ),
+                                                _buildAppTile(
+                          icon: Icons.monitor_heart_outlined,
+                          title: 'Samsung Health',
+                          subtitle: 'Đồng bộ năng lượng tiêu hao & dữ liệu giấc ngủ phục hồi',
+                          color: const Color(0xFF1428A0),
+                          isConnected: connectSamsung,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectSamsung = val);
+                            prefs.setBool('connect_samsung_health', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.favorite_rounded,
+                          title: 'Google Fit / Wear OS',
+                          subtitle: 'Đồng bộ dữ liệu sức khỏe thể hình trên Android Wear',
+                          color: const Color(0xFFEA4335),
+                          isConnected: connectGoogleFit,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectGoogleFit = val);
+                            prefs.setBool('connect_google_fit', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.watch_outlined,
+                          title: 'Nothing X / CMF Watch',
+                          subtitle: 'Đồng bộ nhịp tim, bước chân & Calo tiêu hao từ đồng hồ Nothing qua Health Connect',
+                          color: const Color(0xFFD71920),
+                          isConnected: connectNothingX,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectNothingX = val);
+                            prefs.setBool('connect_nothing_x', val);
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // PHẦN 2: ỨNG DỤNG CHỢ ONLINE
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.shopping_cart_outlined, size: 16, color: Color(0xFF16A34A)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ỨNG DỤNG ĐI CHỢ & MUA SẮM ONLINE',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        _buildAppTile(
+                          icon: Icons.delivery_dining_rounded,
+                          title: 'GrabMart (Giao siêu tốc 30p)',
+                          subtitle: 'Tự động xuất danh sách thiếu hụt trong Tủ Lạnh sang giỏ hàng Grab',
+                          color: const Color(0xFF00B14F),
+                          isConnected: connectGrabMart,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectGrabMart = val);
+                            prefs.setBool('connect_grabmart', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.shopping_bag_outlined,
+                          title: 'ShopeeFood / Shopee Mart',
+                          subtitle: 'So sánh giá thực phẩm tươi sống rẻ nhất & áp mã giảm giá Gymer',
+                          color: const Color(0xFFEE4D2D),
+                          isConnected: connectShopeeFood,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectShopeeFood = val);
+                            prefs.setBool('connect_shopeefood', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.storefront_rounded,
+                          title: 'WinMart / Bách Hóa Xanh',
+                          subtitle: 'Liên kết thẻ thành viên tích điểm khi mua ức gà, thịt bò & rau xanh',
+                          color: const Color(0xFFDC2626),
+                          isConnected: connectWinmart,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectWinmart = val);
+                            prefs.setBool('connect_winmart', val);
+                          },
+                        ),
+                        _buildAppTile(
+                          icon: Icons.eco_rounded,
+                          title: 'Co.opmart Online',
+                          subtitle: 'Ưu tiên nguồn nông sản sạch chuẩn VietGAP cho bữa ăn Eat Clean',
+                          color: const Color(0xFF2563EB),
+                          isConnected: connectCoopmart,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          onChanged: (val) {
+                            setModalState(() => connectCoopmart = val);
+                            prefs.setBool('connect_coopmart', val);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Nút Lưu
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8B5CF6),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.check_circle_outline, size: 20),
+                      label: const Text('LƯU CẤU HÌNH LIÊN KẾT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                      onPressed: () {
+                        Navigator.pop(modalCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✨ Đã lưu cấu hình liên kết thiết bị & chợ online thành công!'),
+                            backgroundColor: Color(0xFF8B5CF6),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAppTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required bool isConnected,
+    required bool isDark,
+    required Color textColor,
+    required Color subTextColor,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isConnected ? color.withValues(alpha: 0.4) : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+          width: isConnected ? 1.4 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(fontSize: 11, color: subTextColor, height: 1.25)),
+              ],
+            ),
+          ),
+          Switch(
+            value: isConnected,
+            activeColor: color,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HỘP THOẠI: BỆNH LÍ & DỊ ỨNG (GIAO DIỆN HIỆN ĐẠI, ĐỒNG BỘ APP)
+  // ---------------------------------------------------------------------------
+  void _showMedicalAndAllergiesDialog(
+    BuildContext context,
+    Color primaryColor,
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+    Color borderColor,
+    bool isDark,
+  ) async {
+    final prefsInstance = await SharedPreferences.getInstance();
+    final profile = await ApiService.getLocalProfile();
+
+    final rawMedical = prefsInstance.getStringList('medical_history') ??
+        (profile?['medicalHistory'] != null ? List<String>.from(profile!['medicalHistory']) : <String>[]);
+    final rawAllergies = prefsInstance.getStringList('food_allergies') ??
+        prefsInstance.getStringList('user_allergies') ??
+        (profile?['allergies'] != null ? List<String>.from(profile!['allergies']) : <String>[]);
+
+    final Set<String> selectedMedical = Set<String>.from(rawMedical);
+    if (selectedMedical.isEmpty) selectedMedical.add('Không có tiền sử bệnh');
+
+    final Set<String> selectedAllergies = Set<String>.from(rawAllergies);
+    if (selectedAllergies.isEmpty) selectedAllergies.add('Không có dị ứng');
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          return SafeArea(
+            child: Container(
+              height: MediaQuery.of(modalCtx).size.height * 0.88,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Header cố định
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.health_and_safety_outlined, color: Color(0xFF0284C7), size: 22),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Bệnh lí & Dị ứng thực phẩm',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(modalCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Banner giải thích bảo vệ AI
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'AI NutriGym sẽ tự động phân tích và loại trừ các nguyên liệu kiêng cữ khỏi thực đơn của bạn.',
+                            style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white70 : const Color(0xFF0369A1), height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        // PHẦN 1: BỆNH LÝ MẮC PHẢI
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '🩺 Bệnh lý mắc phải & Chế độ ăn kiêng:',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Kiêng & Hạn chế', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Bắt buộc chọn ít nhất 1 mục (Chọn "Không có..." nếu cơ thể hoàn toàn khỏe mạnh):', style: TextStyle(fontSize: 11, color: subTextColor)),
+                        const SizedBox(height: 8),
+
+                        Column(
+                          children: [
+                            {'name': 'Gout (Kiêng purin/thịt đỏ/hải sản)', 'icon': '🥩'},
+                            {'name': 'Tiểu đường (Hạn chế đường nhanh)', 'icon': '🍬'},
+                            {'name': 'Huyết áp cao (Hạn chế muối natri)', 'icon': '🧂'},
+                            {'name': 'Đau dạ dày / Trào ngược (Kiêng chua cay/gas)', 'icon': '🌶️'},
+                            {'name': 'Mỡ máu cao (Hạn chế mỡ xấu)', 'icon': '🥑'},
+                            {'name': 'Bệnh lý thận (Hạn chế thừa đạm)', 'icon': '🫘'},
+                            {'name': 'Không có tiền sử bệnh', 'icon': '🛡️'},
+                          ].map((item) {
+                            final med = item['name']!;
+                            final icon = item['icon']!;
+                            final isSel = selectedMedical.contains(med);
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              child: InkWell(
+                                onTap: () {
+                                  setModalState(() {
+                                    if (med == 'Không có tiền sử bệnh') {
+                                      selectedMedical.clear();
+                                      selectedMedical.add('Không có tiền sử bệnh');
+                                    } else {
+                                      if (isSel) {
+                                        selectedMedical.remove(med);
+                                        if (selectedMedical.isEmpty) selectedMedical.add('Không có tiền sử bệnh');
+                                      } else {
+                                        selectedMedical.remove('Không có tiền sử bệnh');
+                                        selectedMedical.add(med);
+                                      }
+                                    }
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? (isDark ? const Color(0xFF0284C7).withValues(alpha: 0.25) : const Color(0xFFE0F2FE))
+                                        : (isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSel ? const Color(0xFF0284C7) : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                                      width: isSel ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(icon, style: const TextStyle(fontSize: 16)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          med,
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                            color: isSel ? (isDark ? Colors.white : const Color(0xFF0369A1)) : textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        isSel ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                                        size: 18,
+                                        color: isSel ? const Color(0xFF0284C7) : (isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // PHẦN 2: DỊ ỨNG THỰC PHẨM
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '⚠️ Dị ứng thực phẩm (Food Allergies):',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Cảnh báo dị ứng', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Các chất hoặc món gây dị ứng, ngứa, khó tiêu (Bắt buộc chọn ít nhất 1 mục):', style: TextStyle(fontSize: 11, color: subTextColor)),
+                        const SizedBox(height: 8),
+
+                        Column(
+                          children: [
+                            {'name': 'Hải sản (Tôm, Cua, Mực)', 'icon': '🦐'},
+                            {'name': 'Đậu phộng / Lạc', 'icon': '🥜'},
+                            {'name': 'Sữa bò / Bất dung nạp Lactose', 'icon': '🥛'},
+                            {'name': 'Trứng gà', 'icon': '🥚'},
+                            {'name': 'Gluten / Bột mì', 'icon': '🌾'},
+                            {'name': 'Đậu nành', 'icon': '🫘'},
+                            {'name': 'Không có dị ứng', 'icon': '🛡️'},
+                          ].map((item) {
+                            final alg = item['name']!;
+                            final icon = item['icon']!;
+                            final isSel = selectedAllergies.contains(alg);
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              child: InkWell(
+                                onTap: () {
+                                  setModalState(() {
+                                    if (alg == 'Không có dị ứng') {
+                                      selectedAllergies.clear();
+                                      selectedAllergies.add('Không có dị ứng');
+                                    } else {
+                                      if (isSel) {
+                                        selectedAllergies.remove(alg);
+                                        if (selectedAllergies.isEmpty) selectedAllergies.add('Không có dị ứng');
+                                      } else {
+                                        selectedAllergies.remove('Không có dị ứng');
+                                        selectedAllergies.add(alg);
+                                      }
+                                    }
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? (isDark ? const Color(0xFFD97706).withValues(alpha: 0.25) : const Color(0xFFFEF3C7))
+                                        : (isDark ? const Color(0xFF151B18) : const Color(0xFFF8FAFC)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSel ? const Color(0xFFD97706) : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                                      width: isSel ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(icon, style: const TextStyle(fontSize: 16)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          alg,
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                            color: isSel ? (isDark ? Colors.white : const Color(0xFFB45309)) : textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        isSel ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                                        size: 18,
+                                        color: isSel ? const Color(0xFFD97706) : (isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+
+                  // Nút Lưu thay đổi
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.check_circle_outline, size: 20),
+                      label: const Text('LƯU BỆNH LÍ & DỊ ỨNG', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setStringList('medical_history', selectedMedical.toList());
+                        await prefs.setStringList('food_allergies', selectedAllergies.toList());
+                        await prefs.setStringList('user_allergies', selectedAllergies.toList());
+
+                        final currentProf = Map<String, dynamic>.from(await ApiService.getLocalProfile() ?? {});
+                        currentProf['medicalHistory'] = selectedMedical.toList();
+                        currentProf['allergies'] = selectedAllergies.toList();
+                        await ApiService.saveLocalProfile(currentProf);
+
+                        if (modalCtx.mounted) {
+                          Navigator.pop(modalCtx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('🩺 Đã lưu Bệnh lí & Dị ứng thành công! Toàn bộ hệ thống và Chatbot AI sẽ tự động đồng bộ.'),
+                              backgroundColor: Color(0xFF0284C7),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

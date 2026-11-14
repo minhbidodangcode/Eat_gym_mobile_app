@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Base URL mặc định
-  static String _baseUrl = 'http://192.168.1.54:3000/api';
+  static String _baseUrl = 'http://192.168.1.47:3000/api';
 
   static String get baseUrl => _baseUrl;
 
@@ -12,7 +12,12 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('custom_base_url');
     if (saved != null && saved.trim().isNotEmpty) {
-      _baseUrl = _normalizeUrl(saved);
+      if (saved.contains('192.168.1.54')) {
+        _baseUrl = 'http://192.168.1.47:3000/api';
+        await prefs.setString('custom_base_url', _baseUrl);
+      } else {
+        _baseUrl = _normalizeUrl(saved);
+      }
     }
   }
 
@@ -718,12 +723,13 @@ class ApiService {
     return [];
   }
 
-  static Future<List<Map<String, dynamic>>> getRecipes({String? search, String? tag}) async {
+  static Future<List<Map<String, dynamic>>> getRecipes({String? search, String? tag, int? limit = 1000}) async {
     final token = await _getToken();
     var url = Uri.parse('$baseUrl/recipes');
     var queryParams = <String, String>{};
     if (search != null && search.isNotEmpty) queryParams['q'] = search;
     if (tag != null && tag.isNotEmpty && tag != 'Tất cả') queryParams['tag'] = tag;
+    if (limit != null) queryParams['limit'] = limit.toString();
     if (queryParams.isNotEmpty) url = url.replace(queryParameters: queryParams);
 
     try {
